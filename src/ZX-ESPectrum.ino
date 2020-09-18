@@ -84,6 +84,10 @@ VGA14Bit vga;
 
 
 void setup() {
+    // Turn off peripherals to gain memory (?do they release properly)
+    esp_bt_controller_deinit();
+    esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+
     Serial.begin(115200);
 
     Serial.println("ZX-ESPectrum + Wiimote initializing...");
@@ -94,7 +98,7 @@ void setup() {
 
     Serial.printf("HEAP BEGIN %d\n", ESP.getFreeHeap());
 
-    initWiimote2Keys();
+//    initWiimote2Keys();
 
     Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
 
@@ -125,6 +129,7 @@ void setup() {
     ram5 = (byte *)malloc(16384);
 #endif
 
+    Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
 
 #ifdef COLOUR_8
     vga.init(vga.MODE360x200, RED_PIN, GREEN_PIN, BLUE_PIN, HSYNC_PIN, VSYNC_PIN);
@@ -393,7 +398,7 @@ void loop() {
     halfsec = !(sp_int_ctr % 25);
 
     do_keyboard();
-    updateWiimote2Keys();
+    //updateWiimote2Keys();
     do_OSD();
 
     // ts1 = millis();
