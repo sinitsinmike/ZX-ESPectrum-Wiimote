@@ -16,7 +16,7 @@ Quick start from PlatformIO:
 - VGA output, 8 or 16 bits.
 - Beeper digital output.
 - Accurate Z80 emulation.
-- Spectrum 16/48 achitecture emulation without PSRAM.
+- Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
 - PS/2 Keyboard.
 - VGA OSD menu: Configuration, architecture, ROM and SNA selection.
