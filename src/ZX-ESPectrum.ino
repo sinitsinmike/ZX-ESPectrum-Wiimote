@@ -90,9 +90,9 @@ VGA14Bit vga;
 
 
 void setup() {
-    // turn off peripherals to recover some memory
-    esp_bt_controller_deinit();
-    esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+    // DO NOT turn off peripherals to recover some memory
+    // esp_bt_controller_deinit();
+    // esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
 
     Serial.begin(115200);
 
@@ -102,9 +102,10 @@ void setup() {
         Serial.println(MSG_VGA_INIT);
     }
 
+    Serial.printf("PSRAM size: %d\n", ESP.getPsramSize());
     Serial.printf("HEAP BEGIN %d\n", ESP.getFreeHeap());
 
-    //initWiimote2Keys();
+    initWiimote2Keys();
 
     Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
 
@@ -413,7 +414,7 @@ void loop() {
     halfsec = !(sp_int_ctr % 25);
 
     do_keyboard();
-    //updateWiimote2Keys();
+    updateWiimote2Keys();
     do_OSD();
 
     // ts1 = millis();

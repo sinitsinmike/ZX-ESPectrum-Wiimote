@@ -19,6 +19,7 @@ Quick start from PlatformIO:
 - Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
 - PS/2 Keyboard.
+- Wiimote support with per-game key assignments.
 - VGA OSD menu: Configuration, architecture, ROM and SNA selection.
 - Tape save and loading.
 - SNA snapshot loading.
@@ -67,15 +68,54 @@ Run these tasks (`Upload` also does a `Build`) whenever you make any change in t
 
 ## Hardware configuration and pinout
 
-See ESP32 pin assignment in `include/def/hardware.h` or change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
+Pin assignment in `include/def/hardware.h` is set to match the TTGo VGaor change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
 
 I have used VGA 6 bit driver (so BRIGHT attribute is kept)
+
+## Connecting a Wiimote
+
+To connect, press 1 and 2 buttons in the Wiimote.
+
+All 4 leds will flash during connection phase, and only LED 1 will be ON when connected.
 
 ## OSD Menu
 
 OSD menu can be opened using the Wiimote's Home key. Navigation is done using the D-Pad, and selection using buttons A, 1 or 2.
 
 From OSD you can load snapshots (from `/data/sna`) or change ROMs.
+
+## Assigning Wiimote keys to emulated Spectrum keys
+For every `.sna` game in `/data/sna`, there should be a corresponding `.txt` file in the same dir, with a very simple format. Examples are provided.
+
+The `ESPWiimote` library generates the following codes for Wiimote keys:
+
+![wiimote-key-codes](./doc/wiimote-key-codes.jpg)
+
+The `.txt` file must have at least 16 characters (only first 16 characters are considered). For example for Manic Miner, `ManicMiner.txt` would contain
+
+`sZ-h------WQe---`
+
+There is a character for each possible 16 bit code of wiimote keys, in order: `0001`, `0002`, `0004`, `0008`, `0010`, `0020`, `0040`, `0080`, `0100`, `0200`, `0400`, `0800`, `1000`, `2000`, `4000`, `8000`; and legal characters are:
+
+```
+1234567890
+QWERTYUIOP
+ASDFGHJKLe
+hZXCVBNMys
+````
+With `e` for ENTER, `h` for CAPS SHIFT, `y` for SYMBOL SHIFT and `s` for SPACE. Any other character (ex: '``') means not used.
+
+For the Manic Miner example, the correspondences would be:
+
+```
+(2)    (0001) -> SPACE (jump)
+(1)    (0002) -> Z     (jump)
+(A)    (0008) -> SHIFT (jump)
+(down) (0400) -> W     (right)
+(up)   (0800) -> Q     (left)
+(+)    (1000) -> ENTER (start)
+
+```
 
 I have NOT included Manic Miner `.sna` snapshot, but you can download it from [worldofspectrum.org](https://worldofspectrum.org/archive/software/games/manic-miner-bug-byte-software-ltd) and convert it to `.sna` using [FUSE](http://fuse-emulator.sourceforge.net/), for example.
 
@@ -85,6 +125,7 @@ I have NOT included Manic Miner `.sna` snapshot, but you can download it from [w
 - VGA Driver from [ESP32Lib by BitLuni](https://github.com/bitluni/ESP32Lib).
 - PS/2 keyboard support based on [ps2kbdlib](https://github.com/michalhol/ps2kbdlib).
 - PS/2 boot for some keyboards from [PS2KeyAdvanced](https://github.com/techpaul/PS2KeyAdvanced).
+- Wiimote library from [ESP32Wiimote by bigw00d](https://github.com/bigw00d/Arduino-ESP32Wiimote).
 - Z80 Emulation derived from [z80emu](https://github.com/anotherlin/z80emu) authored by Lin Ke-Fong.
 - DivIDE ideas (work in progress) taken from the work of Dusan Gallo.
 - AY sound hardware emulation from [AVR-AY](https://www.avray.ru/).
