@@ -512,6 +512,12 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
 
             int n, f, d;
 
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(DE, elapsed_cycles);
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(DE, elapsed_cycles);
+            elapsed_cycles -= 2;
+
             READ_BYTE(HL, n);
             WRITE_BYTE(DE, n);
 
@@ -569,11 +575,29 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
                 hl += d;
                 de += d;
 
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(de, elapsed_cycles);
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(de, elapsed_cycles);
+
                 if (--bc) {
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    elapsed_cycles -= 5;
+
                     elapsed_cycles += 17;
                 }
 
                 else {
+                    elapsed_cycles -= 2;
 
                     elapsed_cycles += 12;
                     break;
@@ -627,6 +651,18 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
             READ_BYTE(HL, n);
             z = a - n;
 
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            elapsed_cycles++;
+            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            elapsed_cycles -= 5;
+
             HL += opcode == OPCODE_CPI ? +1 : -1;
 
             f = (a ^ n ^ z) & Z80_H_FLAG;
@@ -667,12 +703,35 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
                 Z80_READ_BYTE(hl, n);
                 z = a - n;
 
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                elapsed_cycles++;
+                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                
                 hl += d;
-                if (--bc && z)
+                if (--bc && z) {
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    elapsed_cycles++;
+                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    elapsed_cycles -= 10;
 
                     elapsed_cycles += 21;
-
+                }
                 else {
+                    elapsed_cycles -= 5;
 
                     elapsed_cycles += 16;
                     break;
@@ -2445,6 +2504,6 @@ unsigned char delay_contention(word address, unsigned int tstates)
     int halfpix = tstates % 224;
     if (halfpix >= 128) return 0;
 
-    int modulo = tstates % 8;
-    return 3*wait_states[modulo];
+    int modulo = halfpix % 8;
+    return wait_states[modulo];
 }
