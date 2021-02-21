@@ -50,7 +50,7 @@ void setup_cpuspeed();
 void config_read();
 void do_OSD();
 void errorHalt(String);
-void mount_spiffs();
+void init_file_system();
 
 // GLOBALS
 
@@ -109,7 +109,7 @@ void setup() {
 
     Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
 
-    mount_spiffs();
+    init_file_system();
     config_read();
     // wifiConn();
     Serial.printf("HEAP AFTER WIFI %d\n", ESP.getFreeHeap());

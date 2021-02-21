@@ -19,8 +19,9 @@
 #define ERROR_TITLE "  !!!   ERROR - CLIVE MEDITATION   !!!  "
 #define ERROR_BOTTOM "  Sir Clive is smoking in the Rolls...  "
 #define ERR_READ_FILE "Cannot read file!"
-#define ERR_BANK_FAIL "Failed to allocate RAM bank "
-#define ERR_MOUNT_FAIL "Cannot mount internal memory!"
+#define ERR_BANK_FAIL "Failed to allocate RAM bank"
+#define ERR_FS_INT_FAIL "Cannot mount internal storage!"
+#define ERR_FS_EXT_FAIL "Cannot mount external storage!"
 #define ERR_DIR_OPEN "Cannot open directory!"
 
 // OSD

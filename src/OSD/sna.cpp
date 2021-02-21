@@ -6,7 +6,20 @@
 #include "def/msg.h"
 #include "osd.h"
 #include <FS.h>
+
+#ifdef USE_INT_FLASH
+// using internal storage (spi flash)
 #include <SPIFFS.h>
+// set The Filesystem to SPIFFS
+#define THE_FS SPIFFS
+#endif
+
+#ifdef USE_SD_CARD
+// using external storage (SD card)
+#include <SD.h>
+// set The Filesystem to SD
+#define THE_FS SD
+#endif
 
 // Change running snapshot
 void changeSna(String sna_filename) {
@@ -37,7 +50,7 @@ void setDemoMode(boolean on, unsigned short every) {
 bool is_persist_sna_available()
 {
     String filename = DISK_PSNA_FILE;
-    return SPIFFS.exists(filename.c_str());
+    return THE_FS.exists(filename.c_str());
 }
 
 bool save_ram(String sna_file) {
@@ -51,7 +64,7 @@ bool save_ram(String sna_file) {
     }
 
     // open file
-    File f = SPIFFS.open(sna_file, FILE_WRITE);
+    File f = THE_FS.open(sna_file, FILE_WRITE);
     if (!f) {
         Serial.printf("save_ram: failed to open %s for writing\n", sna_file.c_str());
         KB_INT_START;
@@ -134,8 +147,8 @@ bool save_ram(String sna_file) {
     }
 
     f.close();
-    return true;
     KB_INT_START;
+    return true;
 }
 
 static byte* snabuf = NULL;

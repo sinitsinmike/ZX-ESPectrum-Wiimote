@@ -24,7 +24,7 @@ Quick start from PlatformIO:
 - Tape save and loading.
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
-- Internal SPIFFS support.
+- Internal SPIFFS support / external SD card support (only one of both, see hardware.h)
 
 ## Work in progress
 
@@ -43,7 +43,7 @@ Windows, GNU/Linux and MacOS/X. This version has been developed using
 #### Install platformIO:
 
 - There is an extension for Atom and VSCode, please check [this webpage](https://platformio.org/).
-- Select your board, I have used a Espressif ESP32-WROVER.
+- Select your board: lolin32 which behaves just like the TTGo VGA32.
 
 #### Customize platformio.ini
 
@@ -54,9 +54,23 @@ Change upload_port to whatever you're using.
 
 #### Upload the data filesystem
 
+If using internal flash storage (USE_INT_FLASH #defined in hardware.h), you must copy some files to internal storage using this procedure.
+
 `PlatformIO > Project Tasks > Upload File System Image`
 
-All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in SNA format).
+All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in SNA format, into the `/data/sna` subdirectory).
+
+#### Using a external micro SD Card and copying games into it
+
+If using external micro sd card (USE_SD_CARD #defined in hardware.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
+
+The SD card should be formatted in FAT16 / FAT32.
+
+For adding games to the emulator, just turn it off, extract the sd card, copy games in .SNA format to the `/sna` folder of the sd card, insert it again, and turn it on.
+
+Important note: once you flash the firmware successfully with USE_SD_CARD defined, you won't be able to flash the firmware again, unless you remove the SD card. This is due to GPIO pin 2/12 used for SD card MISO/MOSI interfering with the boot/flashing process.
+
+What I do: before flashing (`PlatformIO > Project Tasks > Upload`), I remove the SD card until flashing starts, then I insert it again. For convenience I use a micro sd card extension strap which features a push to insert / push to remove mechanism, which comes in handy.
 
 #### Compile and flash it
 
