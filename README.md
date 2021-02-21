@@ -21,6 +21,7 @@ Quick start from PlatformIO:
 - PS/2 Keyboard.
 - Wiimote support with per-game key assignments.
 - VGA OSD menu: Configuration, architecture, ROM and SNA selection.
+- Support for two aspect ratios: 16:9 or 4:3 monitors (using 360x200 or 320x240 modes)
 - Tape save and loading.
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
@@ -51,6 +52,12 @@ Change upload_port to whatever you're using.
 - Linux: `uploadport = /dev/ttyUSB0` or similar.
 - Windows: `upload_port = COM1` or similar.
 - MacOSX: `upload_port = /dev/cu.SLAB_USBtoUART` or similar.
+
+#### Select your aspect ratio
+
+Default aspect ratio is 16:9, so if your monitor has this, you don't need to change anything.
+
+If your monitor is 4:3, you should edit hardware.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
 
 #### Upload the data filesystem
 

@@ -35,6 +35,22 @@
 #endif
 
 /////////////////////////////////////////////////
+// Screen aspect ratio (16/9 or 4/3)
+/////////////////////////////////////////////////
+// define ONLY one of these
+// AR_16_9
+// AR_4_3
+
+#define AR_16_9
+//#define AR_4_3
+
+// check: only one must be defined
+#if (defined(AR_16_9) && defined(AR_4_3))
+#error "Only one of (AR_16_9, AR_4_3) must be defined"
+#endif
+
+
+/////////////////////////////////////////////////
 // Color mode
 /////////////////////////////////////////////////
 // define ONLY one of these
