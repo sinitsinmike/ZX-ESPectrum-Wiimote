@@ -1,9 +1,8 @@
 // -------------------------------------------------------------------
 //  ESPectrum Emulator
-//  Ramón Martínez & Jorge fuertes 2019
-//  Though from ESP32 Spectrum Emulator (KOGEL esp32) Pete Todd 2017
-//  You are not allowed to distribute this software commercially
-//  lease, notify me, if you make any changes to this file
+//  Ramón Martínez & Jorge Fuertes 2019
+//  David Crespo 2020
+//  Adapted from ESP32 Spectrum Emulator (KOGEL esp32) Pete Todd 2017
 // -------------------------------------------------------------------
 
 #include "Emulator/Keyboard/PS2Kbd.h"
@@ -50,7 +49,7 @@ void setup_cpuspeed();
 void config_read();
 void do_OSD();
 void errorHalt(String);
-void mount_spiffs();
+void init_file_system();
 
 // GLOBALS
 
@@ -88,6 +87,13 @@ VGA6Bit vga;
 VGA14Bit vga;
 #endif
 
+#ifdef AR_16_9
+#define VGA_AR_MODE MODE360x200
+#endif
+
+#ifdef AR_4_3
+#define VGA_AR_MODE MODE320x240
+#endif
 
 void setup() {
     // do not turn off peripherals to recover some memory
@@ -108,7 +114,7 @@ void setup() {
 
     Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
 
-    mount_spiffs();
+    init_file_system();
     config_read();
     // wifiConn();
     Serial.printf("HEAP AFTER WIFI %d\n", ESP.getFreeHeap());
@@ -138,21 +144,21 @@ void setup() {
     Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
 
 #ifdef COLOR_3B
-    vga.init(vga.MODE360x200, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vga.VGA_AR_MODE, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
 #endif
 
 #ifdef COLOR_6B
     const int redPins[] = {RED_PINS_6B};
     const int grePins[] = {GRE_PINS_6B};
     const int bluPins[] = {BLU_PINS_6B};
-    vga.init(vga.MODE360x200, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
 #ifdef COLOR_14B
     const int redPins[] = {RED_PINS_14B};
     const int grePins[] = {GRE_PINS_14B};
     const int bluPins[] = {BLU_PINS_14B};
-    vga.init(vga.MODE360x200, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
     Serial.printf("HEAP after vga  %d \n", ESP.getFreeHeap());
@@ -196,6 +202,28 @@ void setup() {
 
 // VIDEO core 0 *************************************
 
+#define SPEC_W 256
+#define SPEC_H 192
+
+#ifdef AR_16_9
+#define SCR_W 360
+#define SCR_H 200
+#define BOR_W 20
+#define BOR_H 3
+#define OFF_X 32
+// if you can't center the image in your screen,
+// change OFF_X for software centering (0 < OFF_X < 64)
+#endif
+
+#ifdef AR_4_3
+#define SCR_W 320
+#define SCR_H 240
+#define BOR_W 32
+#define BOR_H 23
+#define OFF_X 0
+#endif
+
+
 void videoTask(void *unused) {
     unsigned int ff, i, byte_offset;
     unsigned char color_attrib, pixel_map, flash, bright;
@@ -212,33 +240,31 @@ void videoTask(void *unused) {
         if ((int)param == 1)
             break;
 
-        for (unsigned int vga_lin = 0; vga_lin < 200; vga_lin++) {
+        for (unsigned int vga_lin = 0; vga_lin < SCR_H; vga_lin++) {
             // tick = 0;
-            if (vga_lin < 3 || vga_lin > 194) {
+            if (vga_lin < BOR_H || vga_lin >= BOR_H + SPEC_H) {
 
-                for (int bor = 32; bor < 328; bor++)
+                for (int bor = OFF_X; bor < OFF_X+BOR_W+SPEC_W+BOR_W; bor++)
                     vga.dotFast(bor, vga_lin, zxcolor(borderTemp, 0));
             } else {
 
-                for (int bor = 32; bor < 52; bor++) {
+                for (int bor = OFF_X; bor < OFF_X+BOR_W; bor++) {
                     vga.dotFast(bor, vga_lin, zxcolor(borderTemp, 0));
-                    vga.dotFast(bor + 276, vga_lin, zxcolor(borderTemp, 0));
+                    vga.dotFast(bor + SPEC_W+BOR_W, vga_lin, zxcolor(borderTemp, 0));
                 }
 
                 for (ff = 0; ff < 32; ff++) // foreach byte in line
                 {
 
-                    byte_offset = (vga_lin - 3) * 32 + ff;
+                    byte_offset = (vga_lin - BOR_H) * 32 + ff;
                     calc_y = calcY(byte_offset);
-                    if (!video_latch)
-                    {
-                       color_attrib = readbyte(0x5800 + (calc_y / 8) * 32 + ff); // get 1 of 768 attrib values
-                       pixel_map = readbyte(byte_offset + 0x4000);
-                     } else
-                      {
+                    if (!video_latch) {
+                        color_attrib = readbyte(0x5800 + (calc_y / 8) * 32 + ff); // get 1 of 768 attrib values
+                        pixel_map = readbyte(byte_offset + 0x4000);
+                    } else {
                         color_attrib = ram7[0x1800 + (calc_y / 8) * 32 + ff]; // get 1 of 768 attrib values
                         pixel_map = ram7[byte_offset];
-                      }
+                    }
 
                     for (i = 0; i < 8; i++) // foreach pixel within a byte
                     {
@@ -254,10 +280,10 @@ void videoTask(void *unused) {
                             swap_flash(&zx_fore_color, &zx_back_color);
 
                         if ((pixel_map & bitpos) != 0)
-                            vga.dotFast(zx_vidcalc + 52, calc_y + 3, zx_fore_color);
+                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + BOR_H, zx_fore_color);
 
                         else
-                            vga.dotFast(zx_vidcalc + 52, calc_y + 3, zx_back_color);
+                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + BOR_H, zx_back_color);
                     }
                 }
             }

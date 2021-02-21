@@ -21,7 +21,7 @@ extern String cfg_wssid;
 extern String cfg_wpass;
 
 // Declared methods
-void IRAM_ATTR mount_spiffs();
+void IRAM_ATTR init_file_system();
 String getAllFilesFrom(const String path);
 void listAllFiles();
 File IRAM_ATTR open_read_file(String filename);

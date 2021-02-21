@@ -1,5 +1,7 @@
 # ZX-ESPectrum-Wiimote
 
+**(UPDATE 21/02/2021: added microSD card support, and 4:3 monitor aspect ratio)**
+
 An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
 
 There are per-game customizable (through simple text files) correspondences from Wiimote keys to Spectrum keys.
@@ -21,7 +23,7 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 - Tape save and loading.
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
-- Internal SPIFFS support.
+- Internal SPIFFS support / external SD card support (only one of both, see hardware.h)
 
 ## Work in progress
 
@@ -49,11 +51,33 @@ Change upload_port to whatever you're using.
 - Windows: `upload_port = COM1` or similar.
 - MacOSX: `upload_port = /dev/cu.SLAB_USBtoUART` or similar.
 
+#### Select your aspect ratio
+
+Default aspect ratio is 16:9, so if your monitor has this, you don't need to change anything.
+
+If your monitor is 4:3, you should edit hardware.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
+
 #### Upload the data filesystem
+
+If using internal flash storage (USE_INT_FLASH #defined in hardware.h), you must copy some files to internal storage using this procedure.
 
 `PlatformIO > Project Tasks > Upload File System Image`
 
-All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in SNA format).
+All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in SNA format, into the `/data/sna` subdirectory).
+
+#### Using a external micro SD Card and copying games into it
+
+**(NOTE: this feature has been tested only on a Lilygo TTGo VGA32 board, which has build-in uSD card slot. Pins from hardware.h are from that board, if using a regular ESP32 you must connect the SD card CS, CLK, MISO and MOSI signals to the ESP32 and update pins in hardware.h accordingly)**
+
+If using external micro sd card (USE_SD_CARD #defined in hardware.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
+
+The SD card should be formatted in FAT16 / FAT32.
+
+For adding games to the emulator, just turn it off, extract the sd card, copy games in .SNA format to the `/sna` folder of the sd card, insert it again, and turn it on.
+
+Important note: once you flash the firmware successfully with USE_SD_CARD defined, you won't be able to flash the firmware again, unless you remove the SD card. This is due to GPIO pin 2/12 used for SD card MISO/MOSI interfering with the boot/flashing process.
+
+What I do: before flashing (`PlatformIO > Project Tasks > Upload`), I remove the SD card until flashing starts, then I insert it again. For convenience I use a micro sd card extension strap which features a push to insert / push to remove mechanism, which comes in handy.
 
 #### Compile and flash it
 

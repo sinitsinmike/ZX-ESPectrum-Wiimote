@@ -3,8 +3,21 @@
 #include "Emulator/Keyboard/PS2Kbd.h"
 #include <Arduino.h>
 #include <string.h>
+#include <FS.h>
 
+#ifdef USE_INT_FLASH
+// using internal storage (spi flash)
 #include <SPIFFS.h>
+// set The Filesystem to SPIFFS
+#define THE_FS SPIFFS
+#endif
+
+#ifdef USE_SD_CARD
+// using external storage (SD card)
+#include <SD.h>
+// set The Filesystem to SD
+#define THE_FS SD
+#endif
 
 #include "ESP32Wiimote/ESP32Wiimote.h"
 static ESP32Wiimote wiimote;
@@ -173,7 +186,7 @@ void loadKeytableForGame(const char* sna_fn)
     txt_fn[fnlen-1] = 't';
 
     Serial.printf("Opening %s...\n", txt_fn);
-    File f = SPIFFS.open(txt_fn, FILE_READ);
+    File f = THE_FS.open(txt_fn, FILE_READ);
     vTaskDelay(2);
 
     if (NULL == f) {

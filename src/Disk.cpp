@@ -2,15 +2,32 @@
 #include "Emulator/Memory.h"
 #include "Emulator/z80main.h"
 #include "ZX-ESPectrum.h"
+#include "def/hardware.h"
 #include "def/ascii.h"
 #include "def/files.h"
 #include "def/msg.h"
 #include "def/types.h"
 #include "osd.h"
 #include <FS.h>
-#include <SPIFFS.h>
 #include "Wiimote2Keys.h"
 #include "sort.h"
+#include "Disk.h"
+
+#ifdef USE_INT_FLASH
+// using internal storage (spi flash)
+#include <SPIFFS.h>
+// set The Filesystem to SPIFFS
+#define THE_FS SPIFFS
+#endif
+
+#ifdef USE_SD_CARD
+// using external storage (SD card)
+#include <SD.h>
+#include <SPI.h>
+// set The Filesystem to SD
+#define THE_FS SD
+static SPIClass customSPI;
+#endif
 
 void errorHalt(String errormsg);
 void IRAM_ATTR kb_interruptHandler(void);
@@ -29,16 +46,52 @@ boolean cfg_wconn = false;
 String cfg_wssid = "none";
 String cfg_wpass = "none";
 
-void IRAM_ATTR mount_spiffs() {
+void IRAM_ATTR init_file_system() {
+#ifdef USE_INT_FLASH
+// using internal storage (spi flash)
+    Serial.println("Initializing internal storage...");
     if (!SPIFFS.begin())
-        errorHalt(ERR_MOUNT_FAIL);
+        errorHalt(ERR_FS_INT_FAIL);
 
     vTaskDelay(2);
+
+#endif
+#ifdef USE_SD_CARD
+// using external storage (SD card)
+
+    Serial.println("Initializing external storage...");
+
+    customSPI.begin(SDCARD_CLK, SDCARD_MISO, SDCARD_MOSI, SDCARD_CS);
+
+    if (!SD.begin(13, customSPI, 4000000, "/sd")) {
+        Serial.println("Card Mount Failed");
+        errorHalt(ERR_FS_EXT_FAIL);
+        return;
+    }
+    uint8_t cardType = SD.cardType();
+    
+    if (cardType == CARD_NONE) {
+        Serial.println("No SD card attached");
+        errorHalt(ERR_FS_EXT_FAIL);
+        return;
+    }
+    
+    Serial.print("SD Card Type: ");
+    if      (cardType == CARD_MMC)  Serial.println("MMC");
+    else if (cardType == CARD_SD )  Serial.println("SDSC");
+    else if (cardType == CARD_SDHC) Serial.println("SDHC");
+    else                            Serial.println("UNKNOWN");
+    
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    Serial.printf("SD Card Size: %lluMB\n", cardSize);
+
+    vTaskDelay(2);
+#endif
 }
 
 String getAllFilesFrom(const String path) {
     KB_INT_STOP;
-    File root = SPIFFS.open("/");
+    File root = THE_FS.open("/");
     File file = root.openNextFile();
     String listing;
 
@@ -57,7 +110,7 @@ String getAllFilesFrom(const String path) {
 
 void listAllFiles() {
     KB_INT_STOP;
-    File root = SPIFFS.open("/");
+    File root = THE_FS.open("/");
     Serial.println("fs opened");
     File file = root.openNextFile();
     Serial.println("fs openednextfile");
@@ -77,11 +130,11 @@ File open_read_file(String filename) {
     filename.trim();
     if (cfg_slog_on)
         Serial.printf("%s '%s'\n", MSG_LOADING, filename.c_str());
-    if (!SPIFFS.exists(filename.c_str())) {
+    if (!THE_FS.exists(filename.c_str())) {
         KB_INT_START;
         errorHalt((String)ERR_READ_FILE + "\n" + filename);
     }
-    f = SPIFFS.open(filename.c_str(), FILE_READ);
+    f = THE_FS.open(filename.c_str(), FILE_READ);
     vTaskDelay(2);
 
     return f;
@@ -99,7 +152,8 @@ void load_ram(String sna_file) {
 
     KB_INT_STOP;
 
-    loadKeytableForGame(sna_file.c_str());
+    if (sna_file != DISK_PSNA_FILE)
+        loadKeytableForGame(sna_file.c_str());
 
     lhandle = open_read_file(sna_file);
     sna_size = lhandle.size();
@@ -240,7 +294,7 @@ String getFileEntriesFromDir(String path) {
     KB_INT_STOP;
     Serial.printf("Getting entries from: '%s'\n", path.c_str());
     String filelist;
-    File root = SPIFFS.open(path.c_str());
+    File root = THE_FS.open(path.c_str());
     if (!root || !root.isDirectory()) {
         errorHalt((String)ERR_DIR_OPEN + "\n" + root);
     }
@@ -431,7 +485,7 @@ void config_read() {
 void config_save() {
     KB_INT_STOP;
     Serial.printf("Saving config file '%s':\n", DISK_BOOT_FILENAME);
-    File f = SPIFFS.open(DISK_BOOT_FILENAME, FILE_WRITE);
+    File f = THE_FS.open(DISK_BOOT_FILENAME, FILE_WRITE);
     // Architecture
     Serial.printf("  + arch:%s\n", cfg_arch.c_str());
     f.printf("arch:%s\n", cfg_arch.c_str());
@@ -465,3 +519,4 @@ void config_save() {
     KB_INT_START;
     config_read();
 }
+
