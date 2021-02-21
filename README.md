@@ -6,6 +6,8 @@ An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
 Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
 
+Please watch the [project video on YouTube](https://youtu.be/GXHBrQVTfBw) (spanish audio, english subtitles).
+
 Quick start from PlatformIO:
 - Clone this repo and Open from VSCode/PlatFormIO
 - Copy your SNA files to /data/sna
