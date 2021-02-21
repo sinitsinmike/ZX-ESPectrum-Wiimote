@@ -1,5 +1,7 @@
 # ZX-ESPectrum-Wiimote
 
+**(UPDATE 21/02/2021: added microSD card support, and 4:3 monitor aspect ratio)**
+
 An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
 Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
