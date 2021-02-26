@@ -30,6 +30,7 @@ Quick start from PlatformIO:
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
 - Internal SPIFFS support / external SD card support (only one of both, see config.h).
+- Original Spectrum Keyboard support, using 8 + 5 contacts ribbon connectors connected to 13 ESP pins.
 
 ## Work in progress
 
