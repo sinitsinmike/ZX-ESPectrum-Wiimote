@@ -17,7 +17,7 @@ Quick start from PlatformIO:
 
 ## Features
 
-- VGA output, 8 or 16 bits.
+- VGA output, 3 bit (default), 6 bit, 14 bit.
 - Beeper digital output.
 - Accurate Z80 emulation.
 - Spectrum 16/48 architecture emulation without PSRAM.
@@ -29,7 +29,7 @@ Quick start from PlatformIO:
 - Tape save and loading.
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
-- Internal SPIFFS support / external SD card support (only one of both, see hardware.h)
+- Internal SPIFFS support / external SD card support (only one of both, see config.h).
 
 ## Work in progress
 
@@ -61,11 +61,11 @@ Change upload_port to whatever you're using.
 
 Default aspect ratio is 16:9, so if your monitor has this, you don't need to change anything.
 
-If your monitor is 4:3, you should edit hardware.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
+If your monitor is 4:3, you should edit config.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
 
 #### Upload the data filesystem
 
-If using internal flash storage (USE_INT_FLASH #defined in hardware.h), you must copy some files to internal storage using this procedure.
+If using internal flash storage (USE_INT_FLASH #defined in config.h), you must copy some files to internal storage using this procedure.
 
 `PlatformIO > Project Tasks > Upload File System Image`
 
@@ -73,7 +73,7 @@ All files under the `/data` subdirectory will be copied to the SPIFFS filesystem
 
 #### Using a external micro SD Card and copying games into it
 
-If using external micro sd card (USE_SD_CARD #defined in hardware.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
+If using external micro sd card (USE_SD_CARD #defined in config.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
 
 The SD card should be formatted in FAT16 / FAT32.
 
@@ -93,7 +93,7 @@ Run these tasks (`Upload` also does a `Build`) whenever you make any change in t
 
 ## Hardware configuration and pinout
 
-Pin assignment in `include/def/hardware.h` is set to match the TTGo VGaor change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
+Pin assignment in `include/def/hardware.h` is set to match the TTGo VGA32, use it as-is, or change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
 
 I have used VGA 6 bit driver (so BRIGHT attribute is kept)
 
@@ -159,6 +159,7 @@ I have NOT included Manic Miner `.sna` snapshot, but you can download it from [w
 - Gary Lancaster for the [+3e ROM](http://www.worldofspectrum.org/zxplus3e/).
 - [Retroleum](http://blog.retroleum.co.uk/electronics-articles/a-diagnostic-rom-image-for-the-zx-spectrum/) for the diagnostics ROM.
 - Emil Vikström for his [ArduinoSort](https://github.com/emilv/ArduinoSort) library.
+- [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
 
 ## And all the involved people from the golden age
 

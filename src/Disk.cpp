@@ -23,7 +23,6 @@
 #ifdef USE_SD_CARD
 // using external storage (SD card)
 #include <SD.h>
-#include <SPI.h>
 // set The Filesystem to SD
 #define THE_FS SD
 static SPIClass customSPI;

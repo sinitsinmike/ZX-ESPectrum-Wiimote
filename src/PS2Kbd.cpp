@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "MartianVGA.h"
 #include "ZX-ESPectrum.h"
 #include "def/hardware.h"
@@ -12,6 +14,8 @@ boolean symbol_pressed = false;
 byte rc = 0;
 
 // #define DEBUG_LOG_KEYSTROKES 1
+
+#ifdef PS2_KEYB_PRESENT
 
 void IRAM_ATTR kb_interruptHandler(void) {
     static uint8_t bitcount = 0;
@@ -66,15 +70,14 @@ void IRAM_ATTR kb_interruptHandler(void) {
     }
 }
 
-#define FIX_PERIBOARD_NOT_INITING
-#ifdef  FIX_PERIBOARD_NOT_INITING
+#ifdef  PS2_KEYB_FORCE_INIT
 #include "PS2Boot/PS2KeyAdvanced.h"
 PS2KeyAdvanced ps2boot;
 #endif
 
 void kb_begin()
 {
-#ifdef  FIX_PERIBOARD_NOT_INITING
+#ifdef  PS2_KEYB_FORCE_INIT
     // Configure the keyboard library
     ps2boot.begin( KEYBOARD_DATA, KEYBOARD_CLK );
     ps2boot.echo( );              // ping keyboard to see if there
@@ -94,6 +97,16 @@ void kb_begin()
     memset(oldKeymap, 1, sizeof(oldKeymap));
 }
 
+#else // ! PS2_KEYB_PRESENT
+
+void kb_begin()
+{
+    memset(keymap, 1, sizeof(keymap));
+    memset(oldKeymap, 1, sizeof(oldKeymap));
+}
+
+#endif // PS2_KEYB_PRESENT
+
 // Check if keymatrix is changed
 boolean isKeymapChanged() { return (keymap != oldKeymap); }
 
@@ -110,3 +123,4 @@ void emulateKeyChange(uint8_t scancode, uint8_t isdown)
 {
     keymap[scancode] = isdown ? 0 : 1;
 }
+

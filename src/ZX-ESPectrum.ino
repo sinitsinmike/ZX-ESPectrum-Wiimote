@@ -1,9 +1,8 @@
 // -------------------------------------------------------------------
 //  ESPectrum Emulator
-//  Ramón Martínez & Jorge fuertes 2019
-//  Though from ESP32 Spectrum Emulator (KOGEL esp32) Pete Todd 2017
-//  You are not allowed to distribute this software commercially
-//  lease, notify me, if you make any changes to this file
+//  Ramón Martínez & Jorge Fuertes 2019
+//  David Crespo 2020
+//  Adapted from ESP32 Spectrum Emulator (KOGEL esp32) Pete Todd 2017
 // -------------------------------------------------------------------
 
 #include "Emulator/Keyboard/PS2Kbd.h"
@@ -97,10 +96,13 @@ VGA14Bit vga;
 #endif
 
 
-void setup() {
-    // DO NOT turn off peripherals to recover some memory
-    // esp_bt_controller_deinit();
-    // esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+void setup()
+{
+#ifndef WIIMOTE_PRESENT
+    // if no wiimote, turn off peripherals to recover some memory
+    esp_bt_controller_deinit();
+    esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+#endif
 
     Serial.begin(115200);
 
@@ -168,11 +170,17 @@ void setup() {
 
     vga.clear(0);
 
+#ifdef SPEAKER_PRESENT
     pinMode(SPEAKER_PIN, OUTPUT);
-    pinMode(EAR_PIN, INPUT);
-    pinMode(MIC_PIN, OUTPUT);
     digitalWrite(SPEAKER_PIN, LOW);
+#endif
+#ifdef EAR_PRESENT
+    pinMode(EAR_PIN, INPUT);
+#endif
+#ifdef MIC_PRESENT
+    pinMode(MIC_PIN, OUTPUT);
     digitalWrite(MIC_PIN, LOW);
+#endif
 
     kb_begin();
 
@@ -200,6 +208,19 @@ void setup() {
         load_ram("/sna/" + cfg_ram_file);
     }
 
+#ifdef ZX_KEYB_PRESENT
+    Serial.println("Configuring ZX keyboard pins...");
+    // CONFIGURACION PINES TECLADO FISICO:
+    const int psKR[] = {AD8, AD9, AD10, AD11, AD12, AD13, AD14, AD15};
+    const int psKC[] = {DB0, DB1, DB2, DB3, DB4};
+    for (int t = 0; t < 8; t++) {
+        pinMode(psKR[t], OUTPUT_OPEN_DRAIN);
+    }
+    for (int t = 0; t < 5; t++) {
+        pinMode(psKC[t], INPUT);
+    }
+#endif // ZX_KEYB_PRESENT
+
     Serial.println("End of setup");
 }
 
@@ -209,21 +230,19 @@ void setup() {
 #define SPEC_H 192
 
 #ifdef AR_16_9
-#define SCR_W 360
-#define SCR_H 200
 #define BOR_W 20
-#define BOR_H 3
+#define BOR_H 4
 #define OFF_X 32
+#define OFF_Y 0
 // if you can't center the image in your screen,
 // change OFF_X for software centering (0 < OFF_X < 64)
 #endif
 
 #ifdef AR_4_3
-#define SCR_W 320
-#define SCR_H 240
-#define BOR_W 32
-#define BOR_H 23
-#define OFF_X 0
+#define BOR_W 20
+#define BOR_H 4
+#define OFF_X 12
+#define OFF_Y 20
 #endif
 
 
@@ -243,17 +262,18 @@ void videoTask(void *unused) {
         if ((int)param == 1)
             break;
 
-        for (unsigned int vga_lin = 0; vga_lin < SCR_H; vga_lin++) {
+        for (unsigned int vga_lin = 0; vga_lin < BOR_H+SPEC_H+BOR_H; vga_lin++) {
             // tick = 0;
             if (vga_lin < BOR_H || vga_lin >= BOR_H + SPEC_H) {
 
                 for (int bor = OFF_X; bor < OFF_X+BOR_W+SPEC_W+BOR_W; bor++)
-                    vga.dotFast(bor, vga_lin, zxcolor(borderTemp, 0));
-            } else {
-
+                    vga.dotFast(bor, vga_lin+OFF_Y, zxcolor(borderTemp, 0));
+            }
+            else
+            {
                 for (int bor = OFF_X; bor < OFF_X+BOR_W; bor++) {
-                    vga.dotFast(bor, vga_lin, zxcolor(borderTemp, 0));
-                    vga.dotFast(bor + SPEC_W+BOR_W, vga_lin, zxcolor(borderTemp, 0));
+                    vga.dotFast(bor, vga_lin+OFF_Y, zxcolor(borderTemp, 0));
+                    vga.dotFast(bor + SPEC_W+BOR_W, vga_lin+OFF_Y, zxcolor(borderTemp, 0));
                 }
 
                 for (ff = 0; ff < 32; ff++) // foreach byte in line
@@ -265,11 +285,12 @@ void videoTask(void *unused) {
                     {
                        color_attrib = readbyte(0x5800 + (calc_y / 8) * 32 + ff); // get 1 of 768 attrib values
                        pixel_map = readbyte(byte_offset + 0x4000);
-                     } else
-                      {
+                    }
+                    else
+                    {
                         color_attrib = ram7[0x1800 + (calc_y / 8) * 32 + ff]; // get 1 of 768 attrib values
                         pixel_map = ram7[byte_offset];
-                      }
+                    }
 
                     for (i = 0; i < 8; i++) // foreach pixel within a byte
                     {
@@ -285,10 +306,10 @@ void videoTask(void *unused) {
                             swap_flash(&zx_fore_color, &zx_back_color);
 
                         if ((pixel_map & bitpos) != 0)
-                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + BOR_H, zx_fore_color);
+                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + OFF_Y+BOR_H, zx_fore_color);
 
                         else
-                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + BOR_H, zx_back_color);
+                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + OFF_Y+BOR_H, zx_back_color);
                     }
                 }
             }
@@ -322,50 +343,14 @@ int calcY(int offset) {
 /* Calculate X coordinate (0-255) from Spectrum screen memory location */
 int calcX(int offset) { return (offset % 32) << 3; }
 
+static word vga_colors[16] = {
+    BLACK,     BLUE,     RED,     MAGENTA,     GREEN,     CYAN,     YELLOW,     WHITE,
+    BRI_BLACK, BRI_BLUE, BRI_RED, BRI_MAGENTA, BRI_GREEN, BRI_CYAN, BRI_YELLOW, BRI_WHITE,
+};
+
 unsigned int zxcolor(int c, int bright) {
-    word vga_color;
-
-#ifdef COLOR_3B
-    switch (c) {
-        case 0: vga_color = BLACK;   break;
-        case 1: vga_color = BLUE;    break;
-        case 2: vga_color = RED;     break;
-        case 3: vga_color = MAGENTA; break;
-        case 4: vga_color = GREEN;   break;
-        case 5: vga_color = CYAN;    break;
-        case 6: vga_color = YELLOW;  break;
-        case 7: vga_color = WHITE;   break;
-    }
-#else
-    if (bright && c != 0)
-    {
-        switch (c) {
-            case 0: vga_color = BRI_BLACK;   break;
-            case 1: vga_color = BRI_BLUE;    break;
-            case 2: vga_color = BRI_RED;     break;
-            case 3: vga_color = BRI_MAGENTA; break;
-            case 4: vga_color = BRI_GREEN;   break;
-            case 5: vga_color = BRI_CYAN;    break;
-            case 6: vga_color = BRI_YELLOW;  break;
-            case 7: vga_color = BRI_WHITE;   break;
-        }
-    }
-    else
-    {
-        switch (c) {
-            case 0: vga_color = BLACK;   break;
-            case 1: vga_color = BLUE;    break;
-            case 2: vga_color = RED;     break;
-            case 3: vga_color = MAGENTA; break;
-            case 4: vga_color = GREEN;   break;
-            case 5: vga_color = CYAN;    break;
-            case 6: vga_color = YELLOW;  break;
-            case 7: vga_color = WHITE;   break;
-        }
-    }
-#endif
-
-    return vga_color;
+    if (bright) c += 8;
+    return vga_colors[c];
 }
 
 /* Load zx keyboard lines from PS/2 */

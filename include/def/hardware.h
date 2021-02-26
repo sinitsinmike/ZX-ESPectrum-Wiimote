@@ -1,29 +1,43 @@
 #ifndef ESPectrum_hardware_h
 #define ESPectrum_hardware_h
 
-// adjusted for Lilygo TTGO
-#define SPEAKER_PIN 25
-#define EAR_PIN 34
-#define MIC_PIN 0
+#include "config.h"
 
+// adjusted for Lilygo TTGO
+#ifdef SPEAKER_PRESENT
+#define SPEAKER_PIN 25
+#endif // SPEAKER_PRESENT
+
+#ifdef EAR_PRESENT
+#define EAR_PIN 16
+#endif // EAR_PRESENT
+
+#ifdef MIC_PRESENT
+#define MIC_PIN 17
+#endif // MIC_PRESENT
+
+#ifdef PS2_KEYB_PRESENT
 // adjusted for Lilygo TTGO
 #define KEYBOARD_DATA 32
 #define KEYBOARD_CLK 33
+#endif // PS2_KEYB_PRESENT
 
-/////////////////////////////////////////////////
-// Storage mode
-/////////////////////////////////////////////////
-// define ONLY one of these
-// USE_INT_FLASH for internal flash storage
-// USE_SD_CARD for external SD card
+#ifdef ZX_KEYB_PRESENT
+#define AD8 12
+#define AD9 26
+#define AD10 25
+#define AD11 33
+#define AD12 27
+#define AD13 14
+#define AD14 0
+#define AD15 13
 
-#define USE_INT_FLASH 1
-//#define USE_SD_CARD 1
-
-// check: only one must be defined
-#if defined(USE_INT_FLASH) && defined(USE_SD_CARD)
-#error "Only one of (USE_INT_FLASH, USE_SD_CARD) must be defined"
-#endif
+#define DB0 36
+#define DB1 39
+#define DB2 34
+#define DB3 35
+#define DB4 32
+#endif // ZX_KEYB_PRESENT
 
 // Storage mode: pins for external SD card
 #ifdef USE_SD_CARD
@@ -34,60 +48,28 @@
 #define SDCARD_CLK 14
 #endif
 
-/////////////////////////////////////////////////
-// Screen aspect ratio (16/9 or 4/3)
-/////////////////////////////////////////////////
-// define ONLY one of these
-// AR_16_9
-// AR_4_3
-
-#define AR_16_9
-//#define AR_4_3
-
-// check: only one must be defined
-#if (defined(AR_16_9) && defined(AR_4_3))
-#error "Only one of (AR_16_9, AR_4_3) must be defined"
-#endif
-
-
-/////////////////////////////////////////////////
-// Color mode
-/////////////////////////////////////////////////
-// define ONLY one of these
-// COLOR_3B for -----BGR
-// COLOR_6B for --BBGGRR
-// COLOR_14B for --BBBBGG GGGRRRRR
-
-// #define COLOR_3B
-#define COLOR_6B
-// #define COLOR_14B
-
-// check: only one must be defined
-#if (defined(COLOR_3B) && defined(COLOR_6B)) || (defined(COLOR_6B) && defined(COLOR_14B)) || defined(COLOR_14B) && defined(COLOR_3B)
-#error "Only one of (COLOR_3B, COLOR_6B, COLOR_14B) must be defined"
-#endif
-
-
-/////////////////////////////////////////////////
 // 3 bit pins
-#define RED_PIN_3B 22
-#define GRE_PIN_3B 19
-#define BLU_PIN_3B 5
+#ifdef COLOR_3B
+#define RED_PIN_3B 13
+#define GRE_PIN_3B 12
+#define BLU_PIN_3B 14
+#endif // COLOR_3B
 
-/////////////////////////////////////////////////
 // 6 bit pins
+#ifdef COLOR_6B
 // adjusted for Lilygo TTGO
 #define RED_PINS_6B 21, 22
 #define GRE_PINS_6B 18, 19
 #define BLU_PINS_6B  4,  5
+#endif // COLOR_6B
 
-/////////////////////////////////////////////////
 // 14 bit pins
+#ifdef COLOR_14B
 #define RED_PINS_14B 21, 21, 21, 21, 22
 #define GRE_PINS_14B 18, 18, 18, 18, 19
 #define BLU_PINS_14B      4,  4,  4,  5
+#endif // COLOR_14B
 
-/////////////////////////////////////////////////
 // VGA sync pins
 #define HSYNC_PIN 23
 #define VSYNC_PIN 15
@@ -95,14 +77,23 @@
 /////////////////////////////////////////////////
 // Colors for 3 bit mode
 #ifdef COLOR_3B           //       BGR 
-#define BLACK   0x08      // 0000 1000
-#define BLUE    0x0C      // 0000 1100
-#define RED     0x09      // 0000 1001
-#define MAGENTA 0x0D      // 0000 1101
-#define GREEN   0x0A      // 0000 1010
-#define CYAN    0x0E      // 0000 1110
-#define YELLOW  0x0B      // 0000 1011
-#define WHITE   0x0F      // 0000 1111
+#define BLACK       0x08      // 0000 1000
+#define BLUE        0x0C      // 0000 1100
+#define RED         0x09      // 0000 1001
+#define MAGENTA     0x0D      // 0000 1101
+#define GREEN       0x0A      // 0000 1010
+#define CYAN        0x0E      // 0000 1110
+#define YELLOW      0x0B      // 0000 1011
+#define WHITE       0x0F      // 0000 1111
+
+#define BRI_BLACK   0x08      // 0000 1000
+#define BRI_BLUE    0x0C      // 0000 1100
+#define BRI_RED     0x09      // 0000 1001
+#define BRI_MAGENTA 0x0D      // 0000 1101
+#define BRI_GREEN   0x0A      // 0000 1010
+#define BRI_CYAN    0x0E      // 0000 1110
+#define BRI_YELLOW  0x0B      // 0000 1011
+#define BRI_WHITE   0x0F      // 0000 1111
 #endif
 
 /////////////////////////////////////////////////

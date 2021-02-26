@@ -1,3 +1,4 @@
+#include "def/config.h"
 #include "Wiimote2Keys.h"
 
 #include "Emulator/Keyboard/PS2Kbd.h"
@@ -85,14 +86,6 @@ W2KPROC w2kproc = NULL;
 
 static void w2kproc_osd(uint16_t button);
 static void w2kproc_spectrum(uint16_t button);
-
-void initWiimote2Keys()
-{
-    wiimote.init();
-
-    w2kproc = &w2kproc_spectrum;
-    //w2kproc = &w2kproc_osd;
-}
 
 static uint8_t keytable[] = {
     ZX_KEY_NOKEY,   // 0001 (2)
@@ -203,36 +196,6 @@ void loadKeytableForGame(const char* sna_fn)
     f.close();
 }
 
-void updateWiimote2Keys()
-{
-    // no kempston
-    z80ports_wiin[0x1f] = 0;
-
-    wiimote.task();
-    if (wiimote.available() > 0) {
-        uint16_t button = wiimote.getButtonState();
-
-        if (logWiimoteEvents) Serial.printf("Wiimote button mask: %04X\n", button);
-
-        w2kproc_spectrum(button);
-    
-        if (button & 0x0080)
-            emulateKeyChange(KEY_F1, 1);    }
-}
-
-void updateWiimote2KeysOSD()
-{
-    vTaskDelay(1);
-    wiimote.task();
-    if (wiimote.available() > 0) {
-        uint16_t button = wiimote.getButtonState();
-
-        if (logWiimoteEvents) Serial.printf("Wiimote button mask: %04X\n", button);
-
-        w2kproc_osd(button);
-    }
-}
-
 void w2kproc_osd(uint16_t button)
 {
     uint8_t padl = button & 0x0100 ? 1 : 0;
@@ -275,4 +238,49 @@ void w2kproc_spectrum(uint16_t button)
         mask <<= 1;
     }
 }
+
+void initWiimote2Keys()
+{
+#ifdef WIIMOTE_PRESENT
+    wiimote.init();
+
+    w2kproc = &w2kproc_spectrum;
+#endif // WIIMOTE_PRESENT
+}
+
+void updateWiimote2Keys()
+{
+#ifdef WIIMOTE_PRESENT
+    // no kempston
+    z80ports_wiin[0x1f] = 0;
+
+    wiimote.task();
+    if (wiimote.available() > 0) {
+        uint16_t button = wiimote.getButtonState();
+
+        if (logWiimoteEvents) Serial.printf("Wiimote button mask: %04X\n", button);
+
+        w2kproc_spectrum(button);
+    
+        if (button & 0x0080)
+            emulateKeyChange(KEY_F1, 1);    }
+#endif // WIIMOTE_PRESENT
+}
+
+void updateWiimote2KeysOSD()
+{
+#ifdef WIIMOTE_PRESENT
+    vTaskDelay(1);
+    wiimote.task();
+    if (wiimote.available() > 0) {
+        uint16_t button = wiimote.getButtonState();
+
+        if (logWiimoteEvents) Serial.printf("Wiimote button mask: %04X\n", button);
+
+        w2kproc_osd(button);
+    }
+#endif // WIIMOTE_PRESENT
+}
+
+
 
