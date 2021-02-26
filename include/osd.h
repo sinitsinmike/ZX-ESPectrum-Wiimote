@@ -1,13 +1,23 @@
 // OSD Headers
 #include <Arduino.h>
+#include "def/config.h"
 
 // Defines
 #define MENU_REDRAW true
 #define MENU_UPDATE false
 #define OSD_ERROR true
 #define OSD_NORMAL false
+
+#ifdef AR_16_9
 #define SCR_W 360
 #define SCR_H 200
+#endif
+
+#ifdef AR_4_3
+#define SCR_W 320
+#define SCR_H 240
+#endif
+
 #define OSD_W 248
 #define OSD_H 152
 #define OSD_MARGIN 4
