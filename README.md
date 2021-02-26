@@ -73,7 +73,7 @@ All files under the `/data` subdirectory will be copied to the SPIFFS filesystem
 
 #### Using a external micro SD Card and copying games into it
 
-If using external micro sd card (USE_SD_CARD #defined in config.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
+If using external micro sd card (USE_SD_CARD #defined in config.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself).
 
 The SD card should be formatted in FAT16 / FAT32.
 
@@ -102,6 +102,10 @@ I have used VGA 6 bit driver (so BRIGHT attribute is kept)
 To connect, press 1 and 2 buttons in the Wiimote.
 
 All 4 leds will flash during connection phase, and only LED 1 will be ON when connected.
+
+Important note: wiimote suport is NOT enabled by default on the TTGO. I have experienced slowness at least once when developing, but seems to have gone forever. It may happen when the option is enabled, but a Wiimote has never been paired. I'm not completely sure, your mileage may vary.
+
+You can enable wiimote support uncommenting `#define WIIMOTE_PRESENT` in config.h
 
 ## OSD Menu
 
