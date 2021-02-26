@@ -183,20 +183,56 @@ extern "C" void writeword(uint16_t addr, uint16_t data) {
     writebyte(addr + 1, (uint8_t)(data >> 8));
 }
 
-extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh) {
-    int16_t kbdarrno = 0;
-    // delay(2);
-    // Serial.print ("IN ");
+#ifdef ZX_KEYB_PRESENT
+const int psKR[] = {AD8, AD9, AD10, AD11, AD12, AD13, AD14, AD15};
+const int psKC[] = {DB0, DB1, DB2, DB3, DB4};
+extern "C" void detectZXKeyCombinationForMenu()
+{
+    uint8_t portHigh;
+
+    // try to detect caps shift - column 0xFE, bit 0
+    portHigh = 0xFE;
+    for (int b = 0; b < 8; b++)
+        digitalWrite(psKR[b], ((portHigh >> b) & 0x1) ? HIGH : LOW);
+    //delay(2);
+    if (0 != digitalRead(DB0))
+    return;
+
+    // try to detect symbol shift - column 0x7F, bit 1
+    portHigh = 0x7F;
+    for (int b = 0; b < 8; b++)
+        digitalWrite(psKR[b], ((portHigh >> b) & 0x1) ? HIGH : LOW);
+    //delay(2);
+    if (0 != digitalRead(DB1))
+    return;
+
+    // try to detect enter - column 0xBF, bit 0
+    portHigh = 0xBF;
+    for (int b = 0; b < 8; b++)
+        digitalWrite(psKR[b], ((portHigh >> b) & 0x1) ? HIGH : LOW);
+    //delay(2);
+    if (0 != digitalRead(DB0))
+    return;
+
+    emulateKeyChange(KEY_F1, 1);
+}
+#endif // ZX_KEYB_PRESENT
+
+extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
+{
     if (portLow == 0xFE) {
+        uint8_t result = 0xFF;
 
         // EAR_PIN
         if (portHigh == 0xFE) {
-            bitWrite(z80ports_in  [0], 6, digitalRead(EAR_PIN));
-            bitWrite(z80ports_wiin[0], 6, digitalRead(EAR_PIN));
+#ifdef EAR_PRESENT
+            //bitWrite(z80ports_in  [0], 6, digitalRead(EAR_PIN));
+            //bitWrite(z80ports_wiin[0], 6, digitalRead(EAR_PIN));
+            bitWrite(result, 6, digitalRead(EAR_PIN));
+#endif
         }
 
         // Keyboard
-        uint8_t result = 0xFF;
         if (~(portHigh | 0xFE)&0xFF) result &= (z80ports_in[0] & z80ports_wiin[0]);
         if (~(portHigh | 0xFD)&0xFF) result &= (z80ports_in[1] & z80ports_wiin[1]);
         if (~(portHigh | 0xFB)&0xFF) result &= (z80ports_in[2] & z80ports_wiin[2]);
@@ -205,6 +241,27 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh) {
         if (~(portHigh | 0xDF)&0xFF) result &= (z80ports_in[5] & z80ports_wiin[5]);
         if (~(portHigh | 0xBF)&0xFF) result &= (z80ports_in[6] & z80ports_wiin[6]);
         if (~(portHigh | 0x7F)&0xFF) result &= (z80ports_in[7] & z80ports_wiin[7]);
+
+#ifdef ZX_KEYB_PRESENT
+        detectZXKeyCombinationForMenu();
+        
+        uint8_t zxkbres = 0xFF;
+        // output high part of address bus through pins for physical keyboard rows
+        for (int b = 0; b < 8; b++) {
+            digitalWrite(psKR[b], ((portHigh >> b) & 0x1) ? HIGH : LOW);
+        }
+        // delay for letting the value to build up
+        // delay(2);
+        // read keyboard rows
+        bitWrite(zxkbres, 0, digitalRead(DB0));
+        bitWrite(zxkbres, 1, digitalRead(DB1));
+        bitWrite(zxkbres, 2, digitalRead(DB2));
+        bitWrite(zxkbres, 3, digitalRead(DB3));
+        bitWrite(zxkbres, 4, digitalRead(DB4));
+        // combine physical keyboard value read
+        result &= zxkbres;
+#endif // ZX_KEYB_PRESENT
+
         return result;
     }
     // Kempston
@@ -242,9 +299,13 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         bitWrite(borderTemp, 1, bitRead(data, 1));
         bitWrite(borderTemp, 2, bitRead(data, 2));
 
+#ifdef SPEAKER_PRESENT
         digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
+#endif
 
+#ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
+#endif
 
         z80ports_in[0x20] = data;
     } break;

@@ -15,15 +15,16 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 - VGA output, 3 bit (default), 6 bit, 14 bit.
 - Beeper digital output.
 - Accurate Z80 emulation.
-- Spectrum 16/48 achitecture emulation without PSRAM.
+- Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
 - PS/2 Keyboard.
 - Wiimote support with per-game key assignments.
 - VGA OSD menu: Configuration, architecture, ROM and SNA selection.
+- Support for two aspect ratios: 16:9 or 4:3 monitors (using 360x200 or 320x240 modes)
 - Tape save and loading.
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
-- Internal SPIFFS support / external SD card support (only one of both, see hardware.h)
+- Internal SPIFFS support / external SD card support (only one of both, see config.h).
 
 ## Work in progress
 
@@ -55,11 +56,11 @@ Change upload_port to whatever you're using.
 
 Default aspect ratio is 16:9, so if your monitor has this, you don't need to change anything.
 
-If your monitor is 4:3, you should edit hardware.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
+If your monitor is 4:3, you should edit config.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
 
 #### Upload the data filesystem
 
-If using internal flash storage (USE_INT_FLASH #defined in hardware.h), you must copy some files to internal storage using this procedure.
+If using internal flash storage (USE_INT_FLASH #defined in config.h), you must copy some files to internal storage using this procedure.
 
 `PlatformIO > Project Tasks > Upload File System Image`
 
@@ -69,7 +70,7 @@ All files under the `/data` subdirectory will be copied to the SPIFFS filesystem
 
 **(NOTE: this feature has been tested only on a Lilygo TTGo VGA32 board, which has build-in uSD card slot. Pins from hardware.h are from that board, if using a regular ESP32 you must connect the SD card CS, CLK, MISO and MOSI signals to the ESP32 and update pins in hardware.h accordingly)**
 
-If using external micro sd card (USE_SD_CARD #defined in hardware.h), you must copy files from the `/data` subdirectory to the root of the sd card. 
+If using external micro sd card (USE_SD_CARD #defined in config.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself).
 
 The SD card should be formatted in FAT16 / FAT32.
 
@@ -157,6 +158,7 @@ I have NOT included Manic Miner `.sna` snapshot, but you can download it from [w
 - Gary Lancaster for the [+3e ROM](http://www.worldofspectrum.org/zxplus3e/).
 - [Retroleum](http://blog.retroleum.co.uk/electronics-articles/a-diagnostic-rom-image-for-the-zx-spectrum/) for the diagnostics ROM.
 - Emil Vikström for his [ArduinoSort](https://github.com/emilv/ArduinoSort) library.
+- [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
 
 ## And all the involved people from the golden age
 

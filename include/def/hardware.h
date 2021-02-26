@@ -1,41 +1,41 @@
 #ifndef ESPectrum_hardware_h
 #define ESPectrum_hardware_h
 
-#define SPEAKER_PIN 27
-#define EAR_PIN 34
-#define MIC_PIN 0
+#include "config.h"
 
+#ifdef SPEAKER_PRESENT
+#define SPEAKER_PIN 27
+#endif // SPEAKER_PRESENT
+
+#ifdef EAR_PRESENT
+#define EAR_PIN 16
+#endif // EAR_PRESENT
+
+#ifdef MIC_PRESENT
+#define MIC_PIN 17
+#endif // MIC_PRESENT
+
+#ifdef PS2_KEYB_PRESENT
 #define KEYBOARD_DATA 25
 #define KEYBOARD_CLK 26
+#endif // PS2_KEYB_PRESENT
 
-#define COLOR_3B
-// #define COLOR_6B
-// #define COLOR_14B
+#ifdef ZX_KEYB_PRESENT
+#define AD8 12
+#define AD9 26
+#define AD10 25
+#define AD11 33
+#define AD12 27
+#define AD13 14
+#define AD14 0
+#define AD15 13
 
-/////////////////////////////////////////////////
-//
-// Screen aspect ratio (16/9 or 4/3)
-//
-// define ONLY one of these
-// AR_16_9
-// AR_4_3
-
-#define AR_16_9
-//#define AR_4_3
-/////////////////////////////////////////////////
-
-/////////////////////////////////////////////////
-// 
-// Storage mode
-//
-/////////////////////////////////////////////////
-// define ONLY one of these
-// USE_INT_FLASH for internal flash storage
-// USE_SD_CARD for external SD card
-
-#define USE_INT_FLASH 1
-//#define USE_SD_CARD 1
-///////////////////////////////////////////////////////////////////////////////
+#define DB0 36
+#define DB1 39
+#define DB2 34
+#define DB3 35
+#define DB4 32
+#endif // ZX_KEYB_PRESENT
 
 // Storage mode: pins for external SD card
 #ifdef USE_SD_CARD
@@ -47,19 +47,26 @@
 #endif
 
 // 3 bit pins
+#ifdef COLOR_3B
 #define RED_PIN_3B 13
 #define GRE_PIN_3B 12
 #define BLU_PIN_3B 14
+#endif // COLOR_3B
 
 // 6 bit pins
+#ifdef COLOR_6B
+// adjusted for Lilygo TTGO
 #define RED_PINS_6B 21, 22
 #define GRE_PINS_6B 18, 19
 #define BLU_PINS_6B  4,  5
+#endif // COLOR_6B
 
 // 14 bit pins
+#ifdef COLOR_14B
 #define RED_PINS_14B 21, 21, 21, 21, 22
 #define GRE_PINS_14B 18, 18, 18, 18, 19
 #define BLU_PINS_14B      4,  4,  4,  5
+#endif // COLOR_14B
 
 // VGA sync pins
 #define HSYNC_PIN 32
@@ -68,14 +75,23 @@
 /////////////////////////////////////////////////
 // Colors for 3 bit mode
 #ifdef COLOR_3B           //       BGR 
-#define BLACK   0x08      // 0000 1000
-#define BLUE    0x0C      // 0000 1100
-#define RED     0x09      // 0000 1001
-#define MAGENTA 0x0D      // 0000 1101
-#define GREEN   0x0A      // 0000 1010
-#define CYAN    0x0E      // 0000 1110
-#define YELLOW  0x0B      // 0000 1011
-#define WHITE   0x0F      // 0000 1111
+#define BLACK       0x08      // 0000 1000
+#define BLUE        0x0C      // 0000 1100
+#define RED         0x09      // 0000 1001
+#define MAGENTA     0x0D      // 0000 1101
+#define GREEN       0x0A      // 0000 1010
+#define CYAN        0x0E      // 0000 1110
+#define YELLOW      0x0B      // 0000 1011
+#define WHITE       0x0F      // 0000 1111
+
+#define BRI_BLACK   0x08      // 0000 1000
+#define BRI_BLUE    0x0C      // 0000 1100
+#define BRI_RED     0x09      // 0000 1001
+#define BRI_MAGENTA 0x0D      // 0000 1101
+#define BRI_GREEN   0x0A      // 0000 1010
+#define BRI_CYAN    0x0E      // 0000 1110
+#define BRI_YELLOW  0x0B      // 0000 1011
+#define BRI_WHITE   0x0F      // 0000 1111
 #endif
 
 /////////////////////////////////////////////////
