@@ -1,7 +1,7 @@
 #include "Disk.h"
 #include "Emulator/Keyboard/PS2Kbd.h"
 #include "Emulator/z80main.h"
-#include "ZX-ESPectrum.h"
+#include "ESPectrum.h"
 #include "def/files.h"
 #include "def/msg.h"
 #include "osd.h"
@@ -130,7 +130,7 @@ bool save_ram(String sna_file) {
     f.write(sp_h);
 
     f.write(_zxCpu.im);
-    byte bordercol = borderTemp;
+    byte bordercol = ESPectrum::borderColor;
     f.write(bordercol);
 
     // push PC to stack
@@ -245,7 +245,7 @@ bool save_ram_quick()
     *snaptr++ = sp_h;
 
     *snaptr++ = _zxCpu.im;
-    byte bordercol = borderTemp;
+    byte bordercol = ESPectrum::borderColor;
     *snaptr++ = bordercol;
 
     // push PC to stack
@@ -324,7 +324,7 @@ bool load_ram_quick()
     _zxCpu.im = *snaptr++;
     byte bordercol = *snaptr++;
 
-    borderTemp = bordercol;
+    ESPectrum::borderColor = bordercol;
 
     _zxCpu.iff1 = _zxCpu.iff2;
 

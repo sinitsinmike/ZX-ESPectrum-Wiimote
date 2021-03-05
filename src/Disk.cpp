@@ -1,7 +1,7 @@
 #include "Emulator/Keyboard/PS2Kbd.h"
 #include "Emulator/Memory.h"
 #include "Emulator/z80main.h"
-#include "ZX-ESPectrum.h"
+#include "ESPectrum.h"
 #include "def/hardware.h"
 #include "def/ascii.h"
 #include "def/files.h"
@@ -29,7 +29,6 @@ static SPIClass customSPI;
 #endif
 
 void errorHalt(String errormsg);
-void IRAM_ATTR kb_interruptHandler(void);
 void zx_reset();
 
 // Globals
@@ -215,7 +214,7 @@ void load_ram(String sna_file) {
     _zxCpu.im = lhandle.read();
     byte bordercol = lhandle.read();
 
-    borderTemp = bordercol;
+    ESPectrum::borderColor = bordercol;
 
     _zxCpu.iff1 = _zxCpu.iff2;
 
@@ -284,7 +283,7 @@ void load_ram(String sna_file) {
     _zxCpu.pc = retaddr;
     Serial.printf("%s SNA: %u\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
     Serial.printf("Ret address: %x Stack: %x AF: %x Border: %x sna_size: %d rom: %d bank: %x\n", retaddr,
-                  _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], borderTemp, sna_size, rom_in_use,
+                  _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], ESPectrum::borderColor, sna_size, rom_in_use,
                   bank_latch);
     KB_INT_START;
 }

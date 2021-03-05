@@ -1,28 +1,40 @@
+ #ifndef PS2Keyboard_h
+ #define PS2Keyboard_h
+
 #include "def/config.h"
 
 #include "def/hardware.h"
 #include "def/keys.h"
 #include <Arduino.h>
 
+class PS2Keyboard
+{
+public:
+    static void initialize();
+    static void IRAM_ATTR interruptHandler(void);
+    static bool isKeymapChanged();
+    static bool checkAndCleanKey(uint8_t scancode);
+
+    static void attachInterrupt();
+    static void detachInterrupt();
+
+    static uint8_t keymap[256];
+    static uint8_t oldmap[256];
+
+    // inject key from wiimote, for not modifying OSD code
+    static void emulateKeyChange(uint8_t scancode, uint8_t isdown);
+};
+
 #ifdef PS2_KEYB_PRESENT
 
-#define KB_INT_START attachInterrupt(digitalPinToInterrupt(KEYBOARD_CLK), kb_interruptHandler, FALLING)
-#define KB_INT_STOP detachInterrupt(digitalPinToInterrupt(KEYBOARD_CLK))
+#define KB_INT_START PS2Keyboard::attachInterrupt()
+#define KB_INT_STOP  PS2Keyboard::detachInterrupt()
 
-#else
+#else // !PS2_KEYB_PRESENT
 
 #define KB_INT_START
 #define KB_INT_STOP
 
 #endif // PS2_KEYB_PRESENT
 
-extern byte lastcode;
-
-void IRAM_ATTR kb_interruptHandler(void);
-void kb_begin();
-boolean isKeymapChanged();
-boolean checkAndCleanKey(uint8_t scancode);
-
-// inject key from wiimote, for not modifying OSD code
-void emulateKeyChange(uint8_t scancode, uint8_t isdown);
-
+#endif // PS2Keyboard_h

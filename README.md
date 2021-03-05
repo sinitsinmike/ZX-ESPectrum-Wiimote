@@ -25,6 +25,7 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 - SNA snapshot loading.
 - Quick snapshot saving and loading.
 - Internal SPIFFS support / external SD card support (only one of both, see config.h).
+- Original Spectrum Keyboard support, using 8 + 5 contacts ribbon connectors connected to 13 ESP pins.
 
 ## Work in progress
 
