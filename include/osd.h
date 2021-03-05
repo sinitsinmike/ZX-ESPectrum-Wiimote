@@ -78,5 +78,3 @@ String rowGet(String menu, unsigned short row_number);
 // SNA Management
 void changeSna(String sna_filename);
 void setDemoMode(boolean on, unsigned short every);
-// ULA
-void stepULA();

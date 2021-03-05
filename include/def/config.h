@@ -56,7 +56,33 @@
 #endif
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// Resolution, border and centering
+//
+// Total number of pixels drawn affects video task timing,
+// so don't be tempted to draw borders to fill screen, it would ruin timing!
+//
+// BOR_W and BOR_H are the actual border pixels drawn outside of image.
+// OFF_X and OFF_Y are used for centering, use with caution;
+// you could write off the buffer and crash the emulator.
+//
+///////////////////////////////////////////////////////////////////////////////
+#ifdef AR_16_9
+#define BOR_W 32
+#define BOR_H 4
+#define OFF_X 20
+#define OFF_Y 0
+// if you can't center the image in your screen,
+// change OFF_X for software centering (0 < OFF_X < 40)
+#endif
 
+#ifdef AR_4_3
+#define BOR_W 32
+#define BOR_H 4
+#define OFF_X 0
+#define OFF_Y 20
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // 

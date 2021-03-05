@@ -2,7 +2,7 @@
 #include "Disk.h"
 #include "Emulator/Keyboard/PS2Kbd.h"
 #include "Emulator/z80main.h"
-#include "ZX-ESPectrum.h"
+#include "ESPectrum.h"
 #include "def/Font.h"
 #include "def/files.h"
 #include "def/keys.h"
@@ -26,10 +26,10 @@ void osdAt(byte row, byte col) {
 void drawOSD() {
     unsigned short x = scrAlignCenterX(OSD_W);
     unsigned short y = scrAlignCenterY(OSD_H);
-    vga.fillRect(x, y, OSD_W, OSD_H, zxcolor(1, 0));
-    vga.rect(x, y, OSD_W, OSD_H, zxcolor(0, 0));
-    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, zxcolor(7, 0));
-    vga.setTextColor(zxcolor(0, 0), zxcolor(5, 1));
+    vga.fillRect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(1, 0));
+    vga.rect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(0, 0));
+    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, ESPectrum::zxColor(7, 0));
+    vga.setTextColor(ESPectrum::zxColor(0, 0), ESPectrum::zxColor(5, 1));
     vga.setFont(Font6x8);
     osdHome();
     vga.print(OSD_TITLE);
@@ -101,28 +101,28 @@ void do_OSD() {
     static byte last_sna_row = 0;
     static unsigned int last_demo_ts = millis() / 1000;
     boolean cycle_sna = false;
-    if (checkAndCleanKey(KEY_F12)) {
+    if (PS2Keyboard::checkAndCleanKey(KEY_F12)) {
         cycle_sna = true;
     }
-    else if (checkAndCleanKey(KEY_PAUSE)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_PAUSE)) {
         osdCenteredMsg(OSD_PAUSE, LEVEL_INFO);
-        while (!checkAndCleanKey(KEY_PAUSE)) {
+        while (!PS2Keyboard::checkAndCleanKey(KEY_PAUSE)) {
             delay(5);
         }
     }
-    else if (checkAndCleanKey(KEY_F2)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
         quickSave();
     }
-    else if (checkAndCleanKey(KEY_F3)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
         quickLoad();
     }
-    else if (checkAndCleanKey(KEY_F4)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
         persistSave();
     }
-    else if (checkAndCleanKey(KEY_F5)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F5)) {
         persistLoad();
     }
-    else if (checkAndCleanKey(KEY_F1)) {
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         // Main menu
         byte opt = menuRun(MENU_MAIN);
         if (opt == 1) {
@@ -191,9 +191,11 @@ void do_OSD() {
             // Help
             drawOSD();
             osdAt(2, 0);
-            vga.setTextColor(zxcolor(7, 0), zxcolor(1, 0));
+            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(1, 0));
             vga.print(OSD_HELP);
-            while (!checkAndCleanKey(KEY_F1) && !checkAndCleanKey(KEY_ESC) && !checkAndCleanKey(KEY_ENTER)) {
+            while (!PS2Keyboard::checkAndCleanKey(KEY_F1) &&
+                   !PS2Keyboard::checkAndCleanKey(KEY_ESC) &&
+                   !PS2Keyboard::checkAndCleanKey(KEY_ENTER)) {
                 vTaskDelay(5);
                 updateWiimote2KeysOSD();
             }

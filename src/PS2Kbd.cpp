@@ -1,23 +1,50 @@
 #include "config.h"
 
 #include "MartianVGA.h"
-#include "ZX-ESPectrum.h"
+#include "ESPectrum.h"
 #include "def/hardware.h"
 #include "def/keys.h"
 #include <Arduino.h>
+#include "Emulator/Keyboard/PS2Kbd.h"
 
-unsigned int shift = 0;
-byte lastcode = 0;
-boolean keyup = false;
-boolean shift_presed = false;
-boolean symbol_pressed = false;
-byte rc = 0;
+static boolean keyup = false;
+
+uint8_t PS2Keyboard::keymap[256];
+uint8_t PS2Keyboard::oldmap[256];
 
 // #define DEBUG_LOG_KEYSTROKES 1
 
 #ifdef PS2_KEYB_PRESENT
 
-void IRAM_ATTR kb_interruptHandler(void) {
+#ifdef  PS2_KEYB_FORCE_INIT
+#include "PS2Boot/PS2KeyAdvanced.h"
+PS2KeyAdvanced ps2boot;
+#endif
+
+void PS2Keyboard::initialize()
+{
+#ifdef  PS2_KEYB_FORCE_INIT
+    // Configure the keyboard library
+    ps2boot.begin( KEYBOARD_DATA, KEYBOARD_CLK );
+    ps2boot.echo( );              // ping keyboard to see if there
+    delay( 6 );
+    ps2boot.read( );
+    delay( 6 );
+    ps2boot.terminate();
+#endif
+
+    pinMode(KEYBOARD_DATA, INPUT_PULLUP);
+    pinMode(KEYBOARD_CLK, INPUT_PULLUP);
+    digitalWrite(KEYBOARD_DATA, true);
+    digitalWrite(KEYBOARD_CLK, true);
+    attachInterrupt();
+
+    memset(keymap, 1, sizeof(keymap));
+    memset(oldmap, 1, sizeof(oldmap));
+}
+
+void IRAM_ATTR PS2Keyboard::interruptHandler(void)
+{
     static uint8_t bitcount = 0;
     static uint8_t incoming = 0;
     static uint32_t prev_ms = 0;
@@ -70,48 +97,44 @@ void IRAM_ATTR kb_interruptHandler(void) {
     }
 }
 
-#ifdef  PS2_KEYB_FORCE_INIT
-#include "PS2Boot/PS2KeyAdvanced.h"
-PS2KeyAdvanced ps2boot;
-#endif
-
-void kb_begin()
+void PS2Keyboard::attachInterrupt()
 {
-#ifdef  PS2_KEYB_FORCE_INIT
-    // Configure the keyboard library
-    ps2boot.begin( KEYBOARD_DATA, KEYBOARD_CLK );
-    ps2boot.echo( );              // ping keyboard to see if there
-    delay( 6 );
-    ps2boot.read( );
-    delay( 6 );
-    ps2boot.terminate();
-#endif
+    ::attachInterrupt(digitalPinToInterrupt(KEYBOARD_CLK), PS2Keyboard::interruptHandler, FALLING);
+}
 
-    pinMode(KEYBOARD_DATA, INPUT_PULLUP);
-    pinMode(KEYBOARD_CLK, INPUT_PULLUP);
-    digitalWrite(KEYBOARD_DATA, true);
-    digitalWrite(KEYBOARD_CLK, true);
-    attachInterrupt(digitalPinToInterrupt(KEYBOARD_CLK), kb_interruptHandler, FALLING);
-
-    memset(keymap, 1, sizeof(keymap));
-    memset(oldKeymap, 1, sizeof(oldKeymap));
+void PS2Keyboard::detachInterrupt()
+{
+    ::detachInterrupt(digitalPinToInterrupt(KEYBOARD_CLK));
 }
 
 #else // ! PS2_KEYB_PRESENT
 
-void kb_begin()
+void PS2Keyboard::begin()
 {
     memset(keymap, 1, sizeof(keymap));
-    memset(oldKeymap, 1, sizeof(oldKeymap));
+    memset(oldmap, 1, sizeof(oldmap));
 }
+
+void IRAM_ATTR PS2Keyboard::interruptHandler(void)
+{
+}
+
+void PS2Keyboard::attachInterrupt()
+{
+}
+
+void PS2Keyboard::detachInterrupt()
+{
+}
+
 
 #endif // PS2_KEYB_PRESENT
 
 // Check if keymatrix is changed
-boolean isKeymapChanged() { return (keymap != oldKeymap); }
+boolean PS2Keyboard::isKeymapChanged() { return (keymap != oldmap); } //?
 
 // Check if key is pressed and clean it
-boolean checkAndCleanKey(uint8_t scancode) {
+boolean PS2Keyboard::checkAndCleanKey(uint8_t scancode) {
     if (keymap[scancode] == 0) {
         keymap[scancode] = 1;
         return true;
@@ -119,7 +142,7 @@ boolean checkAndCleanKey(uint8_t scancode) {
     return false;
 }
 
-void emulateKeyChange(uint8_t scancode, uint8_t isdown)
+void PS2Keyboard::emulateKeyChange(uint8_t scancode, uint8_t isdown)
 {
     keymap[scancode] = isdown ? 0 : 1;
 }

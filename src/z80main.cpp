@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "ESPectrum.h"
+
 #include "Emulator/Keyboard/PS2Kbd.h"
 #include "Emulator/Memory.h"
 #include "Emulator/clock.h"
@@ -13,7 +15,6 @@
 
 Z80_STATE _zxCpu;
 
-extern byte borderTemp;
 extern byte z80ports_in[128];
 extern byte z80ports_wiin[128];
 extern byte tick;
@@ -49,7 +50,7 @@ void zx_setup() {
 
 void zx_reset() {
     memset(z80ports_in, 0x1F, 128);
-    borderTemp = 7;
+    ESPectrum::borderColor = 7;
     bank_latch = 0;
     video_latch = 0;
     rom_latch = 0;
@@ -295,9 +296,9 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         // delayMicroseconds(CONTENTION_TIME);
 
         // border color (no bright colors)
-        bitWrite(borderTemp, 0, bitRead(data, 0));
-        bitWrite(borderTemp, 1, bitRead(data, 1));
-        bitWrite(borderTemp, 2, bitRead(data, 2));
+        bitWrite(ESPectrum::borderColor, 0, bitRead(data, 0));
+        bitWrite(ESPectrum::borderColor, 1, bitRead(data, 1));
+        bitWrite(ESPectrum::borderColor, 2, bitRead(data, 2));
 
 #ifdef SPEAKER_PRESENT
         digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker

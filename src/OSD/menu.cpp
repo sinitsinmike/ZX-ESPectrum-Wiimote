@@ -1,6 +1,6 @@
 #include "Disk.h"
 #include "Emulator/Keyboard/PS2Kbd.h"
-#include "ZX-ESPectrum.h"
+#include "ESPectrum.h"
 #include "def/Font.h"
 #include "def/files.h"
 #include "def/msg.h"
@@ -76,15 +76,15 @@ void menuPrintRow(byte virtual_row_num, byte line_type) {
 
     switch (line_type) {
     case IS_TITLE:
-        vga.setTextColor(zxcolor(7, 0), zxcolor(0, 0));
+        vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
         margin = 2;
         break;
     case IS_FOCUSED:
-        vga.setTextColor(zxcolor(0, 1), zxcolor(5, 1));
+        vga.setTextColor(ESPectrum::zxColor(0, 1), ESPectrum::zxColor(5, 1));
         margin = (real_rows > virtual_rows ? 3 : 2);
         break;
     default:
-        vga.setTextColor(zxcolor(0, 1), zxcolor(7, 1));
+        vga.setTextColor(ESPectrum::zxColor(0, 1), ESPectrum::zxColor(7, 1));
         margin = (real_rows > virtual_rows ? 3 : 2);
     }
 
@@ -102,11 +102,11 @@ void menuPrintRow(byte virtual_row_num, byte line_type) {
 
 // Draw the complete menu
 void menuDraw() {
-    stepULA();
+    ESPectrum::waitForVideoTask();
     // Set font
     vga.setFont(Font6x8);
     // Menu border
-    vga.rect(x, y, w, h, zxcolor(0, 0));
+    vga.rect(x, y, w, h, ESPectrum::zxColor(0, 0));
     // Title
     menuPrintRow(0, IS_TITLE);
     // Rainbow
@@ -115,7 +115,7 @@ void menuDraw() {
     byte rb_colors[] = {2, 6, 4, 5};
     for (byte c = 0; c < 4; c++) {
         for (byte i = 0; i < 5; i++) {
-            vga.line(rb_paint_x + i, rb_y, rb_paint_x + 8 + i, rb_y - 8, zxcolor(rb_colors[c], 1));
+            vga.line(rb_paint_x + i, rb_y, rb_paint_x + 8 + i, rb_y - 8, ESPectrum::zxColor(rb_colors[c], 1));
         }
         rb_paint_x += 5;
     }
@@ -143,7 +143,7 @@ unsigned short menuRun(String new_menu) {
     newMenu(new_menu);
     while (1) {
         updateWiimote2KeysOSD();
-        if (checkAndCleanKey(KEY_CURSOR_UP)) {
+        if (PS2Keyboard::checkAndCleanKey(KEY_CURSOR_UP)) {
             if (focus == 1 and begin_row > 1) {
                 menuScroll(DOWN);
             } else if (focus > 1) {
@@ -153,7 +153,7 @@ unsigned short menuRun(String new_menu) {
                     menuPrintRow(focus + 1, IS_NORMAL);
                 }
             }
-        } else if (checkAndCleanKey(KEY_CURSOR_DOWN)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_CURSOR_DOWN)) {
             if (focus == virtual_rows - 1) {
                 menuScroll(UP);
             } else if (focus < virtual_rows - 1) {
@@ -163,7 +163,7 @@ unsigned short menuRun(String new_menu) {
                     menuPrintRow(focus - 1, IS_NORMAL);
                 }
             }
-        } else if (checkAndCleanKey(KEY_PAGE_UP)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_PAGE_UP)) {
             if (begin_row > virtual_rows) {
                 focus = 1;
                 begin_row -= virtual_rows;
@@ -172,7 +172,7 @@ unsigned short menuRun(String new_menu) {
                 begin_row = 1;
             }
             menuRedraw();
-        } else if (checkAndCleanKey(KEY_PAGE_DOWN)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_PAGE_DOWN)) {
             if (real_rows - begin_row  - virtual_rows > virtual_rows) {
                 focus = 1;
                 begin_row += virtual_rows - 1;
@@ -181,17 +181,17 @@ unsigned short menuRun(String new_menu) {
                 begin_row = real_rows - virtual_rows + 1;
             }
             menuRedraw();
-        } else if (checkAndCleanKey(KEY_HOME)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_HOME)) {
             focus = 1;
             begin_row = 1;
             menuRedraw();
-        } else if (checkAndCleanKey(KEY_END)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_END)) {
             focus = virtual_rows - 1;
             begin_row = real_rows - virtual_rows + 1;
             menuRedraw();
-        } else if (checkAndCleanKey(KEY_ENTER)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_ENTER)) {
             return menuRealRowFor(focus);
-        } else if (checkAndCleanKey(KEY_ESC) || checkAndCleanKey(KEY_F1)) {
+        } else if (PS2Keyboard::checkAndCleanKey(KEY_ESC) || PS2Keyboard::checkAndCleanKey(KEY_F1)) {
             return 0;
         }
     }
@@ -231,10 +231,10 @@ void menuScrollBar() {
         // Top handle
         menuAt(1, -1);
         if (begin_row > 1) {
-            vga.setTextColor(zxcolor(7, 0), zxcolor(0, 0));
+            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
             vga.print("+");
         } else {
-            vga.setTextColor(zxcolor(7, 0), zxcolor(0, 0));
+            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
             vga.print("-");
         }
 
@@ -243,7 +243,7 @@ void menuScrollBar() {
         unsigned short holder_y = y + (OSD_FONT_H * 2);
         unsigned short holder_h = OSD_FONT_H * (virtual_rows - 3);
         unsigned short holder_w = OSD_FONT_W;
-        vga.fillRect(holder_x, holder_y, holder_w, holder_h + 1, zxcolor(7, 0));
+        vga.fillRect(holder_x, holder_y, holder_w, holder_h + 1, ESPectrum::zxColor(7, 0));
         holder_y++;
 
         // Scroll bar
@@ -255,15 +255,15 @@ void menuScrollBar() {
             bar_h--;
         }
 
-        vga.fillRect(holder_x + 1, holder_y + bar_y, holder_w - 2, bar_h, zxcolor(0, 0));
+        vga.fillRect(holder_x + 1, holder_y + bar_y, holder_w - 2, bar_h, ESPectrum::zxColor(0, 0));
 
         // Bottom handle
         menuAt(-1, -1);
         if ((begin_row + virtual_rows - 1) < real_rows) {
-            vga.setTextColor(zxcolor(7, 0), zxcolor(0, 0));
+            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
             vga.print("+");
         } else {
-            vga.setTextColor(zxcolor(7, 0), zxcolor(0, 0));
+            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
             vga.print("-");
         }
     }

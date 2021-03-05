@@ -210,14 +210,14 @@ void w2kproc_osd(uint16_t button)
     uint8_t bhom = button & 0x0080 ? 1 : 0;
     uint8_t bplu = button & 0x1000 ? 1 : 0;
 
-    if (bhom) emulateKeyChange(KEY_F1, 1);
-    if (padr) emulateKeyChange(KEY_CURSOR_UP, 1);
-    if (padl) emulateKeyChange(KEY_CURSOR_DOWN, 1);
-    if (padt) emulateKeyChange(KEY_CURSOR_UP, 1);
-    if (padb) emulateKeyChange(KEY_CURSOR_DOWN, 1);
-    if (baaa) emulateKeyChange(KEY_ENTER, 1);
-    if (bone) emulateKeyChange(KEY_ENTER, 1);
-    if (btwo) emulateKeyChange(KEY_ENTER, 1);
+    if (bhom) PS2Keyboard::emulateKeyChange(KEY_F1, 1);
+    if (padr) PS2Keyboard::emulateKeyChange(KEY_CURSOR_UP, 1);
+    if (padl) PS2Keyboard::emulateKeyChange(KEY_CURSOR_DOWN, 1);
+    if (padt) PS2Keyboard::emulateKeyChange(KEY_CURSOR_UP, 1);
+    if (padb) PS2Keyboard::emulateKeyChange(KEY_CURSOR_DOWN, 1);
+    if (baaa) PS2Keyboard::emulateKeyChange(KEY_ENTER, 1);
+    if (bone) PS2Keyboard::emulateKeyChange(KEY_ENTER, 1);
+    if (btwo) PS2Keyboard::emulateKeyChange(KEY_ENTER, 1);
 }
 
 // wiimote
@@ -263,7 +263,8 @@ void updateWiimote2Keys()
         w2kproc_spectrum(button);
     
         if (button & 0x0080)
-            emulateKeyChange(KEY_F1, 1);    }
+            PS2Keyboard::emulateKeyChange(KEY_F1, 1);
+    }
 #endif // WIIMOTE_PRESENT
 }
 

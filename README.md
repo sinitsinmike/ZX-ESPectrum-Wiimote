@@ -15,6 +15,10 @@ Quick start from PlatformIO:
 - Execute task: Upload
 - Enjoy
 
+Please watch the [project video on YouTube](https://youtu.be/ROthljwC5OA) (spanish audio, english subtitles).
+
+If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
+
 ## Features
 
 - VGA output, 3 bit (default), 6 bit, 14 bit.
