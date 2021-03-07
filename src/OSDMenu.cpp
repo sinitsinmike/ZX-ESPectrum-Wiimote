@@ -1,34 +1,43 @@
-#include "Disk.h"
-#include "Emulator/Keyboard/PS2Kbd.h"
+#include "FileUtils.h"
+#include "PS2Kbd.h"
 #include "ESPectrum.h"
-#include "def/Font.h"
-#include "def/files.h"
-#include "def/msg.h"
+#include "messages.h"
 #include "osd.h"
 #include "Wiimote2Keys.h"
 #include <math.h>
 
-byte cols;                     // Maximun columns
-unsigned short real_rows;      // Real row count
-byte virtual_rows;             // Virtual maximun rows on screen
-byte w;                        // Width in pixels
-byte h;                        // Height in pixels
-byte x;                        // X vertical position
-byte y;                        // Y horizontal position
-String menu;                   // Menu string
-unsigned short begin_row;      // First real displayed row
-byte focus;                    // Focused virtual row
-byte last_focus;               // To check for changes
-unsigned short last_begin_row; // To check for changes
+#define MENU_MAX_ROWS 23
+// Line type
+#define IS_TITLE 0
+#define IS_FOCUSED 1
+#define IS_NORMAL 2
+// Scroll
+#define UP true
+#define DOWN false
+
+extern Font Font6x8;
+
+static byte cols;                     // Maximum columns
+static unsigned short real_rows;      // Real row count
+static byte virtual_rows;             // Virtual maximum rows on screen
+static byte w;                        // Width in pixels
+static byte h;                        // Height in pixels
+static byte x;                        // X vertical position
+static byte y;                        // Y horizontal position
+static String menu;                   // Menu string
+static unsigned short begin_row;      // First real displayed row
+static byte focus;                    // Focused virtual row
+static byte last_focus;               // To check for changes
+static unsigned short last_begin_row; // To check for changes
 
 // Set menu and force recalc
-void newMenu(String new_menu) {
+void OSD::newMenu(String new_menu) {
     menu = new_menu;
     menuRecalc();
     menuDraw();
 }
 
-void menuRecalc() {
+void OSD::menuRecalc() {
     // Columns
     cols = 24;
     byte col_count = 0;
@@ -58,19 +67,20 @@ void menuRecalc() {
 }
 
 // Get real row number for a virtual one
-unsigned short menuRealRowFor(byte virtual_row_num) { return begin_row + virtual_row_num - 1; }
+unsigned short OSD::menuRealRowFor(byte virtual_row_num) { return begin_row + virtual_row_num - 1; }
 
 // Menu relative AT
-void menuAt(short int row, short int col) {
+void OSD::menuAt(short int row, short int col) {
     if (col < 0)
         col = cols - 2 - col;
     if (row < 0)
         row = virtual_rows - 2 - row;
-    vga.setCursor(x + 1 + (col * OSD_FONT_W), y + 1 + (row * OSD_FONT_H));
+    ESPectrum::vga.setCursor(x + 1 + (col * OSD_FONT_W), y + 1 + (row * OSD_FONT_H));
 }
 
 // Print a virtual row
-void menuPrintRow(byte virtual_row_num, byte line_type) {
+void OSD::menuPrintRow(byte virtual_row_num, byte line_type) {
+    VGA& vga = ESPectrum::vga;
     byte margin;
     String line = rowGet(menu, menuRealRowFor(virtual_row_num));
 
@@ -101,8 +111,9 @@ void menuPrintRow(byte virtual_row_num, byte line_type) {
 }
 
 // Draw the complete menu
-void menuDraw() {
+void OSD::menuDraw() {
     ESPectrum::waitForVideoTask();
+    VGA& vga = ESPectrum::vga;
     // Set font
     vga.setFont(Font6x8);
     // Menu border
@@ -128,18 +139,18 @@ void menuDraw() {
     menuScrollBar();
 }
 
-String getArchMenu() {
-    String menu = (String)MENU_ARCH + getFileEntriesFromDir(DISK_ROM_DIR);
+String OSD::getArchMenu() {
+    String menu = (String)MENU_ARCH + FileUtils::getFileEntriesFromDir(DISK_ROM_DIR);
     return menu;
 }
 
-String getRomsetMenu(String arch) {
-    String menu = (String)MENU_ROMSET + getFileEntriesFromDir((String)DISK_ROM_DIR + "/" + arch);
+String OSD::getRomsetMenu(String arch) {
+    String menu = (String)MENU_ROMSET + FileUtils::getFileEntriesFromDir((String)DISK_ROM_DIR + "/" + arch);
     return menu;
 }
 
 // Run a new menu
-unsigned short menuRun(String new_menu) {
+unsigned short OSD::menuRun(String new_menu) {
     newMenu(new_menu);
     while (1) {
         updateWiimote2KeysOSD();
@@ -198,7 +209,7 @@ unsigned short menuRun(String new_menu) {
 }
 
 // Scroll
-void menuScroll(boolean dir) {
+void OSD::menuScroll(boolean dir) {
     if (dir == DOWN and begin_row > 1) {
         begin_row--;
     } else if (dir == UP and (begin_row + virtual_rows - 1) < real_rows) {
@@ -210,7 +221,7 @@ void menuScroll(boolean dir) {
 }
 
 // Redraw inside rows
-void menuRedraw() {
+void OSD::menuRedraw() {
     if (focus != last_focus or begin_row != last_begin_row) {
         for (byte row = 1; row < virtual_rows; row++) {
             if (row == focus) {
@@ -226,7 +237,8 @@ void menuRedraw() {
 }
 
 // Draw menu scroll bar
-void menuScrollBar() {
+void OSD::menuScrollBar() {
+    VGA& vga = ESPectrum::vga;
     if (real_rows > virtual_rows) {
         // Top handle
         menuAt(1, -1);
@@ -270,7 +282,7 @@ void menuScrollBar() {
 }
 
 // Return a test menu
-String getTestMenu(unsigned short n_lines) {
+String OSD::getTestMenu(unsigned short n_lines) {
     String test_menu = "Test Menu\n";
     for (unsigned short line = 1; line <= n_lines; line += 2) {
         test_menu += "Option Line " + (String)line + "\n";

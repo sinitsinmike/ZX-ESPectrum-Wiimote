@@ -1,7 +1,7 @@
-#ifndef ESPectrum_hardware_h
-#define ESPectrum_hardware_h
+#ifndef ESPectrum_hardpins_h
+#define ESPectrum_hardpins_h
 
-#include "config.h"
+#include "hardconfig.h"
 
 #ifdef SPEAKER_PRESENT
 #define SPEAKER_PIN 27
@@ -139,4 +139,4 @@
 
 #endif
 
-#endif // ESPectrum_hardware_h
+#endif // ESPectrum_hardpins_h

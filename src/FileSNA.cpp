@@ -1,11 +1,13 @@
-#include "Disk.h"
-#include "Emulator/Keyboard/PS2Kbd.h"
-#include "Emulator/z80main.h"
+#include "FileUtils.h"
+#include "PS2Kbd.h"
+#include "z80main.h"
 #include "ESPectrum.h"
-#include "def/files.h"
-#include "def/msg.h"
+#include "messages.h"
 #include "osd.h"
 #include <FS.h>
+#include "Wiimote2Keys.h"
+#include "Config.h"
+#include "FileSNA.h"
 
 #ifdef USE_INT_FLASH
 // using internal storage (spi flash)
@@ -21,44 +23,194 @@
 #define THE_FS SD
 #endif
 
-// Change running snapshot
-void changeSna(String sna_filename) {
-    osdCenteredMsg((String)MSG_LOADING + ": " + sna_filename, LEVEL_INFO);
+bool FileSNA::load(String sna_fn)
+{
+    File lhandle;
+    uint16_t size_read;
+    byte sp_h, sp_l;
+    uint16_t retaddr;
+    int sna_size;
     zx_reset();
-    Serial.printf("Loading sna: %s\n", sna_filename.c_str());
-    load_ram((String)DISK_SNA_DIR + "/" + sna_filename);
-    osdCenteredMsg(MSG_SAVE_CONFIG, LEVEL_WARN);
-    cfg_ram_file = sna_filename;
-    config_save();
-}
 
-// Demo mode on off
-void setDemoMode(boolean on, unsigned short every) {
-    cfg_demo_mode_on = on;
-    cfg_demo_every = (every > 0 ? every : 60);
-    if (on) {
-        osdCenteredMsg(OSD_DEMO_MODE_ON, LEVEL_OK);
-    } else {
-        osdCenteredMsg(OSD_DEMO_MODE_OFF, LEVEL_WARN);
+    Serial.printf("%s SNA: %ub\n", MSG_FREE_HEAP_BEFORE, ESP.getFreeHeap());
+
+    KB_INT_STOP;
+
+    if (sna_fn != DISK_PSNA_FILE)
+        loadKeytableForGame(sna_fn.c_str());
+
+    lhandle = FileUtils::safeOpenFileRead(sna_fn);
+    sna_size = lhandle.size();
+
+    if (sna_size < SNA_48K_SIZE) {
+        Serial.printf("FileSNA::load: bad SNA %s: size < %d", sna_fn.c_str(), SNA_48K_SIZE);
+        KB_INT_START;
+        return false;
     }
-    Serial.printf("DEMO MODE %s every %u seconds.", (cfg_demo_mode_on ? "ON" : "OFF"), cfg_demo_every);
-    vTaskDelay(200);
-    osdCenteredMsg(MSG_SAVE_CONFIG, LEVEL_WARN);
-    config_save();
+
+    String fileArch = "48K";
+
+    Mem::bankLatch = 0;
+    Mem::pagingLock = 1;
+    Mem::videoLatch = 0;
+
+    size_read = 0;
+    // Read in the registers
+    _zxCpu.i = lhandle.read();
+    _zxCpu.registers.byte[Z80_L] = lhandle.read();
+    _zxCpu.registers.byte[Z80_H] = lhandle.read();
+    _zxCpu.registers.byte[Z80_E] = lhandle.read();
+    _zxCpu.registers.byte[Z80_D] = lhandle.read();
+    _zxCpu.registers.byte[Z80_C] = lhandle.read();
+    _zxCpu.registers.byte[Z80_B] = lhandle.read();
+    _zxCpu.registers.byte[Z80_F] = lhandle.read();
+    _zxCpu.registers.byte[Z80_A] = lhandle.read();
+
+    _zxCpu.alternates[Z80_HL] = _zxCpu.registers.word[Z80_HL];
+    _zxCpu.alternates[Z80_DE] = _zxCpu.registers.word[Z80_DE];
+    _zxCpu.alternates[Z80_BC] = _zxCpu.registers.word[Z80_BC];
+    _zxCpu.alternates[Z80_AF] = _zxCpu.registers.word[Z80_AF];
+
+    _zxCpu.registers.byte[Z80_L] = lhandle.read();
+    _zxCpu.registers.byte[Z80_H] = lhandle.read();
+    _zxCpu.registers.byte[Z80_E] = lhandle.read();
+    _zxCpu.registers.byte[Z80_D] = lhandle.read();
+    _zxCpu.registers.byte[Z80_C] = lhandle.read();
+    _zxCpu.registers.byte[Z80_B] = lhandle.read();
+    _zxCpu.registers.byte[Z80_IYL] = lhandle.read();
+    _zxCpu.registers.byte[Z80_IYH] = lhandle.read();
+    _zxCpu.registers.byte[Z80_IXL] = lhandle.read();
+    _zxCpu.registers.byte[Z80_IXH] = lhandle.read();
+
+    byte inter = lhandle.read();
+    _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
+    _zxCpu.r = lhandle.read();
+
+    _zxCpu.registers.byte[Z80_F] = lhandle.read();
+    _zxCpu.registers.byte[Z80_A] = lhandle.read();
+
+    sp_l = lhandle.read();
+    sp_h = lhandle.read();
+    _zxCpu.registers.word[Z80_SP] = sp_l + sp_h * 0x100;
+
+    _zxCpu.im = lhandle.read();
+    byte bordercol = lhandle.read();
+
+    ESPectrum::borderColor = bordercol;
+
+    _zxCpu.iff1 = _zxCpu.iff2;
+
+    if (sna_size == SNA_48K_SIZE)
+    {
+        fileArch = "48K";
+
+        uint16_t thestack = _zxCpu.registers.word[Z80_SP];
+        uint16_t buf_p = 0x4000;
+        while (lhandle.available()) {
+            writebyte(buf_p, lhandle.read());
+            buf_p++;
+        }
+
+        // uint16_t offset = thestack - 0x4000;
+        // retaddr = ram5[offset] + 0x100 * ram5[offset + 1];
+        retaddr = readword(thestack);
+        Serial.printf("%x\n", retaddr);
+        _zxCpu.registers.word[Z80_SP]++;
+        _zxCpu.registers.word[Z80_SP]++;
+    }
+    else
+    {
+        fileArch = "128K";
+
+        uint16_t buf_p;
+        for (buf_p = 0x4000; buf_p < 0x8000; buf_p++) {
+            writebyte(buf_p, lhandle.read());
+        }
+        for (buf_p = 0x8000; buf_p < 0xc000; buf_p++) {
+            writebyte(buf_p, lhandle.read());
+        }
+
+        for (buf_p = 0xc000; buf_p < 0xffff; buf_p++) {
+            writebyte(buf_p, lhandle.read());
+        }
+
+        byte machine_b = lhandle.read();
+        Serial.printf("Machine: %x\n", machine_b);
+        byte retaddr_l = lhandle.read();
+        byte retaddr_h = lhandle.read();
+        retaddr = retaddr_l + retaddr_h * 0x100;
+        byte tmp_port = lhandle.read();
+
+        byte tmp_byte;
+        for (int a = 0xc000; a < 0xffff; a++) {
+            Mem::bankLatch = 0;
+            tmp_byte = readbyte(a);
+            Mem::bankLatch = tmp_port & 0x07;
+            writebyte(a, tmp_byte);
+        }
+
+        byte tr_dos = lhandle.read();
+        byte tmp_latch = tmp_port & 0x7;
+        for (int page = 0; page < 8; page++) {
+            if (page != tmp_latch && page != 2 && page != 5) {
+                Mem::bankLatch = page;
+                Serial.printf("Page %d actual_latch: %d\n", page, Mem::bankLatch);
+                for (buf_p = 0xc000; buf_p <= 0xFFFF; buf_p++) {
+                    writebyte(buf_p, lhandle.read());
+                }
+            }
+        }
+
+        Mem::videoLatch = bitRead(tmp_port, 3);
+        Mem::romLatch = bitRead(tmp_port, 4);
+        Mem::pagingLock = bitRead(tmp_port, 5);
+        Mem::bankLatch = tmp_latch;
+        Mem::romInUse = Mem::romLatch;
+    }
+    lhandle.close();
+
+    // just architecturey things
+    if (Config::getArch() == "128K")
+    {
+        if (fileArch == "48K")
+        {
+#ifdef SNAPSHOT_LOAD_FORCE_ARCH
+            Config::requestMachine("48K", "SINCLAIR", true);
+            Mem::romInUse = 0;
+#else
+            Mem::romInUse = 1;
+#endif
+        }
+    }
+    else if (Config::getArch() == "48K")
+    {
+        if (fileArch == "128K")
+        {
+            Config::requestMachine("128K", "SINCLAIR", true);
+            Mem::romInUse = 1;
+        }
+    }
+
+    _zxCpu.pc = retaddr;
+    Serial.printf("%s SNA: %u\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
+    Serial.printf("Ret address: %x Stack: %x AF: %x Border: %x sna_size: %d rom: %d bank: %x\n", retaddr,
+                  _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], ESPectrum::borderColor, sna_size, Mem::romInUse,
+                  Mem::bankLatch);
+    KB_INT_START;
 }
 
-bool is_persist_sna_available()
+bool FileSNA::isPersistAvailable()
 {
     String filename = DISK_PSNA_FILE;
     return THE_FS.exists(filename.c_str());
 }
 
-bool save_ram(String sna_file) {
+bool FileSNA::save(String sna_file) {
     KB_INT_STOP;
 
     // only 48K snapshot supported at the moment
-    if (cfg_arch != "48K") {
-        Serial.println("save_ram: only 48K supported at the moment");
+    if (Config::getArch() != "48K") {
+        Serial.println("FileSNA::save: only 48K supported at the moment");
         KB_INT_START;
         return false;
     }
@@ -66,7 +218,7 @@ bool save_ram(String sna_file) {
     // open file
     File f = THE_FS.open(sna_file, FILE_WRITE);
     if (!f) {
-        Serial.printf("save_ram: failed to open %s for writing\n", sna_file.c_str());
+        Serial.printf("FileSNA::save: failed to open %s for writing\n", sna_file.c_str());
         KB_INT_START;
         return false;
     }
@@ -153,18 +305,18 @@ bool save_ram(String sna_file) {
 
 static byte* snabuf = NULL;
 
-bool is_quick_sna_available()
+bool FileSNA::isQuickAvailable()
 {
     return snabuf != NULL;
 }
 
-bool save_ram_quick()
+bool FileSNA::saveQuick()
 {
     KB_INT_STOP;
 
     // only 48K snapshot supported at the moment
-    if (cfg_arch != "48K") {
-        Serial.println("save_ram_quick: only 48K supported at the moment");
+    if (Config::getArch() != "48K") {
+        Serial.println("FileSNA::saveQuick: only 48K supported at the moment");
         KB_INT_START;
         return false;
     }
@@ -178,7 +330,7 @@ bool save_ram_quick()
         snabuf = (byte*)malloc(49179);
 #endif
         if (snabuf == NULL) {
-            Serial.println("save_ram_quick: cannot allocate memory for snapshot buffer");
+            Serial.println("FileSNA::saveQuick: cannot allocate memory for snapshot buffer");
             KB_INT_START;
             return false;
         }
@@ -265,18 +417,18 @@ bool save_ram_quick()
     return true;
 }
 
-bool load_ram_quick()
+bool FileSNA::loadQuick()
 {
     // only 48K snapshot supported at the moment
-    if (cfg_arch != "48K") {
-        Serial.println("save_ram_quick: only 48K supported at the moment");
+    if (Config::getArch() != "48K") {
+        Serial.println("FileSNA::loadQuick(): only 48K supported at the moment");
         KB_INT_START;
         return false;
     }
 
     if (NULL == snabuf) {
         // nothing to read
-        Serial.println("save_ram_quick: nothing to load");
+        Serial.println("FileSNA::loadQuick(): nothing to load");
         KB_INT_START;
         return false;
     }

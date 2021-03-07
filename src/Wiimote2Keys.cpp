@@ -1,7 +1,8 @@
-#include "def/config.h"
+#include "hardconfig.h"
+#include "ESPectrum.h"
 #include "Wiimote2Keys.h"
 
-#include "Emulator/Keyboard/PS2Kbd.h"
+#include "PS2Kbd.h"
 #include <Arduino.h>
 #include <string.h>
 #include <FS.h>
@@ -22,8 +23,6 @@
 
 #include "ESP32Wiimote/ESP32Wiimote.h"
 static ESP32Wiimote wiimote;
-
-extern byte z80ports_wiin[128];
 
 static bool logWiimoteEvents = false;
 
@@ -233,7 +232,7 @@ void w2kproc_spectrum(uint16_t button)
             uint8_t bitidx  = keycode & 0x0F;
 
             uint8_t bitvalue = button & mask ? 0 : 1;
-            bitWrite(z80ports_wiin[portidx], bitidx, bitvalue);
+            bitWrite(Ports::wii[portidx], bitidx, bitvalue);
         }
         mask <<= 1;
     }
@@ -252,7 +251,7 @@ void updateWiimote2Keys()
 {
 #ifdef WIIMOTE_PRESENT
     // no kempston
-    z80ports_wiin[0x1f] = 0;
+    Ports::wii[0x1f] = 0;
 
     wiimote.task();
     if (wiimote.available() > 0) {

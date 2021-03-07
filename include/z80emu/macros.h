@@ -1,3 +1,6 @@
+#ifndef Z80EMU_MACROS_H
+#define Z80EMU_MACROS_H
+
 /* macros.h
  * Helper macros definitions.
  *
@@ -376,3 +379,5 @@
         (x) >>= 1;                                                      \
         F = SZYXP_FLAGS_TABLE[(x) & 0xff] | c;                          \
 }
+
+#endif // Z80EMU_MACROS_H

@@ -187,4 +187,4 @@ extern int      Z80Emulate (Z80_STATE *state,
 }
 #endif
 
-#endif
+#endif // __Z80EMU_INCLUDED__

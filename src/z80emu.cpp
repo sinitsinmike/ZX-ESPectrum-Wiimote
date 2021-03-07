@@ -5,13 +5,12 @@
  *
  * This code is free, do whatever you want with it.
  */
-#include "Emulator/z80emu/z80emu.h"
+#include "z80emu/z80emu.h"
 #include "Arduino.h"
-#include "Emulator/Memory.h"
-#include "Emulator/z80emu/instructions.h"
-#include "Emulator/z80emu/macros.h"
-#include "Emulator/z80emu/tables.h"
-#include "Emulator/z80user.h"
+#include "z80emu/instructions.h"
+#include "z80emu/macros.h"
+#include "z80emu/tables.h"
+#include "z80user.h"
 
 /* Indirect (HL) or prefixed indexed (IX + d) and (IY + d) memory operands are
  * encoded using the 3 bits "110" (0x06).

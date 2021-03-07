@@ -1,11 +1,9 @@
-#include "config.h"
+#include "hardconfig.h"
 
-#include "MartianVGA.h"
 #include "ESPectrum.h"
-#include "def/hardware.h"
-#include "def/keys.h"
+#include "hardpins.h"
 #include <Arduino.h>
-#include "Emulator/Keyboard/PS2Kbd.h"
+#include "PS2Kbd.h"
 
 static boolean keyup = false;
 

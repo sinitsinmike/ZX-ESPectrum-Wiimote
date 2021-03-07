@@ -2,7 +2,7 @@
 //
 // ZX-ESPectrum - ZX Spectrum emulator for ESP32 microcontroller
 //
-// config.h
+// hardconfig.h
 // 
 // created by David Crespo on 19/11/2020
 //
@@ -10,8 +10,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef ESPectrum_config_h
-#define ESPectrum_config_h
+#ifndef ESPectrum_hardconfig_h
+#define ESPectrum_hardconfig_h
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -155,5 +155,20 @@
 // #define MIC_PRESENT
 ///////////////////////////////////////////////////////////////////////////////
 
-#endif // ESPectrum_config_h
+///////////////////////////////////////////////////////////////////////////////
 //
+// Snapshot loading behaviour
+//
+// define SNAPSHOT_LOAD_FORCE_ARCH if you want the architecture present
+// in the snapshot file to be forcibly set as the current emulated machine.
+// 
+// if current machine is 48K and a 128K snapshot is loaded,
+// arch will be switched to 128K always (with SINCLAIR romset as the default).
+//
+// but if machine is in 128K mode and a 48K snapshot is loaded,
+// arch will be switched to 48K only if SNAPSHOT_LOAD_FORCE_ARCH is defined.
+
+#define SNAPSHOT_LOAD_FORCE_ARCH
+///////////////////////////////////////////////////////////////////////////////
+
+#endif // ESPectrum_config_h
