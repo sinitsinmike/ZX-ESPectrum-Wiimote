@@ -1,18 +1,11 @@
-#include "Emulator/Keyboard/PS2Kbd.h"
-#include "Emulator/Memory.h"
-#include "Emulator/clock.h"
-#include "Emulator/z80emu/z80emu.h"
-#include "Emulator/z80main.h"
-#include "Emulator/z80user.h"
+#include "PS2Kbd.h"
+#include "z80emu/z80emu.h"
+#include "z80main.h"
+#include "z80user.h"
 #include <Arduino.h>
 
-#include "MartianVGA.h"
-
-#include "def/Font.h"
-#include "def/files.h"
-#include "def/hardware.h"
-#include "def/msg.h"
-#include "net.h"
+#include "hardpins.h"
+#include "messages.h"
 
 #include "driver/timer.h"
 #include "soc/timer_group_struct.h"
@@ -21,40 +14,53 @@
 #include "Wiimote2Keys.h"
 
 #include "ESPectrum.h"
+#include "FileSNA.h"
+#include "Config.h"
+#include "FileUtils.h"
+#include "osd.h"
 
 // EXTERN VARS
-extern boolean cfg_slog_on;
-extern String cfg_ram_file;
-extern String cfg_rom_set;
-extern String cfg_arch;
 extern CONTEXT _zxContext;
 extern Z80_STATE _zxCpu;
 extern int _total;
 extern int _next_total;
 
-void load_rom(String, String);
-void load_ram(String);
-
 // EXTERN METHODS
 
 void setup_cpuspeed();
-void config_read();
-void do_OSD();
-void errorHalt(String);
-void init_file_system();
 
-// GLOBALS
-
-// keyboard ports read from PS2 keyboard
-volatile byte z80ports_in[128];
-
-// keyboard ports read from Wiimote
-volatile byte z80ports_wiin[128];
-
+// ESPectrum graphics variables
 byte ESPectrum::borderColor = 7;
+VGA ESPectrum::vga;
+
+// Memory
+uint8_t* Mem::rom0 = NULL;
+uint8_t* Mem::rom1 = NULL;
+uint8_t* Mem::rom2 = NULL;
+uint8_t* Mem::rom3 = NULL;
+
+uint8_t* Mem::ram0 = NULL;
+uint8_t* Mem::ram1 = NULL;
+uint8_t* Mem::ram2 = NULL;
+uint8_t* Mem::ram3 = NULL;
+uint8_t* Mem::ram4 = NULL;
+uint8_t* Mem::ram5 = NULL;
+uint8_t* Mem::ram6 = NULL;
+uint8_t* Mem::ram7 = NULL;
+
+volatile uint8_t Mem::bankLatch = 0;
+volatile uint8_t Mem::videoLatch = 0;
+volatile uint8_t Mem::romLatch = 0;
+volatile uint8_t Mem::pagingLock = 0;
+uint8_t Mem::modeSP3 = 0;
+uint8_t Mem::romSP3 = 0;
+uint8_t Mem::romInUse = 0;
+
+// Ports
+volatile uint8_t Ports::base[128];
+volatile uint8_t Ports::wii[128];
+
 volatile byte flashing = 0;
-volatile boolean xULAStop = false;
-volatile boolean xULAStopped = false;
 volatile byte tick;
 const int SAMPLING_RATE = 44100;
 const int BUFFER_SIZE = 2000;
@@ -67,18 +73,6 @@ static volatile bool videoTaskIsRunning = false;    // volatile keyword REQUIRED
 static uint16_t *param;
 
 // SETUP *************************************
-#ifdef COLOR_3B
-VGA3Bit vga;
-#endif
-
-#ifdef COLOR_6B
-VGA6Bit vga;
-#endif
-
-#ifdef COLOR_14B
-VGA14Bit vga;
-#endif
-
 #ifdef AR_16_9
 #define VGA_AR_MODE MODE360x200
 #endif
@@ -99,7 +93,7 @@ void ESPectrum::setup()
 
     Serial.println("ZX-ESPectrum + Wiimote initializing...");
 
-    if (cfg_slog_on) {
+    if (Config::slog_on) {
         Serial.println(MSG_VGA_INIT);
     }
 
@@ -110,31 +104,32 @@ void ESPectrum::setup()
 
     Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
 
-    init_file_system();
-    config_read();
-    // wifiConn();
-    Serial.printf("HEAP AFTER WIFI %d\n", ESP.getFreeHeap());
+    FileUtils::initFileSystem();
+    Config::load();
+    Config::loadSnapshotLists();
+
+    Serial.printf("HEAP AFTER FILESYSTEM %d\n", ESP.getFreeHeap());
 
 #ifdef BOARD_HAS_PSRAM
-    rom0 = (byte *)ps_malloc(16384);
-    rom1 = (byte *)ps_malloc(16384);
-    rom2 = (byte *)ps_malloc(16384);
-    rom3 = (byte *)ps_malloc(16384);
+    Mem::rom0 = (byte *)ps_malloc(16384);
+    Mem::rom1 = (byte *)ps_malloc(16384);
+    Mem::rom2 = (byte *)ps_malloc(16384);
+    Mem::rom3 = (byte *)ps_malloc(16384);
 
-    ram0 = (byte *)ps_malloc(16384);
-    ram1 = (byte *)ps_malloc(16384);
-    ram2 = (byte *)ps_malloc(16384);
-    ram3 = (byte *)ps_malloc(16384);
-    ram4 = (byte *)ps_malloc(16384);
-    ram5 = (byte *)malloc(16384);
-    ram6 = (byte *)ps_malloc(16384);
-    ram7 = (byte *)malloc(16384);
+    Mem::ram0 = (byte *)ps_malloc(16384);
+    Mem::ram1 = (byte *)ps_malloc(16384);
+    Mem::ram2 = (byte *)ps_malloc(16384);
+    Mem::ram3 = (byte *)ps_malloc(16384);
+    Mem::ram4 = (byte *)ps_malloc(16384);
+    Mem::ram5 = (byte *)malloc(16384);
+    Mem::ram6 = (byte *)ps_malloc(16384);
+    Mem::ram7 = (byte *)malloc(16384);
 #else
-    rom0 = (byte *)malloc(16384);
+    Mem::rom0 = (byte *)malloc(16384);
 
-    ram0 = (byte *)malloc(16384);
-    ram2 = (byte *)malloc(16384);
-    ram5 = (byte *)malloc(16384);
+    Mem::ram0 = (byte *)malloc(16384);
+    Mem::ram2 = (byte *)malloc(16384);
+    Mem::ram5 = (byte *)malloc(16384);
 #endif
 
     Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
@@ -184,8 +179,8 @@ void ESPectrum::setup()
 
     // make sure keyboard ports are FF
     for (int t = 0; t < 32; t++) {
-        z80ports_in[t] = 0x1f;
-        z80ports_wiin[t] = 0x1f;
+        Ports::base[t] = 0x1f;
+        Ports::wii[t] = 0x1f;
     }
 
     Serial.printf("%s %u\n", MSG_EXEC_ON_CORE, xPortGetCoreID());
@@ -194,9 +189,9 @@ void ESPectrum::setup()
     vidQueue = xQueueCreate(1, sizeof(uint16_t *));
     xTaskCreatePinnedToCore(&ESPectrum::videoTask, "videoTask", 1024 * 4, NULL, 5, &videoTaskHandle, 0);
 
-    load_rom(cfg_arch, cfg_rom_set);
-    if ((String)cfg_ram_file != (String)NO_RAM_FILE) {
-        load_ram("/sna/" + cfg_ram_file);
+    Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
+    if ((String)Config::ram_file != (String)NO_RAM_FILE) {
+        OSD::changeSnapshot(Config::ram_file);
     }
 
 #ifdef ZX_KEYB_PRESENT
@@ -259,15 +254,15 @@ void ESPectrum::videoTask(void *unused) {
 
                     byte_offset = (vga_lin - BOR_H) * 32 + ff;
                     calc_y = calcY(byte_offset);
-                    if (!video_latch)
+                    if (!Mem::videoLatch)
                     {
                        color_attrib = readbyte(0x5800 + (calc_y / 8) * 32 + ff); // get 1 of 768 attrib values
                        pixel_map = readbyte(byte_offset + 0x4000);
                     }
                     else
                     {
-                        color_attrib = ram7[0x1800 + (calc_y / 8) * 32 + ff]; // get 1 of 768 attrib values
-                        pixel_map = ram7[byte_offset];
+                        color_attrib = Mem::ram7[0x1800 + (calc_y / 8) * 32 + ff]; // get 1 of 768 attrib values
+                        pixel_map = Mem::ram7[byte_offset];
                     }
 
                     for (i = 0; i < 8; i++) // foreach pixel within a byte
@@ -342,61 +337,61 @@ uint16_t ESPectrum::zxColor(uint8_t color, uint8_t bright) {
 void ESPectrum::processKeyboard() {
     byte kempston = 0;
 
-    bitWrite(z80ports_in[0], 0, PS2Keyboard::keymap[0x12]);
-    bitWrite(z80ports_in[0], 1, PS2Keyboard::keymap[0x1a]);
-    bitWrite(z80ports_in[0], 2, PS2Keyboard::keymap[0x22]);
-    bitWrite(z80ports_in[0], 3, PS2Keyboard::keymap[0x21]);
-    bitWrite(z80ports_in[0], 4, PS2Keyboard::keymap[0x2a]);
+    bitWrite(Ports::base[0], 0, PS2Keyboard::keymap[0x12]);
+    bitWrite(Ports::base[0], 1, PS2Keyboard::keymap[0x1a]);
+    bitWrite(Ports::base[0], 2, PS2Keyboard::keymap[0x22]);
+    bitWrite(Ports::base[0], 3, PS2Keyboard::keymap[0x21]);
+    bitWrite(Ports::base[0], 4, PS2Keyboard::keymap[0x2a]);
 
-    bitWrite(z80ports_in[1], 0, PS2Keyboard::keymap[0x1c]);
-    bitWrite(z80ports_in[1], 1, PS2Keyboard::keymap[0x1b]);
-    bitWrite(z80ports_in[1], 2, PS2Keyboard::keymap[0x23]);
-    bitWrite(z80ports_in[1], 3, PS2Keyboard::keymap[0x2b]);
-    bitWrite(z80ports_in[1], 4, PS2Keyboard::keymap[0x34]);
+    bitWrite(Ports::base[1], 0, PS2Keyboard::keymap[0x1c]);
+    bitWrite(Ports::base[1], 1, PS2Keyboard::keymap[0x1b]);
+    bitWrite(Ports::base[1], 2, PS2Keyboard::keymap[0x23]);
+    bitWrite(Ports::base[1], 3, PS2Keyboard::keymap[0x2b]);
+    bitWrite(Ports::base[1], 4, PS2Keyboard::keymap[0x34]);
 
-    bitWrite(z80ports_in[2], 0, PS2Keyboard::keymap[0x15]);
-    bitWrite(z80ports_in[2], 1, PS2Keyboard::keymap[0x1d]);
-    bitWrite(z80ports_in[2], 2, PS2Keyboard::keymap[0x24]);
-    bitWrite(z80ports_in[2], 3, PS2Keyboard::keymap[0x2d]);
-    bitWrite(z80ports_in[2], 4, PS2Keyboard::keymap[0x2c]);
+    bitWrite(Ports::base[2], 0, PS2Keyboard::keymap[0x15]);
+    bitWrite(Ports::base[2], 1, PS2Keyboard::keymap[0x1d]);
+    bitWrite(Ports::base[2], 2, PS2Keyboard::keymap[0x24]);
+    bitWrite(Ports::base[2], 3, PS2Keyboard::keymap[0x2d]);
+    bitWrite(Ports::base[2], 4, PS2Keyboard::keymap[0x2c]);
 
-    bitWrite(z80ports_in[3], 0, PS2Keyboard::keymap[0x16]);
-    bitWrite(z80ports_in[3], 1, PS2Keyboard::keymap[0x1e]);
-    bitWrite(z80ports_in[3], 2, PS2Keyboard::keymap[0x26]);
-    bitWrite(z80ports_in[3], 3, PS2Keyboard::keymap[0x25]);
-    bitWrite(z80ports_in[3], 4, PS2Keyboard::keymap[0x2e]);
+    bitWrite(Ports::base[3], 0, PS2Keyboard::keymap[0x16]);
+    bitWrite(Ports::base[3], 1, PS2Keyboard::keymap[0x1e]);
+    bitWrite(Ports::base[3], 2, PS2Keyboard::keymap[0x26]);
+    bitWrite(Ports::base[3], 3, PS2Keyboard::keymap[0x25]);
+    bitWrite(Ports::base[3], 4, PS2Keyboard::keymap[0x2e]);
 
-    bitWrite(z80ports_in[4], 0, PS2Keyboard::keymap[0x45]);
-    bitWrite(z80ports_in[4], 1, PS2Keyboard::keymap[0x46]);
-    bitWrite(z80ports_in[4], 2, PS2Keyboard::keymap[0x3e]);
-    bitWrite(z80ports_in[4], 3, PS2Keyboard::keymap[0x3d]);
-    bitWrite(z80ports_in[4], 4, PS2Keyboard::keymap[0x36]);
+    bitWrite(Ports::base[4], 0, PS2Keyboard::keymap[0x45]);
+    bitWrite(Ports::base[4], 1, PS2Keyboard::keymap[0x46]);
+    bitWrite(Ports::base[4], 2, PS2Keyboard::keymap[0x3e]);
+    bitWrite(Ports::base[4], 3, PS2Keyboard::keymap[0x3d]);
+    bitWrite(Ports::base[4], 4, PS2Keyboard::keymap[0x36]);
 
-    bitWrite(z80ports_in[5], 0, PS2Keyboard::keymap[0x4d]);
-    bitWrite(z80ports_in[5], 1, PS2Keyboard::keymap[0x44]);
-    bitWrite(z80ports_in[5], 2, PS2Keyboard::keymap[0x43]);
-    bitWrite(z80ports_in[5], 3, PS2Keyboard::keymap[0x3c]);
-    bitWrite(z80ports_in[5], 4, PS2Keyboard::keymap[0x35]);
+    bitWrite(Ports::base[5], 0, PS2Keyboard::keymap[0x4d]);
+    bitWrite(Ports::base[5], 1, PS2Keyboard::keymap[0x44]);
+    bitWrite(Ports::base[5], 2, PS2Keyboard::keymap[0x43]);
+    bitWrite(Ports::base[5], 3, PS2Keyboard::keymap[0x3c]);
+    bitWrite(Ports::base[5], 4, PS2Keyboard::keymap[0x35]);
 
-    bitWrite(z80ports_in[6], 0, PS2Keyboard::keymap[0x5a]);
-    bitWrite(z80ports_in[6], 1, PS2Keyboard::keymap[0x4b]);
-    bitWrite(z80ports_in[6], 2, PS2Keyboard::keymap[0x42]);
-    bitWrite(z80ports_in[6], 3, PS2Keyboard::keymap[0x3b]);
-    bitWrite(z80ports_in[6], 4, PS2Keyboard::keymap[0x33]);
+    bitWrite(Ports::base[6], 0, PS2Keyboard::keymap[0x5a]);
+    bitWrite(Ports::base[6], 1, PS2Keyboard::keymap[0x4b]);
+    bitWrite(Ports::base[6], 2, PS2Keyboard::keymap[0x42]);
+    bitWrite(Ports::base[6], 3, PS2Keyboard::keymap[0x3b]);
+    bitWrite(Ports::base[6], 4, PS2Keyboard::keymap[0x33]);
 
-    bitWrite(z80ports_in[7], 0, PS2Keyboard::keymap[0x29]);
-    bitWrite(z80ports_in[7], 1, PS2Keyboard::keymap[0x14]);
-    bitWrite(z80ports_in[7], 2, PS2Keyboard::keymap[0x3a]);
-    bitWrite(z80ports_in[7], 3, PS2Keyboard::keymap[0x31]);
-    bitWrite(z80ports_in[7], 4, PS2Keyboard::keymap[0x32]);
+    bitWrite(Ports::base[7], 0, PS2Keyboard::keymap[0x29]);
+    bitWrite(Ports::base[7], 1, PS2Keyboard::keymap[0x14]);
+    bitWrite(Ports::base[7], 2, PS2Keyboard::keymap[0x3a]);
+    bitWrite(Ports::base[7], 3, PS2Keyboard::keymap[0x31]);
+    bitWrite(Ports::base[7], 4, PS2Keyboard::keymap[0x32]);
 
     // Kempston joystick
-    z80ports_in[0x1f] = 0;
-    bitWrite(z80ports_in[0x1f], 0, !PS2Keyboard::keymap[KEY_CURSOR_RIGHT]);
-    bitWrite(z80ports_in[0x1f], 1, !PS2Keyboard::keymap[KEY_CURSOR_LEFT]);
-    bitWrite(z80ports_in[0x1f], 2, !PS2Keyboard::keymap[KEY_CURSOR_DOWN]);
-    bitWrite(z80ports_in[0x1f], 3, !PS2Keyboard::keymap[KEY_CURSOR_UP]);
-    bitWrite(z80ports_in[0x1f], 4, !PS2Keyboard::keymap[KEY_ALT_GR]);
+    Ports::base[0x1f] = 0;
+    bitWrite(Ports::base[0x1f], 0, !PS2Keyboard::keymap[KEY_CURSOR_RIGHT]);
+    bitWrite(Ports::base[0x1f], 1, !PS2Keyboard::keymap[KEY_CURSOR_LEFT]);
+    bitWrite(Ports::base[0x1f], 2, !PS2Keyboard::keymap[KEY_CURSOR_DOWN]);
+    bitWrite(Ports::base[0x1f], 3, !PS2Keyboard::keymap[KEY_CURSOR_UP]);
+    bitWrite(Ports::base[0x1f], 4, !PS2Keyboard::keymap[KEY_ALT_GR]);
 }
 
 /* +-------------+
@@ -404,9 +399,6 @@ void ESPectrum::processKeyboard() {
    +-------------+
  */
 void ESPectrum::loop() {
-    // static byte last_ts = 0;
-    unsigned long ts1, ts2;
-
     if (halfsec) {
         flashing = ~flashing;
     }
@@ -415,22 +407,14 @@ void ESPectrum::loop() {
 
     processKeyboard();
     updateWiimote2Keys();
-    do_OSD();
+    OSD::do_OSD();
 
-    // ts1 = millis();
     zx_loop();
-    // ts2 = millis();
 
     xQueueSend(vidQueue, &param, portMAX_DELAY);
 
     while (videoTaskIsRunning) {
     }
-
-    /*
-    if ((ts2 - ts1) != last_ts) {
-        Serial.printf("PC:  %d time: %d\n", _zxCpu.pc, ts2 - ts1);
-        last_ts = ts2 - ts1;
-    }*/
 
     TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
     TIMERG0.wdt_feed = 1;

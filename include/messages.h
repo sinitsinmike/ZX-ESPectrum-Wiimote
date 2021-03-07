@@ -1,7 +1,10 @@
-#pragma once
+#ifndef ESPECTRUM_MESSAGES_h
+#define ESPECTRUM_MESSAGES_h
 
 // General
 #define MSG_LOADING "Loading file"
+#define MSG_LOADING_SNA "Loading SNA file"
+#define MSG_LOADING_Z80 "Loading Z80 file"
 #define MSG_SAVE_CONFIG "Saving config file"
 #define MSG_CHIP_SETUP "Chip setup"
 #define MSG_VGA_INIT "Initalizing VGA"
@@ -72,7 +75,7 @@
 #define MENU_ROMSET "Select Rom Set\n"
 #define OSD_HELP \
     "Developed in 2019 by Rampa & Queru\n"\
-    "Modified  in 2020 by DCrespo\n"\
+    "Modified  in 2020, 2021 by DCrespo\n"\
     "for adding Wiimote[W] as input device,\n"\
     "keeping PS/2 keyboard[K] support.\n\n" \
     "    [K]F1       [W]Home   for main menu\n"\
@@ -82,4 +85,6 @@
     "For syncing Wiimote, press buttons 1 & 2\n\n"\
     "Kempston joystick is emulated using\n"\
     "cursor keys and AltGr for fire button.\n"
-    #define MENU_TEST getTestMenu(200)
+#define MENU_TEST getTestMenu(200)
+
+#endif // ESPECTRUM_MESSAGES_h

@@ -2,6 +2,8 @@
 
 **(UPDATE 21/02/2021: added microSD card support, and 4:3 monitor aspect ratio)**
 
+**(UPDATE 07/03/2021: added .Z80 support, types 1, 2, and 3, with support for 48K/128K )**
+
 An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
 Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
@@ -28,26 +30,21 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
 - PS/2 Keyboard.
 - Wiimote support with per-game key assignments.
-- VGA OSD menu: Configuration, architecture, ROM and SNA selection.
+- VGA OSD menu: Configuration, architecture, ROM and SNA/Z80 selection.
 - Support for two aspect ratios: 16:9 or 4:3 monitors (using 360x200 or 320x240 modes)
-- Tape save and loading.
+- Tape saving and loading.
 - SNA snapshot loading.
-- Quick snapshot saving and loading.
-- Internal SPIFFS support / external SD card support (only one of both, see config.h).
+- Z80 snapshot loading.
+- Quick snapshot saving and loading (SNA, only 48K supported).
+- Internal SPIFFS support / external SD card support (only one of both, see hardconfig.h).
 
 ## Work in progress
 
-- AY-3-8910 emulation and sound output with dedicated chip.
-- SD card support.
-- DivIDE emulation.
-- Dedicated motherboard design.
-- Joystick support.
-- USB keyboard.
-- OTA: Over the Air updates.
+- AY-3-8912 emulation (no sound yet for 128K).
 
 ## Compiling and installing
 
-Windows, GNU/Linux and MacOS/X. This version has been developed using 
+Windows, GNU/Linux and MacOS/X. This version has been developed using platformIO.
 
 #### Install platformIO:
 
@@ -65,23 +62,23 @@ Change upload_port to whatever you're using.
 
 Default aspect ratio is 16:9, so if your monitor has this, you don't need to change anything.
 
-If your monitor is 4:3, you should edit config.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
+If your monitor is 4:3, you should edit hardconfig.h, comment the `#define AR_16_9 1` line, and uncomment the `#define AR_4_3 1` line.
 
 #### Upload the data filesystem
 
-If using internal flash storage (USE_INT_FLASH #defined in config.h), you must copy some files to internal storage using this procedure.
+If using internal flash storage (USE_INT_FLASH #defined in hardconfig.h), you must copy some files to internal storage using this procedure.
 
 `PlatformIO > Project Tasks > Upload File System Image`
 
-All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in SNA format, into the `/data/sna` subdirectory).
+All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in .SNA or .Z80 format, into the `/data/sna` subdirectory).
 
 #### Using a external micro SD Card and copying games into it
 
-If using external micro sd card (USE_SD_CARD #defined in config.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself).
+If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself).
 
 The SD card should be formatted in FAT16 / FAT32.
 
-For adding games to the emulator, just turn it off, extract the sd card, copy games in .SNA format to the `/sna` folder of the sd card, insert it again, and turn it on.
+For adding games to the emulator, just turn it off, extract the sd card, copy games in .SNA or .Z80 format to the `/sna` folder of the sd card, insert it again, and turn it on.
 
 Important note: once you flash the firmware successfully with USE_SD_CARD defined, you won't be able to flash the firmware again, unless you remove the SD card. This is due to GPIO pin 2/12 used for SD card MISO/MOSI interfering with the boot/flashing process.
 
@@ -97,7 +94,7 @@ Run these tasks (`Upload` also does a `Build`) whenever you make any change in t
 
 ## Hardware configuration and pinout
 
-Pin assignment in `include/def/hardware.h` is set to match the TTGo VGA32, use it as-is, or change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
+Pin assignment in `hardpins.h` is set to match the TTGo VGA32, use it as-is, or change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
 
 I have used VGA 6 bit driver (so BRIGHT attribute is kept)
 
@@ -118,7 +115,7 @@ OSD menu can be opened using the Wiimote's Home key. Navigation is done using th
 From OSD you can load snapshots (from `/data/sna`) or change ROMs.
 
 ## Assigning Wiimote keys to emulated Spectrum keys
-For every `.sna` game in `/data/sna`, there should be a corresponding `.txt` file in the same dir, with a very simple format. Examples are provided.
+For every `.sna / .z80` game in `/data/sna`, there should be a corresponding `.txt` file in the same dir, with a very simple format. Examples are provided.
 
 The `ESPWiimote` library generates the following codes for Wiimote keys:
 
@@ -150,7 +147,7 @@ For the Manic Miner example, the correspondences would be:
 
 ```
 
-I have NOT included Manic Miner `.sna` snapshot, but you can download it from [worldofspectrum.org](https://worldofspectrum.org/archive/software/games/manic-miner-bug-byte-software-ltd) and convert it to `.sna` using [FUSE](http://fuse-emulator.sourceforge.net/), for example.
+I have NOT included Manic Miner `.sna / .z80` snapshot, but you can download it from [worldofspectrum.org](https://worldofspectrum.org/archive/software/games/manic-miner-bug-byte-software-ltd) and convert it to `.sna / .z80` using [FUSE](http://fuse-emulator.sourceforge.net/), for example.
 
 ## Thanks to
 

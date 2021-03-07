@@ -1,80 +1,58 @@
+#ifndef ESPECTRUM_OSD_H
+#define ESPECTRUM_OSD_H
+
 // OSD Headers
 #include <Arduino.h>
-#include "def/config.h"
+#include "hardconfig.h"
 
 // Defines
-#define MENU_REDRAW true
-#define MENU_UPDATE false
-#define OSD_ERROR true
-#define OSD_NORMAL false
-
-#ifdef AR_16_9
-#define SCR_W 360
-#define SCR_H 200
-#endif
-
-#ifdef AR_4_3
-#define SCR_W 320
-#define SCR_H 240
-#endif
-
-#define OSD_W 248
-#define OSD_H 152
-#define OSD_MARGIN 4
 #define OSD_FONT_W 6
 #define OSD_FONT_H 8
-#define LEVEL_INFO 0
-#define LEVEL_OK 1
-#define LEVEL_WARN 2
-#define LEVEL_ERROR 3
-#define ON true
-#define OFF false
-#define MENU_MAX_ROWS 23
-// Line type
-#define IS_TITLE 0
-#define IS_FOCUSED 1
-#define IS_NORMAL 2
-// Scroll
-#define UP true
-#define DOWN false
-// Sound
-#define SND_CLICK_DURATION 50
-#define SND_CLICK_SPACE 5
 
 // OSD Interface
-// Calc
-unsigned short scrAlignCenterX(unsigned short pixel_width);
-unsigned short scrAlignCenterY(unsigned short pixel_height);
-byte osdMaxRows();
-byte osdMaxCols();
-unsigned short osdInsideX();
-unsigned short osdInsideY();
-// OSD
-void osdHome();
-void osdAt(byte row, byte col);
-void drawOSD();
-void do_OSD();
-// Error
-void errorPanel(String errormsg);
-void errorHalt(String errormsg);
-void osdCenteredMsg(String msg, byte warn_level);
-// Menu
-void newMenu(String new_menu);
-void menuRecalc();
-unsigned short menuRealRowFor(byte virtual_row_num);
-void menuPrintRow(byte virtual_row_num, byte line_type);
-void menuDraw();
-void menuRedraw();
-String getArchMenu();
-String getRomsetMenu(String arch);
-unsigned short menuRun(String new_menu);
-void menuScroll(boolean up);
-void menuAt(short int row, short int col);
-void menuScrollBar();
-String getTestMenu(unsigned short n_lines);
-// Rows
-unsigned short rowCount(String menu);
-String rowGet(String menu, unsigned short row_number);
-// SNA Management
-void changeSna(String sna_filename);
-void setDemoMode(boolean on, unsigned short every);
+class OSD
+{
+public:
+    // Calc
+    static unsigned short scrAlignCenterX(unsigned short pixel_width);
+    static unsigned short scrAlignCenterY(unsigned short pixel_height);
+    static byte osdMaxRows();
+    static byte osdMaxCols();
+    static unsigned short osdInsideX();
+    static unsigned short osdInsideY();
+
+    // OSD
+    static void osdHome();
+    static void osdAt(byte row, byte col);
+    static void drawOSD();
+    static void do_OSD();
+
+    // Error
+    static void errorPanel(String errormsg);
+    static void errorHalt(String errormsg);
+    static void osdCenteredMsg(String msg, byte warn_level);
+
+    // Menu
+    static void newMenu(String new_menu);
+    static void menuRecalc();
+    static unsigned short menuRealRowFor(byte virtual_row_num);
+    static void menuPrintRow(byte virtual_row_num, byte line_type);
+    static void menuDraw();
+    static void menuRedraw();
+    static String getArchMenu();
+    static String getRomsetMenu(String arch);
+    static unsigned short menuRun(String new_menu);
+    static void menuScroll(boolean up);
+    static void menuAt(short int row, short int col);
+    static void menuScrollBar();
+    static String getTestMenu(unsigned short n_lines);
+
+    // Rows
+    static unsigned short rowCount(String menu);
+    static String rowGet(String menu, unsigned short row_number);
+
+    // Snapshot (SNA/Z80) Management
+    static void changeSnapshot(String sna_filename);
+};
+
+#endif // ESPECTRUM_OSD_H

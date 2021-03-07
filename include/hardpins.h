@@ -1,7 +1,7 @@
-#ifndef ESPectrum_hardware_h
-#define ESPectrum_hardware_h
+#ifndef ESPectrum_hardpins_h
+#define ESPectrum_hardpins_h
 
-#include "config.h"
+#include "hardconfig.h"
 
 // adjusted for Lilygo TTGO
 #ifdef SPEAKER_PRESENT
@@ -141,4 +141,4 @@
 
 #endif
 
-#endif // ESPectrum_hardware_h
+#endif // ESPectrum_hardpins_h

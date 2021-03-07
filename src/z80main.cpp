@@ -1,22 +1,17 @@
-#include "def/hardware.h"
-#include "startup.h"
+#include "hardpins.h"
 #include <stdio.h>
 #include <string.h>
 
 #include "ESPectrum.h"
 
-#include "Emulator/Keyboard/PS2Kbd.h"
-#include "Emulator/Memory.h"
-#include "Emulator/clock.h"
-#include "Emulator/z80Input.h"
-#include "Emulator/z80main.h"
+#include "PS2Kbd.h"
+#include "z80main.h"
+#include "Config.h"
 
 #define RAM_AVAILABLE 0xC000
 
 Z80_STATE _zxCpu;
 
-extern byte z80ports_in[128];
-extern byte z80ports_wiin[128];
 extern byte tick;
 
 CONTEXT _zxContext;
@@ -26,15 +21,28 @@ int _next_total = 0;
 static uint8_t zx_data = 0;
 static uint32_t frames = 0;
 static uint32_t _ticks = 0;
+
+#define FRAME_PERIOD_MS 20
+#define CPU_SPEED_MHZ_ZX48 3.5
+#define CPU_SPEED_MHZ_ZX128 3.5469
+
+int CalcTStates() {
+    if (Config::getArch() == "48K") {
+        return CPU_SPEED_MHZ_ZX48 * FRAME_PERIOD_MS * 1000;
+    } else {
+        return CPU_SPEED_MHZ_ZX128 * FRAME_PERIOD_MS * 1000;
+    }
+}
+
 int cycles_per_step = CalcTStates();
 
 extern "C" {
-uint8_t readbyte(uint16_t addr);
-uint16_t readword(uint16_t addr);
-void writebyte(uint16_t addr, uint8_t data);
-void writeword(uint16_t addr, uint16_t data);
-uint8_t input(uint8_t portLow, uint8_t portHigh);
-void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
+    uint8_t readbyte(uint16_t addr);
+    uint16_t readword(uint16_t addr);
+    void writebyte(uint16_t addr, uint8_t data);
+    void writeword(uint16_t addr, uint16_t data);
+    uint8_t input(uint8_t portLow, uint8_t portHigh);
+    void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
 }
 
 void zx_setup() {
@@ -49,15 +57,18 @@ void zx_setup() {
 }
 
 void zx_reset() {
-    memset(z80ports_in, 0x1F, 128);
+    for (uint8_t i = 0; i < 128; i++) {
+        Ports::base[i] == 0x1F;
+        Ports::wii[i] == 0x1F;
+    }
     ESPectrum::borderColor = 7;
-    bank_latch = 0;
-    video_latch = 0;
-    rom_latch = 0;
-    paging_lock = 0;
-    sp3_mode = 0;
-    sp3_rom = 0;
-    rom_in_use = 0;
+    Mem::bankLatch = 0;
+    Mem::videoLatch = 0;
+    Mem::romLatch = 0;
+    Mem::pagingLock = 0;
+    Mem::modeSP3 = 0;
+    Mem::romSP3 = 0;
+    Mem::romInUse = 0;
     cycles_per_step = CalcTStates();
 
     Z80Reset(&_zxCpu);
@@ -77,100 +88,92 @@ int32_t zx_loop() {
 extern "C" uint8_t readbyte(uint16_t addr) {
     switch (addr) {
     case 0x0000 ... 0x3fff:
-        switch (rom_in_use) {
+        switch (Mem::romInUse) {
         case 0:
-            return rom0[addr];
+            return Mem::rom0[addr];
         case 1:
-            return rom1[addr];
+            return Mem::rom1[addr];
         case 2:
-            return rom2[addr];
+            return Mem::rom2[addr];
         case 3:
-            return rom3[addr];
+            return Mem::rom3[addr];
         }
     case 0x4000 ... 0x7fff:
-        return ram5[addr - 0x4000];
+        return Mem::ram5[addr - 0x4000];
         break;
     case 0x8000 ... 0xbfff:
-        return ram2[addr - 0x8000];
+        return Mem::ram2[addr - 0x8000];
         break;
     case 0xc000 ... 0xffff:
-        switch (bank_latch) {
+        switch (Mem::bankLatch) {
         case 0:
-            return ram0[addr - 0xc000];
+            return Mem::ram0[addr - 0xc000];
             break;
         case 1:
-            return ram1[addr - 0xc000];
+            return Mem::ram1[addr - 0xc000];
             break;
         case 2:
-            return ram2[addr - 0xc000];
+            return Mem::ram2[addr - 0xc000];
             break;
         case 3:
-            return ram3[addr - 0xc000];
+            return Mem::ram3[addr - 0xc000];
             break;
         case 4:
-            return ram4[addr - 0xc000];
+            return Mem::ram4[addr - 0xc000];
             break;
         case 5:
-            return ram5[addr - 0xc000];
+            return Mem::ram5[addr - 0xc000];
             break;
         case 6:
-            return ram6[addr - 0xc000];
+            return Mem::ram6[addr - 0xc000];
             break;
         case 7:
-            return ram7[addr - 0xc000];
+            return Mem::ram7[addr - 0xc000];
             break;
         }
-        // Serial.printf("Address: %x Returned address %x  Bank: %x\n",addr,addr-0xc000,bank_latch);
+        // Serial.printf("Address: %x Returned address %x  Bank: %x\n",addr,addr-0xc000,Mem::bankLatch);
         break;
     }
 }
 
 extern "C" uint16_t readword(uint16_t addr) { return ((readbyte(addr + 1) << 8) | readbyte(addr)); }
 
-extern "C" void writebyte(uint16_t addr, uint8_t data) {
-
-    //  if (addr >= (uint16_t)0x4000 && addr <= (uint16_t)0x7FFF)
-    //  {
-    //      while (writeScreen) {
-    //          delayMicroseconds(1);
-    //      }
-    // if (addr >= 0x8000)
-    //   Serial.printf("Address: %x  Bank: %x\n",addr,bank_latch);
-
+extern "C" void writebyte(uint16_t addr, uint8_t data)
+{
     switch (addr) {
     case 0x0000 ... 0x3fff:
         return;
     case 0x4000 ... 0x7fff:
-        ram5[addr - 0x4000] = data;
+        Mem::ram5[addr - 0x4000] = data;
         break;
     case 0x8000 ... 0xbfff:
-        ram2[addr - 0x8000] = data;
+        Mem::ram2[addr - 0x8000] = data;
         break;
     case 0xc000 ... 0xffff:
-        switch (bank_latch) {
+        switch (Mem::bankLatch) {
         case 0:
-            ram0[addr - 0xc000] = data;
+            Mem::ram0[addr - 0xc000] = data;
             break;
         case 1:
-            ram1[addr - 0xc000] = data;
+            Mem::ram1[addr - 0xc000] = data;
             break;
         case 2:
-            ram2[addr - 0xc000] = data;
+            Mem::ram2[addr - 0xc000] = data;
             break;
         case 3:
-            ram3[addr - 0xc000] = data;
+            Mem::ram3[addr - 0xc000] = data;
             break;
         case 4:
-            ram4[addr - 0xc000] = data;
+            Mem::ram4[addr - 0xc000] = data;
             break;
         case 5:
-            ram5[addr - 0xc000] = data;
+            Mem::ram5[addr - 0xc000] = data;
             break;
         case 6:
-            ram6[addr - 0xc000] = data;
+            Mem::ram6[addr - 0xc000] = data;
             break;
         case 7:
-            ram7[addr - 0xc000] = data;
+            Mem::ram7[addr - 0xc000] = data;
             break;
         }
         // Serial.println("plin");
@@ -227,21 +230,19 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
         // EAR_PIN
         if (portHigh == 0xFE) {
 #ifdef EAR_PRESENT
-            //bitWrite(z80ports_in  [0], 6, digitalRead(EAR_PIN));
-            //bitWrite(z80ports_wiin[0], 6, digitalRead(EAR_PIN));
             bitWrite(result, 6, digitalRead(EAR_PIN));
 #endif
         }
 
         // Keyboard
-        if (~(portHigh | 0xFE)&0xFF) result &= (z80ports_in[0] & z80ports_wiin[0]);
-        if (~(portHigh | 0xFD)&0xFF) result &= (z80ports_in[1] & z80ports_wiin[1]);
-        if (~(portHigh | 0xFB)&0xFF) result &= (z80ports_in[2] & z80ports_wiin[2]);
-        if (~(portHigh | 0xF7)&0xFF) result &= (z80ports_in[3] & z80ports_wiin[3]);
-        if (~(portHigh | 0xEF)&0xFF) result &= (z80ports_in[4] & z80ports_wiin[4]);
-        if (~(portHigh | 0xDF)&0xFF) result &= (z80ports_in[5] & z80ports_wiin[5]);
-        if (~(portHigh | 0xBF)&0xFF) result &= (z80ports_in[6] & z80ports_wiin[6]);
-        if (~(portHigh | 0x7F)&0xFF) result &= (z80ports_in[7] & z80ports_wiin[7]);
+        if (~(portHigh | 0xFE)&0xFF) result &= (Ports::base[0] & Ports::wii[0]);
+        if (~(portHigh | 0xFD)&0xFF) result &= (Ports::base[1] & Ports::wii[1]);
+        if (~(portHigh | 0xFB)&0xFF) result &= (Ports::base[2] & Ports::wii[2]);
+        if (~(portHigh | 0xF7)&0xFF) result &= (Ports::base[3] & Ports::wii[3]);
+        if (~(portHigh | 0xEF)&0xFF) result &= (Ports::base[4] & Ports::wii[4]);
+        if (~(portHigh | 0xDF)&0xFF) result &= (Ports::base[5] & Ports::wii[5]);
+        if (~(portHigh | 0xBF)&0xFF) result &= (Ports::base[6] & Ports::wii[6]);
+        if (~(portHigh | 0x7F)&0xFF) result &= (Ports::base[7] & Ports::wii[7]);
 
 #ifdef ZX_KEYB_PRESENT
         detectZXKeyCombinationForMenu();
@@ -267,7 +268,7 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
     }
     // Kempston
     if (portLow == 0x1F) {
-        return z80ports_in[31];
+        return Ports::base[31];
     }
     // Sound (AY-3-8912)
 
@@ -308,7 +309,7 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
 #endif
 
-        z80ports_in[0x20] = data;
+        Ports::base[0x20] = data;
     } break;
 
     case 0xFD: {
@@ -327,26 +328,26 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
 #endif
 
         case 0x7F:
-            if (!paging_lock) {
-                paging_lock = bitRead(tmp_data, 5);
-                rom_latch = bitRead(tmp_data, 4);
-                video_latch = bitRead(tmp_data, 3);
-                bank_latch = tmp_data & 0x7;
-                // rom_in_use=0;
-                bitWrite(rom_in_use, 1, sp3_rom);
-                bitWrite(rom_in_use, 0, rom_latch);
+            if (!Mem::pagingLock) {
+                Mem::pagingLock = bitRead(tmp_data, 5);
+                Mem::romLatch = bitRead(tmp_data, 4);
+                Mem::videoLatch = bitRead(tmp_data, 3);
+                Mem::bankLatch = tmp_data & 0x7;
+                // Mem::romInUse=0;
+                bitWrite(Mem::romInUse, 1, Mem::romSP3);
+                bitWrite(Mem::romInUse, 0, Mem::romLatch);
                 // Serial.printf("7FFD data: %x ROM latch: %x Video Latch: %x bank latch: %x page lock:
-                // %x\n",tmp_data,rom_latch,video_latch,bank_latch,paging_lock);
+                // %x\n",tmp_data,Mem::romLatch,Mem::videoLatch,Mem::bankLatch,Mem::pagingLock);
             }
             break;
 
         case 0x1F:
-            sp3_mode = bitRead(data, 0);
-            sp3_rom = bitRead(data, 2);
-            bitWrite(rom_in_use, 1, sp3_rom);
-            bitWrite(rom_in_use, 0, rom_latch);
+            Mem::modeSP3 = bitRead(data, 0);
+            Mem::romSP3 = bitRead(data, 2);
+            bitWrite(Mem::romInUse, 1, Mem::romSP3);
+            bitWrite(Mem::romInUse, 0, Mem::romLatch);
 
-            // Serial.printf("1FFD data: %x mode: %x rom bits: %x ROM chip: %x\n",data,sp3_mode,sp3_rom, rom_in_use);
+            // Serial.printf("1FFD data: %x mode: %x rom bits: %x ROM chip: %x\n",data,Mem::modeSP3,Mem::romSP3, Mem::romInUse);
             break;
         }
     } break;

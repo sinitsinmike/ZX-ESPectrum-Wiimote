@@ -1,3 +1,6 @@
+#ifndef Z80EMU_INSTRUCTIONS_H
+#define Z80EMU_INSTRUCTIONS_H
+
 /* instructions.h
  * Declaration of the "generic" instructions emulated.
  *
@@ -235,3 +238,5 @@ enum {
                                  */
 
 };
+
+#endif // Z80EMU_INSTRUCTIONS_H

@@ -1,2 +1,0 @@
-// Netword methods
-void wifiConn();
