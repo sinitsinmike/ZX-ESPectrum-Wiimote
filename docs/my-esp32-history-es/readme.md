@@ -3,7 +3,7 @@
 ### David Crespo, marzo de 2021
 __________________________
 
-En mayo de 2020 un cliente (soy programador freelance) me pidió ayuda para evaluar un microcontrolador ESP32 que quería usar en su producto, ya estaba usando un PSOC para comunicación por Bluetooth y ahora necesitaba WiFi y mayor potencia.
+En mayo de 2020 un cliente (soy programador freelance) me pidió ayuda para evaluar un microcontrolador ESP32 que quería usar en su producto; ya estaba usando un PSOC para comunicación por Bluetooth y ahora necesitaba WiFi y mayor potencia.
 
 Me entregó mi primera placa (una placa de desarrollo DevKit ESP32-WRoom) y empecé a investigar sus capacidades, a familiarizarme con el entorno de desarrollo, a compilar y flashear pruebas...
 
@@ -11,7 +11,7 @@ Y me pareció un cacharro potente dentro de sus limitaciones, así que me puse a
 
 ![esp32-wroom](../img/esp32-wroom.jpg)
 
-Lo primero que me llamó la atención (y mucho) fueron los trabajos de Bitluni (https://bitluni.net/), en los que conseguía utilizar el hardware programable para generar señal de vídeo.
+Lo primero que me llamó la atención (y mucho) fueron los trabajos de Bitluni ([https://bitluni.net/](https://bitluni.net/)), en los que conseguía utilizar el hardware programable para generar señal de vídeo.
 
 Lo primero que probé fue una demo en la que genera señal de vídeo compuesto (en blanco y negro), así que flasheé mi ESP32 y la conecté a mi TV de 14'' (el que uso para el Spectrum), y aluciné viendo una demo poligonal de una Venus de Milo en 3D.
 
@@ -97,7 +97,7 @@ Puse dos modalidades de snapshot: a memoria (más rápida) y a disco (más lenta
 
 A finales de agosto de 2020 publiqué mi primer vídeo sobre el emulador ESPectrum:
 
-https://www.youtube.com/watch?v=ROthljwC5OA
+[https://www.youtube.com/watch?v=ROthljwC5OA](https://www.youtube.com/watch?v=ROthljwC5OA)
 
 ![video202008](../img/video202008.jpg)
 
@@ -113,7 +113,7 @@ Eso sí, la TTGO lleva un convertidor D/A de resistencias R/2R de 2 bits por com
 
 A principios de octubre de 2020 publiqué mi segundo vídeo sobre el emulador ESPectrum:
 
-https://www.youtube.com/watch?v=GXHBrQVTfBw
+[https://www.youtube.com/watch?v=GXHBrQVTfBw](https://www.youtube.com/watch?v=GXHBrQVTfBw)
 
 ![video202008](../img/video202010.jpg)
 
@@ -137,15 +137,15 @@ Así que implementé correctamente los ciclos de espera para las instrucciones L
 
 Con tanto probar el juego volví a tener ganas de jugarlo y estuve practicando hasta que fui capaz de terminar los 20 niveles sin vidas infinitas ni snapshots. Grabé un vídeo de la hazaña, realizada sobre un Spectrum 48K de teclas de goma, conectado a una TV de tubo, y cargando el juego desde cassette.
 
-https://www.youtube.com/watch?v=3qQsPtiP_nc
+[https://www.youtube.com/watch?v=3qQsPtiP_nc](https://www.youtube.com/watch?v=3qQsPtiP_nc)
 
 El juego terminado otra vez, pero viendo sólo pantalla:
 
-https://www.youtube.com/watch?v=uph2Q00jCfU
+[https://www.youtube.com/watch?v=uph2Q00jCfU](https://www.youtube.com/watch?v=uph2Q00jCfU)
 
 Los siguientes meses no le dediqué tiempo al emulador ESPectrum. Tuve poco tiempo debido a una gran carga de trabajo.
 
-A finales de febrero de 2020 volví a retomar el ESPectrum. Fabriqué unas carcasas con la impresora 3D para meter dentro las TTGo.
+A finales de febrero de 2021 volví a retomar el ESPectrum. Fabriqué unas carcasas con la impresora 3D para meter dentro las TTGo.
 
 ![ttgocases](../img/ttgocases.jpg)
 
@@ -153,7 +153,7 @@ También compré un monitor VGA TFT de 17" (4:3) de segunda mano, barato (10€)
 
 A petición de un usuario que comentó en uno de los vídeos, añadí soporte para tarjeta SD, lo que resultó muy fácil, debido a que la TTGo trae una ranura para tarjeta microSD. Fue sencillo de implementar, únicamente hubo que inicializar el soporte para SD, y luego sustituir en todas las llamadas de acceso a disco el objeto SPIFFS por el objeto SD. Se puede elegir entre uno u otro cambiando un #define en un fichero de cabecera.
 
-En marzo de 2020 hice una reorganización del código, unificando las dos ramas (master y lilygo-ttgo-vga32), que aunque siguen siendo ramas distintas, comparten el 99.9% del código (sólo difiere la asignación de pines y poco más).
+En marzo de 2021 hice una reorganización del código, unificando las dos ramas (master y lilygo-ttgo-vga32), que aunque siguen siendo ramas distintas, comparten el 99.9% del código (sólo difiere la asignación de pines y poco más).
 
 Con el código limpio y ordenado, añadí soporte para el formato de archivo .Z80, mucho más extendido que el formato .SNA que estaba usando hasta ahora. Conseguí soportar varias versiones de .Z80, para Spectrum 48K y 128K, además conmutando entre modos 48 y 128 en función del tipo de .Z80 que se está cargando, cosa que no hacían antes.
 
