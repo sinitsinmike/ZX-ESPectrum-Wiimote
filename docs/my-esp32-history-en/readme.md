@@ -7,7 +7,7 @@ In May 2020 a client of mine (I am a freelance programmer) asked me to evaluate 
 
 He handed me my first board (a DevKit ESP32-WRoom development board) and I began testing  features, getting familiar with the development environment, compiling and flashing tests ...
 
-And I thought it was powerful device within its limitations, so I started to investigate what else did people do with it.
+And I thought it was a powerful device within its limitations, so I started to investigate what else did people do with it.
 
 ![esp32-wroom](../img/esp32-wroom.jpg)
 

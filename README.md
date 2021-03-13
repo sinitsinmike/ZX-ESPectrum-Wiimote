@@ -46,7 +46,7 @@ Windows, GNU/Linux and MacOS/X. This version has been developed using platformIO
 #### Install platformIO:
 
 - There is an extension for Atom and VSCode, please check [this website](https://platformio.org/).
-- Select your board, I have used a Espressif ESP32-WROVER.
+- Select your board, pico32 which behaves just like the TTGo VGA32.
 
 #### Customize platformio.ini
 
