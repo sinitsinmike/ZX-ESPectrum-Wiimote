@@ -19,6 +19,8 @@
 #include "FileUtils.h"
 #include "osd.h"
 
+#include "AySound.h"
+
 // EXTERN VARS
 extern CONTEXT _zxContext;
 extern Z80_STATE _zxCpu;
@@ -188,6 +190,8 @@ void ESPectrum::setup()
 
     vidQueue = xQueueCreate(1, sizeof(uint16_t *));
     xTaskCreatePinnedToCore(&ESPectrum::videoTask, "videoTask", 1024 * 4, NULL, 5, &videoTaskHandle, 0);
+
+    AySound::initialize();
 
     Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
     if ((String)Config::ram_file != (String)NO_RAM_FILE) {
@@ -410,6 +414,8 @@ void ESPectrum::loop() {
     OSD::do_OSD();
 
     zx_loop();
+
+    AySound::update();
 
     xQueueSend(vidQueue, &param, portMAX_DELAY);
 

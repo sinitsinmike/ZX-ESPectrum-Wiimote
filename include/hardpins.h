@@ -5,6 +5,7 @@
 
 // adjusted for Lilygo TTGO
 #ifdef SPEAKER_PRESENT
+// NOTE: PIN 25 is hardwired in FabGL audio (used for AY3891x emulation)
 #define SPEAKER_PIN 25
 #endif // SPEAKER_PRESENT
 
