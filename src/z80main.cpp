@@ -7,6 +7,7 @@
 #include "PS2Kbd.h"
 #include "z80main.h"
 #include "Config.h"
+#include "AySound.h"
 
 #define RAM_AVAILABLE 0xC000
 
@@ -272,12 +273,13 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
     }
     // Sound (AY-3-8912)
 
-#ifdef AY_SOUND
+#ifdef USE_AY_SOUND
     if (portLow == 0xFD) {
         switch (portHigh) {
         case 0xFF:
             // Serial.println("Read AY register");
-            return _ay3_8912.getRegisterData();
+            //return _ay3_8912.getRegisterData();
+            return AySound::getRegisterData();
         }
     }
 #endif
@@ -316,14 +318,16 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         // Sound (AY-3-8912)
         switch (portHigh) {
 
-#ifdef AY_SOUND
+#ifdef USE_AY_SOUND
         case 0xFF:
             // Serial.printf("Select AY register %x %x %x\n",portHigh,portLow,data);
-            _ay3_8912.selectRegister(data);
+            //_ay3_8912.selectRegister(data);
+            AySound::selectRegister(data);
             break;
         case 0xBF:
             // Serial.printf("Select AY register Data %x %x %x\n",portHigh,portLow,data);
-            _ay3_8912.setRegisterData(data);
+            //_ay3_8912.setRegisterData(data);
+            AySound::setRegisterData(data);
             break;
 #endif
 

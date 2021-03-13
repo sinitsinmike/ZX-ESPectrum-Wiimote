@@ -4,7 +4,8 @@
 #include "hardconfig.h"
 
 #ifdef SPEAKER_PRESENT
-#define SPEAKER_PIN 27
+// NOTE: PIN 25 is hardwired in FabGL audio (used for AY3891x emulation)
+#define SPEAKER_PIN 25
 #endif // SPEAKER_PRESENT
 
 #ifdef EAR_PRESENT
@@ -16,7 +17,7 @@
 #endif // MIC_PRESENT
 
 #ifdef PS2_KEYB_PRESENT
-#define KEYBOARD_DATA 25
+#define KEYBOARD_DATA 27
 #define KEYBOARD_CLK 26
 #endif // PS2_KEYB_PRESENT
 

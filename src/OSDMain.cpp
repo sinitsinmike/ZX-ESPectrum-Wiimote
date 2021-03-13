@@ -7,6 +7,7 @@
 #include "Wiimote2Keys.h"
 #include "Config.h"
 #include "FileSNA.h"
+#include "AySound.h"
 
 #define MENU_REDRAW true
 #define MENU_UPDATE false
@@ -161,6 +162,9 @@ void OSD::do_OSD() {
         persistLoad();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
+        AySound::resetSound();
+        AySound::silenceAllChannels(true);
+
         // Main menu
         byte opt = menuRun(MENU_MAIN);
         if (opt == 1) {
@@ -235,6 +239,8 @@ void OSD::do_OSD() {
                 updateWiimote2KeysOSD();
             }
         }
+        
+        AySound::silenceAllChannels(false);
         // Exit
     }
 }
@@ -346,6 +352,8 @@ String OSD::rowGet(String menu, unsigned short row) {
 // Change running snapshot
 void OSD::changeSnapshot(String filename)
 {
+    AySound::resetSound();
+
     if (FileUtils::hasSNAextension(filename))
     {
         osdCenteredMsg((String)MSG_LOADING_SNA + ": " + filename, LEVEL_INFO);

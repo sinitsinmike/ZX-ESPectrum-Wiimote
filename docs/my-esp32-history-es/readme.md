@@ -13,15 +13,15 @@ Y me pareció un cacharro potente dentro de sus limitaciones, así que me puse a
 
 Lo primero que me llamó la atención (y mucho) fueron los trabajos de Bitluni ([https://bitluni.net/](https://bitluni.net/)), en los que conseguía utilizar el hardware programable para generar señal de vídeo.
 
-Lo primero que probé fue una demo en la que genera señal de vídeo compuesto (en blanco y negro), así que flasheé mi ESP32 y la conecté a mi TV de 14'' (el que uso para el Spectrum), y aluciné viendo una demo poligonal de una Venus de Milo en 3D.
+Lo primero que probé fue una demo en la que genera señal de vídeo compuesto (en blanco y negro), así que flasheé mi ESP32 y la conecté a mi TV de 14" (el que uso para el Spectrum), y aluciné viendo una demo poligonal de una Venus de Milo en 3D.
 
 ![esp32-composite](../img/esp32-composite.jpg)
 
-También tenía demos de vídeo compuesto en color, pero no era estable. En algunas TV se veía en color, en otras no...
+También tenía demos de vídeo compuesto en color, pero no eran estables. En algunas TV se veía en color, en otras no...
 
 Después probé las demos de VGA, primero con color RGB digital (1 bit por componente de color R/G/B), conectando directamente el pin R al pin R del DSUB15, el G al G, el B al B, HSync a HSync y VSync a VSync.
 
-En la página de github venía un circuito para conseguir mayor profundidad de bits: crear un DAC R/2R con resistencias para conseguir el modo de más calidad de color disponible: R5G5B4, con 5 bits para rojo, 5 para verde y 4 para azul. Después de unas cuantas horas de soldador y pruebas de cableado y mapeo de pins, conseguí ver las demos de más calidad de color.
+En la página de github de Bitluni venía [un circuito](https://github.com/bitluni/ESP32Lib/blob/master/Documentation/schematic.png) para conseguir mayor profundidad de bits: crear un DAC R/2R con resistencias para conseguir el modo de más calidad de color disponible: R5G5B4, con 5 bits para rojo, 5 para verde y 4 para azul. Después de unas cuantas horas de soldador y pruebas de cableado y mapeo de pins, conseguí ver las demos de más calidad de color.
 
 ![dacr2r](../img/dacr2r.jpg)
 
@@ -101,7 +101,7 @@ A finales de agosto de 2020 publiqué mi primer vídeo sobre el emulador ESPectr
 
 ![video202008](../img/video202008.jpg)
 
-Revisando about el repositorio de github del emulador de Rampa (del cual partí) ví que mencionaban "also for TTG VGA32". Investigué y ví que se referían a la Lilygo TTGo VGA32, una placa con todos los conectores ya soldados (PS/2 y VGA) y que salía por unos 10€.
+Revisando el about del repositorio de github del emulador de Rampa (del cual partí) ví que mencionaban "also for TTG VGA32". Investigué y ví que se referían a la Lilygo TTGo VGA32, una placa con todos los conectores ya soldados (PS/2 y VGA) y que salía por unos 10€.
 
 En septiembre de 2020 me llegó y empecé a trastear con ella.
 
@@ -109,7 +109,7 @@ En septiembre de 2020 me llegó y empecé a trastear con ella.
 
 En realidad no hubo mucho que trastear, ya que prácticamente todo funcionó a la primera, sólo hubo que cambiar en el código del emulador los números de pin que usaba mi hardware por los que usaba la TTGO.
 
-Eso sí, la TTGO lleva un convertidor D/A de resistencias R/2R de 2 bits por componente de color (RRGGBB), así que aproveché para integrar una nueva versión de la biblioteca de Bitluni, para usar el modo VGA6Bit, con lo que recuperé el atributo BRIGHT del spectrum.
+Eso sí, la TTGO lleva un convertidor D/A de resistencias R/2R de 2 bits por componente de color (RRGGBB), así que aproveché para integrar una nueva versión de la biblioteca de Bitluni, para usar el modo VGA6Bit, con lo que recuperé el atributo BRIGHT del Spectrum.
 
 A principios de octubre de 2020 publiqué mi segundo vídeo sobre el emulador ESPectrum:
 
@@ -119,7 +119,7 @@ A principios de octubre de 2020 publiqué mi segundo vídeo sobre el emulador ES
 
 A través de los comentarios del vídeo me puse en contacto con Stormbytes1970 (Paco), con quién estuve hablando de la manera de conectar un teclado de Spectrum real (de 48 o 48+) a la ESP utilizando 13 pines GPIO.
 
-La verdad es que paco me abrió un poco los ojos con este tema, yo lo había pensado con mentalidad de programador (leer periódicamente el estado del teclado y almacenarlo en un buffer), mientras que el tenía una mentalidad más electrónica, que consistía en interceptar las propias llamadas a "leer puerto" del Spectrum emulado, para por un lado escribir el número de puerto en los 8 pines de salida, y por otro lado leer el estado de los 5 pines de entrada.
+La verdad es que Paco me abrió los ojos con este tema, yo lo había pensado con mentalidad de programador (leer periódicamente el estado del teclado y almacenarlo en un buffer), mientras que el tenía una mentalidad más electrónica, que consistía en interceptar las propias llamadas a "leer puerto" del Spectrum emulado, para por un lado escribir el número de puerto en los 8 pines de salida, y por otro lado leer el estado de los 5 pines de entrada.
 
 Me pasó su código y tras unas cuantas pruebas lo integré en mi repositorio, como una opción más de configuración del emulador, que podía usarse o no cambiando #defines en un fichero de cabecera .h.
 
@@ -127,7 +127,7 @@ Me pasó su código y tras unas cuantas pruebas lo integré en mi repositorio, c
 
 En noviembre de 2020 estuve investigando un detalle que no me gustaba del emulador: la temporización. En algunos juegos, la temporización era aproximadamente correcta. Pero el Manic Miner (mi juego preferido de Spectrum, dicho sea de paso), iba demasiado rápido en el emulador ESPectrum.
 
-Ya había visto que la implementación de la contended memory en el emulador no estaba demasiado bien hecha. En su día la corregí, pero no fue suficiente. La contended memory es un mecanismo presente en los spectrums, de modo que los accesos a los primeros 16Kb de memoria RAM (donde se aloja el framebuffer, la memoria gráfica) se ven penalizados en momentos concretos del ciclo de dibujo en pantalla. La ULA (el chip gráfico) tiene preferencia en el acceso a memoria, y si la CPU quiere acceder a esos primeros 16Kb de RAM, la ULA retrasa a la CPU introduciéndole ciclos de espera (parando la señal de reloj, una forma "creativa" de hacerlo).
+Ya había visto que la implementación de la contended memory en el emulador no estaba demasiado bien hecha. En su día la corregí, pero no fue suficiente. La contended memory es un mecanismo presente en los Spectrums, de modo que los accesos a los primeros 16Kb de memoria RAM (donde se aloja el framebuffer, la memoria gráfica) se ven penalizados en momentos concretos del ciclo de dibujo en pantalla. La ULA (el chip gráfico) tiene preferencia en el acceso a memoria, y si la CPU quiere acceder a esos primeros 16Kb de RAM, la ULA retrasa a la CPU introduciéndole ciclos de espera (parando la señal de reloj, una forma "creativa" de hacerlo).
 
 ![manicminer](../img/manicminer.jpg)
 
@@ -157,10 +157,7 @@ En marzo de 2021 hice una reorganización del código, unificando las dos ramas 
 
 Con el código limpio y ordenado, añadí soporte para el formato de archivo .Z80, mucho más extendido que el formato .SNA que estaba usando hasta ahora. Conseguí soportar varias versiones de .Z80, para Spectrum 48K y 128K, además conmutando entre modos 48 y 128 en función del tipo de .Z80 que se está cargando, cosa que no hacían antes.
 
+También añadí soporte parcial para el sonido del Spectrum 128K mediante una emulación incompleta del chip AY-3-8912. No suena exactamente igual que en un Spectrum, pero es similar (por lo menos el tono es exacto), y al menos los juegos de 128K tienen algo de sonido.
+
 Continuará...
-
-
-
-
-
 

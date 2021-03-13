@@ -1,8 +1,6 @@
 # ZX-ESPectrum-Wiimote
 
-**(UPDATE 21/02/2021: added microSD card support, and 4:3 monitor aspect ratio)**
-
-**(UPDATE 07/03/2021: added .Z80 support, types 1, 2, and 3, with support for 48K/128K )**
+**LATEST UPDATES: 128K sound, .Z80 format (48/128), micro SD card, 4:3 aspect ratio.**
 
 An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
 
@@ -16,6 +14,7 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 
 - VGA output, 3 bit (default), 6 bit, 14 bit.
 - Beeper digital output.
+- AY-3-8912 sound chip emulation (incomplete but working).
 - Accurate Z80 emulation.
 - Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
@@ -32,7 +31,7 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 
 ## Work in progress
 
-- AY-3-8912 emulation (no sound yet for 128K).
+- Better AY-3-8912 emulation (sound is still a little dirty).
 
 ## Compiling and installing
 
@@ -92,7 +91,7 @@ See ESP32 pin assignment in `hardpins.h` or change it to your own preference.
 
 I have used VGA 3 bit driver (so BRIGHT attribute is lost), but it's simpler to connect and no R-2R DAC is needed. Also, I have assigned pins to bottom side of the ESP32, as it is too wide for usual breadboards.
 
-![esp32-pinout](./doc/esp32-pinout.jpg)
+![esp32-pinout](./docs/esp32-pinout.jpg)
 
 ## Connecting a Wiimote
 
@@ -111,7 +110,7 @@ For every `.sna / .z80` game in `/data/sna`, there should be a corresponding `.t
 
 The `ESPWiimote` library generates the following codes for Wiimote keys:
 
-![wiimote-key-codes](./doc/wiimote-key-codes.jpg)
+![wiimote-key-codes](./docs/wiimote-key-codes.jpg)
 
 The `.txt` file must have at least 16 characters (only first 16 characters are considered). For example for Manic Miner, `ManicMiner.txt` would contain
 
@@ -141,6 +140,12 @@ For the Manic Miner example, the correspondences would be:
 
 I have NOT included Manic Miner `.sna / .z80` snapshot, but you can download it from [worldofspectrum.org](https://worldofspectrum.org/archive/software/games/manic-miner-bug-byte-software-ltd) and convert it to `.sna / .z80` using [FUSE](http://fuse-emulator.sourceforge.net/), for example.
 
+## My development history
+
+I have write a detailed story, with photos, of the development process of this emulator and some of the devices I have tested it with.
+- [Development story, in english](https://dcrespo3d.github.io/ZX-ESPectrum-Wiimote/my-esp32-history-en/)
+- [Historia del desarrollo, en español](https://dcrespo3d.github.io/ZX-ESPectrum-Wiimote/my-esp32-history-es/)
+
 ## Thanks to
 
 - Idea from the work of Charles Peter Debenham Todd: [PaseVGA](https://github.com/retrogubbins/paseVGA).
@@ -157,6 +162,8 @@ I have NOT included Manic Miner `.sna / .z80` snapshot, but you can download it 
 - [Retroleum](http://blog.retroleum.co.uk/electronics-articles/a-diagnostic-rom-image-for-the-zx-spectrum/) for the diagnostics ROM.
 - Emil Vikström for his [ArduinoSort](https://github.com/emilv/ArduinoSort) library.
 - [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
+- Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (for now, it's a great library).
+- [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip.
 
 ## And all the involved people from the golden age
 
