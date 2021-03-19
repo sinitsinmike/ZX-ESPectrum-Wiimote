@@ -13,6 +13,9 @@
 class OSD
 {
 public:
+    // ZX Color
+    static uint16_t zxColor(uint8_t color, uint8_t bright);
+
     // Calc
     static unsigned short scrAlignCenterX(unsigned short pixel_width);
     static unsigned short scrAlignCenterY(unsigned short pixel_height);

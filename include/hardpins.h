@@ -51,9 +51,9 @@
 
 // 3 bit pins
 #ifdef COLOR_3B
-#define RED_PIN_3B 13
-#define GRE_PIN_3B 12
-#define BLU_PIN_3B 14
+#define RED_PIN_3B 22
+#define GRE_PIN_3B 19
+#define BLU_PIN_3B 5
 #endif // COLOR_3B
 
 // 6 bit pins

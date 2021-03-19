@@ -30,6 +30,18 @@ static byte focus;                    // Focused virtual row
 static byte last_focus;               // To check for changes
 static unsigned short last_begin_row; // To check for changes
 
+#define NUM_SPECTRUM_COLORS 16
+
+static word spectrum_colors[NUM_SPECTRUM_COLORS] = {
+    BLACK,     BLUE,     RED,     MAGENTA,     GREEN,     CYAN,     YELLOW,     WHITE,
+    BRI_BLACK, BRI_BLUE, BRI_RED, BRI_MAGENTA, BRI_GREEN, BRI_CYAN, BRI_YELLOW, BRI_WHITE,
+};
+
+uint16_t OSD::zxColor(uint8_t color, uint8_t bright) {
+    if (bright) color += 8;
+    return spectrum_colors[color];
+}
+
 // Set menu and force recalc
 void OSD::newMenu(String new_menu) {
     menu = new_menu;
@@ -86,15 +98,15 @@ void OSD::menuPrintRow(byte virtual_row_num, byte line_type) {
 
     switch (line_type) {
     case IS_TITLE:
-        vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
+        vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(0, 0));
         margin = 2;
         break;
     case IS_FOCUSED:
-        vga.setTextColor(ESPectrum::zxColor(0, 1), ESPectrum::zxColor(5, 1));
+        vga.setTextColor(OSD::zxColor(0, 1), OSD::zxColor(5, 1));
         margin = (real_rows > virtual_rows ? 3 : 2);
         break;
     default:
-        vga.setTextColor(ESPectrum::zxColor(0, 1), ESPectrum::zxColor(7, 1));
+        vga.setTextColor(OSD::zxColor(0, 1), OSD::zxColor(7, 1));
         margin = (real_rows > virtual_rows ? 3 : 2);
     }
 
@@ -117,7 +129,7 @@ void OSD::menuDraw() {
     // Set font
     vga.setFont(Font6x8);
     // Menu border
-    vga.rect(x, y, w, h, ESPectrum::zxColor(0, 0));
+    vga.rect(x, y, w, h, OSD::zxColor(0, 0));
     // Title
     menuPrintRow(0, IS_TITLE);
     // Rainbow
@@ -126,7 +138,7 @@ void OSD::menuDraw() {
     byte rb_colors[] = {2, 6, 4, 5};
     for (byte c = 0; c < 4; c++) {
         for (byte i = 0; i < 5; i++) {
-            vga.line(rb_paint_x + i, rb_y, rb_paint_x + 8 + i, rb_y - 8, ESPectrum::zxColor(rb_colors[c], 1));
+            vga.line(rb_paint_x + i, rb_y, rb_paint_x + 8 + i, rb_y - 8, OSD::zxColor(rb_colors[c], 1));
         }
         rb_paint_x += 5;
     }
@@ -243,10 +255,10 @@ void OSD::menuScrollBar() {
         // Top handle
         menuAt(1, -1);
         if (begin_row > 1) {
-            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
+            vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(0, 0));
             vga.print("+");
         } else {
-            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
+            vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(0, 0));
             vga.print("-");
         }
 
@@ -255,7 +267,7 @@ void OSD::menuScrollBar() {
         unsigned short holder_y = y + (OSD_FONT_H * 2);
         unsigned short holder_h = OSD_FONT_H * (virtual_rows - 3);
         unsigned short holder_w = OSD_FONT_W;
-        vga.fillRect(holder_x, holder_y, holder_w, holder_h + 1, ESPectrum::zxColor(7, 0));
+        vga.fillRect(holder_x, holder_y, holder_w, holder_h + 1, OSD::zxColor(7, 0));
         holder_y++;
 
         // Scroll bar
@@ -267,15 +279,15 @@ void OSD::menuScrollBar() {
             bar_h--;
         }
 
-        vga.fillRect(holder_x + 1, holder_y + bar_y, holder_w - 2, bar_h, ESPectrum::zxColor(0, 0));
+        vga.fillRect(holder_x + 1, holder_y + bar_y, holder_w - 2, bar_h, OSD::zxColor(0, 0));
 
         // Bottom handle
         menuAt(-1, -1);
         if ((begin_row + virtual_rows - 1) < real_rows) {
-            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
+            vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(0, 0));
             vga.print("+");
         } else {
-            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(0, 0));
+            vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(0, 0));
             vga.print("-");
         }
     }

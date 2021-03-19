@@ -197,6 +197,48 @@ int Z80NonMaskableInterrupt(Z80_STATE *state, void *context) {
     return elapsed_cycles + 11;
 }
 
+//#define LOG_DEBUG_TIMING
+
+static uint32_t ts_start;
+static uint32_t ts_target_frame = 20000;
+static uint32_t target_cycle_count;
+
+static inline void begin_timing(uint32_t _target_cycle_count)
+{
+    ts_start = micros();
+    target_cycle_count = _target_cycle_count;
+
+#ifdef LOG_DEBUG_TIMING
+    static int ctr = 0;
+    if (ctr == 0) {
+        ctr = 50;
+        Serial.printf("begin_timing: %u\n", _target_cycle_count);
+    }
+    else ctr--;
+#endif
+}
+
+static inline void delay_instruction(uint32_t elapsed_cycles)
+{
+    uint32_t ts_current = micros() - ts_start;
+    uint32_t ts_target = ts_target_frame * elapsed_cycles / target_cycle_count;
+    if (ts_target > ts_current) {
+        uint32_t us_to_wait = ts_target - ts_current;
+        if (us_to_wait < ts_target_frame)
+            delayMicroseconds(us_to_wait);
+    }
+
+#ifdef LOG_DEBUG_TIMING
+    static int ctr = 0;
+    if (ctr == 0) {
+        ctr = 200000;
+        Serial.printf("ts_current: Tstate = %u, ts_target = %u, ts_current = %u\n", elapsed_cycles, ts_target, ts_current);
+    }
+    else ctr--;
+#endif
+}
+
+
 int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
     int elapsed_cycles, pc, opcode;
 
@@ -206,6 +248,7 @@ int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
     pc = state->pc;
     Z80_FETCH_BYTE(pc, opcode);
     state->pc = pc + 1;
+    begin_timing(number_cycles);
     return emulate(state, opcode, elapsed_cycles, number_cycles, context);
 }
 
@@ -233,9 +276,9 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
     start_emulation:
 
         registers = state->register_table;
-        // if (opcode != 0xdb)
-        delayMicroseconds((elapsed_cycles - last_cycles) / 6);
-        // delayMicroseconds(1);
+
+        delay_instruction(elapsed_cycles);
+
         last_cycles = elapsed_cycles;
 
     emulate_next_opcode:

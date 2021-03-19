@@ -69,19 +69,21 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 #ifdef AR_16_9
-#define BOR_W 20
+#define BOR_W 52
 #define BOR_H 4
-#define OFF_X 32
+#define OFF_X 0
 #define OFF_Y 0
 // if you can't center the image in your screen,
-// change OFF_X for software centering (0 < OFF_X < 64)
+// set some offset, (ex: OFF_X = _20_)
+// use a smaller border (ex: BOR_W = 32 == 52 - _20_)
+// then change OFF_X for software centering (0 < OFF_X < 40) (40 == 2 * _20_)
 #endif
 
 #ifdef AR_4_3
-#define BOR_W 20
-#define BOR_H 4
-#define OFF_X 12
-#define OFF_Y 20
+#define BOR_W 32
+#define BOR_H 24
+#define OFF_X 0
+#define OFF_Y 0
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
