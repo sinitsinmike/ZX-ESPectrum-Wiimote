@@ -64,10 +64,10 @@ void OSD::drawOSD() {
     VGA& vga = ESPectrum::vga;
     unsigned short x = scrAlignCenterX(OSD_W);
     unsigned short y = scrAlignCenterY(OSD_H);
-    vga.fillRect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(1, 0));
-    vga.rect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(0, 0));
-    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, ESPectrum::zxColor(7, 0));
-    vga.setTextColor(ESPectrum::zxColor(0, 0), ESPectrum::zxColor(5, 1));
+    vga.fillRect(x, y, OSD_W, OSD_H, OSD::zxColor(1, 0));
+    vga.rect(x, y, OSD_W, OSD_H, OSD::zxColor(0, 0));
+    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, OSD::zxColor(7, 0));
+    vga.setTextColor(OSD::zxColor(0, 0), OSD::zxColor(5, 1));
     vga.setFont(Font6x8);
     osdHome();
     vga.print(OSD_TITLE);
@@ -230,7 +230,7 @@ void OSD::do_OSD() {
             // Help
             drawOSD();
             osdAt(2, 0);
-            vga.setTextColor(ESPectrum::zxColor(7, 0), ESPectrum::zxColor(1, 0));
+            vga.setTextColor(OSD::zxColor(7, 0), OSD::zxColor(1, 0));
             vga.print(OSD_HELP);
             while (!PS2Keyboard::checkAndCleanKey(KEY_F1) &&
                    !PS2Keyboard::checkAndCleanKey(KEY_ESC) &&
@@ -256,18 +256,18 @@ void OSD::errorPanel(String errormsg) {
     ESPectrum::waitForVideoTask();
     VGA& vga = ESPectrum::vga;
 
-    vga.fillRect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(0, 0));
-    vga.rect(x, y, OSD_W, OSD_H, ESPectrum::zxColor(7, 0));
-    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, ESPectrum::zxColor(2, 1));
+    vga.fillRect(x, y, OSD_W, OSD_H, OSD::zxColor(0, 0));
+    vga.rect(x, y, OSD_W, OSD_H, OSD::zxColor(7, 0));
+    vga.rect(x + 1, y + 1, OSD_W - 2, OSD_H - 2, OSD::zxColor(2, 1));
     vga.setFont(Font6x8);
     osdHome();
-    vga.setTextColor(ESPectrum::zxColor(7, 1), ESPectrum::zxColor(2, 1));
+    vga.setTextColor(OSD::zxColor(7, 1), OSD::zxColor(2, 1));
     vga.print(ERROR_TITLE);
     osdAt(2, 0);
-    vga.setTextColor(ESPectrum::zxColor(7, 1), ESPectrum::zxColor(0, 0));
+    vga.setTextColor(OSD::zxColor(7, 1), OSD::zxColor(0, 0));
     vga.println(errormsg.c_str());
     osdAt(17, 0);
-    vga.setTextColor(ESPectrum::zxColor(7, 1), ESPectrum::zxColor(2, 1));
+    vga.setTextColor(OSD::zxColor(7, 1), OSD::zxColor(2, 1));
     vga.print(ERROR_BOTTOM);
 }
 
@@ -292,20 +292,20 @@ void OSD::osdCenteredMsg(String msg, byte warn_level) {
 
     switch (warn_level) {
     case LEVEL_OK:
-        ink = ESPectrum::zxColor(7, 1);
-        paper = ESPectrum::zxColor(4, 0);
+        ink = OSD::zxColor(7, 1);
+        paper = OSD::zxColor(4, 0);
         break;
     case LEVEL_ERROR:
-        ink = ESPectrum::zxColor(7, 1);
-        paper = ESPectrum::zxColor(2, 0);
+        ink = OSD::zxColor(7, 1);
+        paper = OSD::zxColor(2, 0);
         break;
     case LEVEL_WARN:
-        ink = ESPectrum::zxColor(0, 0);
-        paper = ESPectrum::zxColor(6, 0);
+        ink = OSD::zxColor(0, 0);
+        paper = OSD::zxColor(6, 0);
         break;
     default:
-        ink = ESPectrum::zxColor(7, 0);
-        paper = ESPectrum::zxColor(1, 0);
+        ink = OSD::zxColor(7, 0);
+        paper = OSD::zxColor(1, 0);
     }
 
     ESPectrum::waitForVideoTask();

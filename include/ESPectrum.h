@@ -32,6 +32,7 @@ public:
     // graphics
     static VGA vga;
     static uint8_t borderColor;
+    static void precalcColors();
     static uint16_t zxColor(uint8_t color, uint8_t bright);
     static void waitForVideoTask();
 

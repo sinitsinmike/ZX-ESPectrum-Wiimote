@@ -21,6 +21,9 @@
 
 #include "AySound.h"
 
+// works, but not needed for now
+// #pragma GCC optimize ("O3")
+
 // EXTERN VARS
 extern CONTEXT _zxContext;
 extern Z80_STATE _zxCpu;
@@ -63,7 +66,6 @@ volatile uint8_t Ports::base[128];
 volatile uint8_t Ports::wii[128];
 
 volatile byte flashing = 0;
-volatile byte tick;
 const int SAMPLING_RATE = 44100;
 const int BUFFER_SIZE = 2000;
 
@@ -154,6 +156,9 @@ void ESPectrum::setup()
     vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
+    // precalculate colors for current VGA mode
+    precalcColors();
+
     Serial.printf("HEAP after vga  %d \n", ESP.getFreeHeap());
 
     vga.clear(0);
@@ -214,6 +219,25 @@ void ESPectrum::setup()
     Serial.println("End of setup");
 }
 
+#define NUM_SPECTRUM_COLORS 16
+
+static word spectrum_colors[NUM_SPECTRUM_COLORS] = {
+    BLACK,     BLUE,     RED,     MAGENTA,     GREEN,     CYAN,     YELLOW,     WHITE,
+    BRI_BLACK, BRI_BLUE, BRI_RED, BRI_MAGENTA, BRI_GREEN, BRI_CYAN, BRI_YELLOW, BRI_WHITE,
+};
+
+void ESPectrum::precalcColors()
+{
+    for (int i = 0; i < NUM_SPECTRUM_COLORS; i++)
+        spectrum_colors[i] = (spectrum_colors[i] & vga.RGBAXMask) | vga.SBits;
+}
+
+uint16_t ESPectrum::zxColor(uint8_t color, uint8_t bright) {
+    if (bright) color += 8;
+    return spectrum_colors[color];
+}
+
+
 // VIDEO core 0 *************************************
 
 #define SPEC_W 256
@@ -223,76 +247,111 @@ static int calcY(int offset);
 static int calcX(int offset);
 static void swap_flash(word *a, word *b);
 
+#define ULA_SWAP(y) ((y & 0xC0) | ((y & 0x38) >> 3) | ((y & 0x07) << 3))
+
 void ESPectrum::videoTask(void *unused) {
-    unsigned int ff, i, byte_offset;
-    unsigned char color_attrib, pixel_map, flash, bright;
-    unsigned int zx_vidcalc, calc_y;
-
-    word zx_fore_color, zx_back_color, tmp_color;
-    // byte active_latch;
-
     videoTaskIsRunning = true;
     uint16_t *param;
 
     while (1) {
-        xQueuePeek(vidQueue, &param, portMAX_DELAY);
-        if ((int)param == 1)
-            break;
+        xQueueReceive(vidQueue, &param, portMAX_DELAY);
+    
+        int vgaX;   // from 0 to RESX - 1
+        int vgaY;   // from 0 to RESY - 1
+        int speX;   // from 0 to 256
+        int speY;   // from 0 to 192
+        int ulaX;   // from 0 to 32
+        int ulaY;   // from 0 to 192, bit-swapped 76210543
 
-        for (unsigned int vga_lin = 0; vga_lin < BOR_H+SPEC_H+BOR_H; vga_lin++) {
-            // tick = 0;
-            if (vga_lin < BOR_H || vga_lin >= BOR_H + SPEC_H) {
+        int bmpOffset;     // offset for bitmap in graphic memory
+        int attOffset;     // offset for attrib in graphic memory
 
-                for (int bor = OFF_X; bor < OFF_X+BOR_W+SPEC_W+BOR_W; bor++)
-                    vga.dotFast(bor, vga_lin+OFF_Y, zxColor(borderColor, 0));
+        int att, bmp;   // attribute and bitmap
+        int fla, bri;   // flash and bright flags
+        int pap, ink;   // paper and ink color
+        int aux;        // auxiliary for flash swapping
+        int back, fore; // background and foreground colors
+        int pix;        // final pixel color
+
+        uint8_t* grmem;
+
+        uint32_t ts_start = micros();
+
+        for (int vgaY = 0; vgaY < BOR_H+SPEC_H+BOR_H; vgaY++) {
+            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+            uint8_t* lineptr = vga.backBuffer[vgaY+OFF_Y];
+            vgaX = OFF_X;
+            if (vgaY < BOR_H || vgaY >= BOR_H + SPEC_H) {
+                for (int i = 0; i < BOR_W+SPEC_W+BOR_W; i++, vgaX++) {
+                    lineptr[vgaX^2] = zxColor(borderColor, 0);
+                }
             }
             else
             {
-                for (int bor = OFF_X; bor < OFF_X+BOR_W; bor++) {
-                    vga.dotFast(bor, vga_lin+OFF_Y, zxColor(borderColor, 0));
-                    vga.dotFast(bor + SPEC_W+BOR_W, vga_lin+OFF_Y, zxColor(borderColor, 0));
+                speY = vgaY - BOR_H;
+                ulaY = ULA_SWAP(speY);
+                lineptr = vga.backBuffer[speY+OFF_Y+BOR_H];
+
+                vgaX = OFF_X;
+                for (int i = 0; i < BOR_W; i++, vgaX++) {
+                    lineptr[vgaX^2] = zxColor(borderColor, 0);
                 }
 
-                for (ff = 0; ff < 32; ff++) // foreach byte in line
+                bmpOffset =   ulaY << 5;
+                attOffset = ((speY >> 3) << 5) + 0x1800;
+
+                for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
                 {
+                    att = grmem[attOffset + ulaX];  // get attribute byte
 
-                    byte_offset = (vga_lin - BOR_H) * 32 + ff;
-                    calc_y = calcY(byte_offset);
-                    if (!Mem::videoLatch)
-                    {
-                       color_attrib = readbyte(0x5800 + (calc_y / 8) * 32 + ff); // get 1 of 768 attrib values
-                       pixel_map = readbyte(byte_offset + 0x4000);
+                    ink = (att     ) & 0b111;
+                    pap = (att >> 3) & 0b111;
+                    bri = (att >> 6) & 1;
+                    fla = (att >> 7);
+                    fore = zxColor(ink, bri);
+                    back = zxColor(pap, bri);
+
+                    if (fla && flashing) {
+                        aux = fore; fore = back; back = aux;
                     }
-                    else
-                    {
-                        color_attrib = Mem::ram7[0x1800 + (calc_y / 8) * 32 + ff]; // get 1 of 768 attrib values
-                        pixel_map = Mem::ram7[byte_offset];
-                    }
 
-                    for (i = 0; i < 8; i++) // foreach pixel within a byte
-                    {
-
-                        zx_vidcalc = ff * 8 + i;
-                        byte bitpos = (0x80 >> i);
-                        bright = (color_attrib & 0B01000000) >> 6;
-                        flash = (color_attrib & 0B10000000) >> 7;
-                        zx_fore_color = zxColor((color_attrib & 0B00000111), bright);
-                        zx_back_color = zxColor(((color_attrib & 0B00111000) >> 3), bright);
-
-                        if (flash && flashing)
-                            swap_flash(&zx_fore_color, &zx_back_color);
-
-                        if ((pixel_map & bitpos) != 0)
-                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + OFF_Y+BOR_H, zx_fore_color);
-
-                        else
-                            vga.dotFast(zx_vidcalc + OFF_X+BOR_W, calc_y + OFF_Y+BOR_H, zx_back_color);
+                    bmp = grmem[bmpOffset + ulaX];  // get bitmap byte
+                    for (int i = 0; i < 8; i++) // foreach pixel within a byte
+                    {   
+                        uint32_t mask = 0x80 >> i;
+                        if (bmp & mask) pix = fore;
+                        else            pix = back;
+                        lineptr[vgaX^2] = pix;
+                        vgaX++;
                     }
                 }
+
+                for (int i = 0; i < BOR_W; i++, vgaX++) {
+                    lineptr[vgaX^2] = zxColor(borderColor, 0);
+                }
+
+
             }
         }
 
-        xQueueReceive(vidQueue, &param, portMAX_DELAY);
+        uint32_t ts_end = micros();
+
+        uint32_t elapsed = ts_end - ts_start;
+        uint32_t target = 20000;
+        uint32_t idle = target - elapsed;
+        if (idle < target)
+            delayMicroseconds(idle);
+
+// #define LOG_DEBUG_TIMING
+
+#ifdef LOG_DEBUG_TIMING
+        static int ctr = 0;
+        if (ctr == 0) {
+            ctr = 50;
+            Serial.printf("[VideoTask] elapsed: %u; idle: %u\n", elapsed, idle);
+        }
+        else ctr--;
+#endif
         videoTaskIsRunning = false;
     }
     videoTaskIsRunning = false;
@@ -306,35 +365,6 @@ void ESPectrum::waitForVideoTask() {
     xQueueSend(vidQueue, &param, portMAX_DELAY);
     // Wait while ULA loop is finishing
     delay(45);
-}
-
-
-void swap_flash(word *a, word *b) {
-    word temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-// SPECTRUM SCREEN DISPLAY
-//
-/* Calculate Y coordinate (0-192) from Spectrum screen memory location */
-static int calcY(int offset) {
-    return ((offset >> 11) << 6)                                            // sector start
-           + ((offset % 2048) >> 8)                                         // pixel rows
-           + ((((offset % 2048) >> 5) - ((offset % 2048) >> 8 << 3)) << 3); // character rows
-}
-
-/* Calculate X coordinate (0-255) from Spectrum screen memory location */
-static int calcX(int offset) { return (offset % 32) << 3; }
-
-static word vga_colors[16] = {
-    BLACK,     BLUE,     RED,     MAGENTA,     GREEN,     CYAN,     YELLOW,     WHITE,
-    BRI_BLACK, BRI_BLUE, BRI_RED, BRI_MAGENTA, BRI_GREEN, BRI_CYAN, BRI_YELLOW, BRI_WHITE,
-};
-
-uint16_t ESPectrum::zxColor(uint8_t color, uint8_t bright) {
-    if (bright) color += 8;
-    return vga_colors[color];
 }
 
 /* Load zx keyboard lines from PS/2 */
@@ -413,11 +443,29 @@ void ESPectrum::loop() {
     updateWiimote2Keys();
     OSD::do_OSD();
 
+    xQueueSend(vidQueue, &param, portMAX_DELAY);
+    uint32_t ts_start = micros();
+
     zx_loop();
 
-    AySound::update();
+    uint32_t ts_end = micros();
 
-    xQueueSend(vidQueue, &param, portMAX_DELAY);
+    uint32_t elapsed = ts_end - ts_start;
+    uint32_t target = 20000;
+    uint32_t idle = target - elapsed;
+    // if (idle < target)
+    //     delayMicroseconds(idle);
+
+#ifdef LOG_DEBUG_TIMING
+    static int ctr = 0;
+    if (ctr == 0) {
+        ctr = 50;
+        Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
+    }
+    else ctr--;
+#endif
+
+    AySound::update();
 
     while (videoTaskIsRunning) {
     }
