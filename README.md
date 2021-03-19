@@ -15,7 +15,7 @@ If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](htt
 - VGA output, 3 bit (default), 6 bit, 14 bit.
 - Beeper digital output.
 - AY-3-8912 sound chip emulation (incomplete but working).
-- Accurate Z80 emulation.
+- Accurate Z80 emulation, with enhanced timing and fast video generation.
 - Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
 - PS/2 Keyboard.
@@ -62,6 +62,8 @@ If using internal flash storage (USE_INT_FLASH #defined in hardconfig.h), you mu
 `PlatformIO > Project Tasks > Upload File System Image`
 
 All files under the `/data` subdirectory will be copied to the SPIFFS filesystem partition. Run this task whenever you add any file to the data subdirectory (e.g, adding games in .SNA or .Z80 format, into the `/data/sna` subdirectory).
+
+NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo3d/zx-spectrum-snake) and [Tetris](https://github.com/dcrespo3d/zx-spectrum-tetris). NOTE: the games have NO sound.
 
 #### Using a external micro SD Card and copying games into it
 

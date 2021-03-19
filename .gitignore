@@ -15,3 +15,7 @@ data/sna/**
 !data/sna/fantasy.sna
 !data/sna/fantasy.txt
 !data/sna/ManicMiner.txt
+!data/sna/Snake.sna
+!data/sna/Snake.txt
+!data/sna/Tetris.sna
+!data/sna/Tetris.txt
