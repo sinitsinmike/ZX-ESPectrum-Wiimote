@@ -197,7 +197,11 @@ int Z80NonMaskableInterrupt(Z80_STATE *state, void *context) {
     return elapsed_cycles + 11;
 }
 
+#define USE_PER_INSTRUCTION_TIMING
+
 //#define LOG_DEBUG_TIMING
+
+#ifdef USE_PER_INSTRUCTION_TIMING
 
 static uint32_t ts_start;
 static uint32_t ts_target_frame = 20000;
@@ -238,6 +242,7 @@ static inline void delay_instruction(uint32_t elapsed_cycles)
 #endif
 }
 
+#endif  // USE_PER_INSTRUCTION_TIMING
 
 int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
     int elapsed_cycles, pc, opcode;
@@ -248,7 +253,9 @@ int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
     pc = state->pc;
     Z80_FETCH_BYTE(pc, opcode);
     state->pc = pc + 1;
+#ifdef USE_PER_INSTRUCTION_TIMING
     begin_timing(number_cycles);
+#endif
     return emulate(state, opcode, elapsed_cycles, number_cycles, context);
 }
 
@@ -277,7 +284,9 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
 
         registers = state->register_table;
 
+#ifdef USE_PER_INSTRUCTION_TIMING
         delay_instruction(elapsed_cycles);
+#endif
 
         last_cycles = elapsed_cycles;
 
