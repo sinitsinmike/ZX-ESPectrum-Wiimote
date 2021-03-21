@@ -9,19 +9,7 @@
 #include "Config.h"
 #include "AySound.h"
 
-#define RAM_AVAILABLE 0xC000
-
-Z80_STATE _zxCpu;
-
-extern byte tick;
-
-CONTEXT _zxContext;
-static uint16_t _attributeCount;
-int _total;
-int _next_total = 0;
-static uint8_t zx_data = 0;
-static uint32_t frames = 0;
-static uint32_t _ticks = 0;
+#pragma GCC optimize ("O3")
 
 #define FRAME_PERIOD_MS 20
 #define CPU_SPEED_MHZ_ZX48 3.5
@@ -36,6 +24,13 @@ int CalcTStates() {
 }
 
 int cycles_per_step = CalcTStates();
+static uint8_t port_data = 0;
+
+Z80_STATE _zxCpu;
+
+#ifdef CPU_LINKEFONG
+
+CONTEXT _zxContext;
 
 extern "C" {
     uint8_t readbyte(uint16_t addr);
@@ -46,13 +41,150 @@ extern "C" {
     void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
 }
 
+#endif  // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+
+extern "C" {
+    uint8_t input(uint8_t portLow, uint8_t portHigh);
+    void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
+}
+
+#include "z80.h"
+
+static bool interruptPending = false;
+static uint32_t tstates = 0;
+
+// sequence of wait states
+static unsigned char wait_states[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
+
+// delay contention: emulates wait states introduced by the ULA (graphic chip)
+// whenever there is a memory access to contended memory (shared between ULA and CPU).
+// detailed info: https://worldofspectrum.org/faq/reference/48kreference.htm#ZXSpectrum
+// from paragraph which starts with "The 50 Hz interrupt is synchronized with..."
+// if you only read from https://worldofspectrum.org/faq/reference/48kreference.htm#Contention
+// without reading the previous paragraphs about line timings, it may be confusing.
+static unsigned char delay_contention(uint16_t address, unsigned int tstates)
+{
+	// delay states one t-state BEFORE the first pixel to be drawn
+	tstates += 1;
+
+	// each line spans 224 t-states
+	int line = tstates / 224;
+
+	// only the 192 lines between 64 and 255 have graphic data, the rest is border
+	if (line < 64 || line >= 256) return 0;
+
+	// only the first 128 t-states of each line correspond to a graphic data transfer
+	// the remaining 96 t-states correspond to border
+	int halfpix = tstates % 224;
+	if (halfpix >= 128) return 0;
+
+	int modulo = halfpix % 8;
+	return wait_states[modulo];
+}
+
+#define ADDRESS_IN_LOW_RAM(addr) (1 == (addr >> 14))
+
+class MyZ80 : public Z80operations
+{
+    public:
+    /* Read opcode from RAM */
+    uint8_t fetchOpcode(uint16_t address) {
+        // 3 clocks to fetch opcode from RAM and 1 execution clock
+        if (ADDRESS_IN_LOW_RAM(address))
+            tstates += delay_contention(address, tstates);
+
+        tstates += 4;
+        return readbyte(address);
+    }
+
+    /* Read/Write byte from/to RAM */
+    uint8_t peek8(uint16_t address) {
+        // 3 clocks for read byte from RAM
+        if (ADDRESS_IN_LOW_RAM(address))
+            tstates += delay_contention(address, tstates);
+
+        tstates += 3;
+        return readbyte(address);
+    }
+    void poke8(uint16_t address, uint8_t value) {
+        // 3 clocks for write byte to RAM
+        if (ADDRESS_IN_LOW_RAM(address))
+            tstates += delay_contention(address, tstates);
+
+        tstates += 3;
+        writebyte(address, value);
+    }
+
+    /* Read/Write word from/to RAM */
+    uint16_t peek16(uint16_t address) {
+        // Order matters, first read lsb, then read msb, don't "optimize"
+        uint8_t lsb = peek8(address);
+        uint8_t msb = peek8(address + 1);
+        return (msb << 8) | lsb;
+    }
+    void poke16(uint16_t address, RegisterPair word) {
+        // Order matters, first write lsb, then write msb, don't "optimize"
+        poke8(address, word.byte8.lo);
+        poke8(address + 1, word.byte8.hi);
+    }
+
+    /* In/Out byte from/to IO Bus */
+    uint8_t inPort(uint16_t port) {
+        // 3 clocks for read byte from bus
+        tstates += 3;
+        uint8_t hiport = port >> 8;
+        uint8_t loport = port & 0xFF;
+        return input(loport, hiport);
+    }
+    void outPort(uint16_t port, uint8_t value) {
+        // 4 clocks for write byte to bus
+        tstates += 4;
+        uint8_t hiport = port >> 8;
+        uint8_t loport = port & 0xFF;
+        output(loport, hiport, value);
+    }
+
+    /* Put an address on bus lasting 'tstates' cycles */
+    void addressOnBus(uint16_t address, int32_t wstates){
+    	// Additional clocks to be added on some instructions
+        if (ADDRESS_IN_LOW_RAM(address)) {
+            for (int idx = 0; idx < wstates; idx++) {
+                tstates += delay_contention(address, tstates) + 1;
+            }
+        }
+        else
+            tstates += wstates;
+    }
+
+    /* Clocks needed for processing INT and NMI */
+    void interruptHandlingTime(int32_t wstates) {
+    	tstates += wstates;
+    }
+
+    /* Callback to know when the INT signal is active */
+    bool isActiveINT(void) {
+        if (!interruptPending) return false;
+        interruptPending = false;
+        return true;
+    }
+};
+
+MyZ80 myZ80;
+Z80 z80(&myZ80);
+
+#endif  // CPU_JLSANCHEZ
+
 void zx_setup() {
+#ifdef CPU_LINKEFONG
     _zxContext.readbyte = readbyte;
     _zxContext.readword = readword;
     _zxContext.writeword = writeword;
     _zxContext.writebyte = writebyte;
     _zxContext.input = input;
     _zxContext.output = output;
+#endif
 
     zx_reset();
 }
@@ -72,23 +204,102 @@ void zx_reset() {
     Mem::romInUse = 0;
     cycles_per_step = CalcTStates();
 
+#ifdef CPU_LINKEFONG
     Z80Reset(&_zxCpu);
+#endif
+
+#ifdef CPU_JLSANCHEZ
+    z80.reset();
+#endif 
 }
 
-int32_t zx_loop() {
+#ifdef CPU_JLSANCHEZ
+
+#define USE_PER_INSTRUCTION_TIMING
+
+//#define LOG_DEBUG_TIMING
+
+#ifdef USE_PER_INSTRUCTION_TIMING
+
+static uint32_t ts_start;
+static uint32_t ts_target_frame = 20000;
+static uint32_t target_cycle_count;
+
+static inline void begin_timing(uint32_t _target_cycle_count)
+{
+    ts_start = micros();
+    target_cycle_count = _target_cycle_count;
+
+#ifdef LOG_DEBUG_TIMING
+    static int ctr = 0;
+    if (ctr == 0) {
+        ctr = 50;
+        Serial.printf("begin_timing: %u\n", _target_cycle_count);
+    }
+    else ctr--;
+#endif
+}
+
+static inline void delay_instruction(uint32_t elapsed_cycles)
+{
+    uint32_t ts_current = micros() - ts_start;
+    uint32_t ts_target = ts_target_frame * elapsed_cycles / target_cycle_count;
+    if (ts_target > ts_current) {
+        uint32_t us_to_wait = ts_target - ts_current;
+        if (us_to_wait < ts_target_frame)
+            delayMicroseconds(us_to_wait);
+    }
+
+#ifdef LOG_DEBUG_TIMING
+    static int ctr = 0;
+    if (ctr == 0) {
+        ctr = 200000;
+        Serial.printf("ts_current: Tstate = %u, ts_target = %u, ts_current = %u\n", elapsed_cycles, ts_target, ts_current);
+    }
+    else ctr--;
+#endif
+}
+
+#endif  // USE_PER_INSTRUCTION_TIMING
+
+#endif  // CPU_JLSANCHEZ
+
+int32_t zx_loop()
+{
     int32_t result = -1;
-    byte tmp_color = 0;
 
-    _total = Z80Emulate(&_zxCpu, cycles_per_step, &_zxContext);
+#ifdef CPU_LINKEFONG
+    Z80Emulate(&_zxCpu, cycles_per_step, &_zxContext);
     Z80Interrupt(&_zxCpu, 0xff, &_zxContext);
-  //  Serial.println(_total);
+#endif
+#ifdef CPU_JLSANCHEZ
+    uint32_t cycleTstates = cycles_per_step;
 
+#ifdef USE_PER_INSTRUCTION_TIMING
+    begin_timing(cycleTstates);
+#endif
+
+    tstates = 0;
+	uint32_t prevTstates = 0;
+
+	while (tstates < cycleTstates)
+	{
+		z80.execute();
+#ifdef USE_PER_INSTRUCTION_TIMING
+        delay_instruction(tstates);
+#endif
+		prevTstates = tstates;
+	}
+
+    interruptPending = true;
+#endif
     return result;
 }
 
 extern "C" uint8_t readbyte(uint16_t addr) {
-    switch (addr) {
-    case 0x0000 ... 0x3fff:
+    uint8_t page = addr >> 14;
+    switch (page) {
+    case 0:
         switch (Mem::romInUse) {
         case 0:
             return Mem::rom0[addr];
@@ -99,13 +310,13 @@ extern "C" uint8_t readbyte(uint16_t addr) {
         case 3:
             return Mem::rom3[addr];
         }
-    case 0x4000 ... 0x7fff:
+    case 1:
         return Mem::ram5[addr - 0x4000];
         break;
-    case 0x8000 ... 0xbfff:
+    case 2:
         return Mem::ram2[addr - 0x8000];
         break;
-    case 0xc000 ... 0xffff:
+    case 3:
         switch (Mem::bankLatch) {
         case 0:
             return Mem::ram0[addr - 0xc000];
@@ -141,16 +352,17 @@ extern "C" uint16_t readword(uint16_t addr) { return ((readbyte(addr + 1) << 8) 
 
 extern "C" void writebyte(uint16_t addr, uint8_t data)
 {
-    switch (addr) {
-    case 0x0000 ... 0x3fff:
+    uint8_t page = addr >> 14;
+    switch (page) {
+    case 0:
         return;
-    case 0x4000 ... 0x7fff:
+    case 1:
         Mem::ram5[addr - 0x4000] = data;
         break;
-    case 0x8000 ... 0xbfff:
+    case 2:
         Mem::ram2[addr - 0x8000] = data;
         break;
-    case 0xc000 ... 0xffff:
+    case 3:
         switch (Mem::bankLatch) {
         case 0:
             Mem::ram0[addr - 0xc000] = data;
@@ -284,7 +496,7 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
     }
 #endif
 
-    uint8_t data = zx_data;
+    uint8_t data = port_data;
     data |= (0xe0); /* Set bits 5-7 - as reset above */
     data &= ~0x40;
     // Serial.printf("Port %x%x  Data %x\n", portHigh,portLow,data);
@@ -294,10 +506,8 @@ extern "C" uint8_t input(uint8_t portLow, uint8_t portHigh)
 extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     uint8_t tmp_data = data;
     switch (portLow) {
-    case 0xFE: {
-
+    case 0xFE:
         // delayMicroseconds(CONTENTION_TIME);
-
         // border color (no bright colors)
         bitWrite(ESPectrum::borderColor, 0, bitRead(data, 0));
         bitWrite(ESPectrum::borderColor, 1, bitRead(data, 1));
@@ -310,53 +520,43 @@ extern "C" void output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
 #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
 #endif
-
         Ports::base[0x20] = data;
-    } break;
+        break;
 
     case 0xFD: {
         // Sound (AY-3-8912)
         switch (portHigh) {
-
 #ifdef USE_AY_SOUND
-        case 0xFF:
-            // Serial.printf("Select AY register %x %x %x\n",portHigh,portLow,data);
-            //_ay3_8912.selectRegister(data);
-            AySound::selectRegister(data);
-            break;
-        case 0xBF:
-            // Serial.printf("Select AY register Data %x %x %x\n",portHigh,portLow,data);
-            //_ay3_8912.setRegisterData(data);
-            AySound::setRegisterData(data);
-            break;
+            case 0xFF:
+                AySound::selectRegister(data);
+                break;
+            case 0xBF:
+                AySound::setRegisterData(data);
+                break;
 #endif
-
-        case 0x7F:
-            if (!Mem::pagingLock) {
-                Mem::pagingLock = bitRead(tmp_data, 5);
-                Mem::romLatch = bitRead(tmp_data, 4);
-                Mem::videoLatch = bitRead(tmp_data, 3);
-                Mem::bankLatch = tmp_data & 0x7;
-                // Mem::romInUse=0;
+            case 0x7F:
+                if (!Mem::pagingLock) {
+                    Mem::pagingLock = bitRead(tmp_data, 5);
+                    Mem::romLatch = bitRead(tmp_data, 4);
+                    Mem::videoLatch = bitRead(tmp_data, 3);
+                    Mem::bankLatch = tmp_data & 0x7;
+                    bitWrite(Mem::romInUse, 1, Mem::romSP3);
+                    bitWrite(Mem::romInUse, 0, Mem::romLatch);
+                }
+                break;
+            case 0x1F:
+                Mem::modeSP3 = bitRead(data, 0);
+                Mem::romSP3 = bitRead(data, 2);
                 bitWrite(Mem::romInUse, 1, Mem::romSP3);
                 bitWrite(Mem::romInUse, 0, Mem::romLatch);
-                // Serial.printf("7FFD data: %x ROM latch: %x Video Latch: %x bank latch: %x page lock:
-                // %x\n",tmp_data,Mem::romLatch,Mem::videoLatch,Mem::bankLatch,Mem::pagingLock);
+
+                // Serial.printf("1FFD data: %x mode: %x rom bits: %x ROM chip: %x\n",data,Mem::modeSP3,Mem::romSP3, Mem::romInUse);
+                break;
             }
-            break;
-
-        case 0x1F:
-            Mem::modeSP3 = bitRead(data, 0);
-            Mem::romSP3 = bitRead(data, 2);
-            bitWrite(Mem::romInUse, 1, Mem::romSP3);
-            bitWrite(Mem::romInUse, 0, Mem::romLatch);
-
-            // Serial.printf("1FFD data: %x mode: %x rom bits: %x ROM chip: %x\n",data,Mem::modeSP3,Mem::romSP3, Mem::romInUse);
-            break;
         }
-    } break;
+        break;
         // default:
-        //    zx_data = data;
+        //    port_data = data;
         break;
     }
 }

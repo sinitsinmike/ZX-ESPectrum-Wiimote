@@ -1,3 +1,4 @@
+#include "hardconfig.h"
 #include "FileUtils.h"
 #include "PS2Kbd.h"
 #include "z80main.h"
@@ -8,6 +9,12 @@
 #include "Wiimote2Keys.h"
 #include "Config.h"
 #include "FileSNA.h"
+
+#ifdef CPU_JLSANCHEZ
+#include "Z80.h"
+
+extern Z80 z80;
+#endif
 
 #ifdef USE_INT_FLASH
 // using internal storage (spi flash)
@@ -23,11 +30,23 @@
 #define THE_FS SD
 #endif
 
+static uint16_t readWordLE(File f)
+{
+    uint8_t lo = f.read();
+    uint8_t hi = f.read();
+    return lo | (hi << 8);
+}
+
+static uint16_t readWordBE(File f)
+{
+    uint8_t hi = f.read();
+    uint8_t lo = f.read();
+    return lo | (hi << 8);
+}
+
 bool FileSNA::load(String sna_fn)
 {
     File lhandle;
-    uint16_t size_read;
-    byte sp_h, sp_l;
     uint16_t retaddr;
     int sna_size;
     zx_reset();
@@ -54,118 +73,137 @@ bool FileSNA::load(String sna_fn)
     Mem::pagingLock = 1;
     Mem::videoLatch = 0;
 
-    size_read = 0;
     // Read in the registers
+#ifdef CPU_LINKEFONG
     _zxCpu.i = lhandle.read();
-    _zxCpu.registers.byte[Z80_L] = lhandle.read();
-    _zxCpu.registers.byte[Z80_H] = lhandle.read();
-    _zxCpu.registers.byte[Z80_E] = lhandle.read();
-    _zxCpu.registers.byte[Z80_D] = lhandle.read();
-    _zxCpu.registers.byte[Z80_C] = lhandle.read();
-    _zxCpu.registers.byte[Z80_B] = lhandle.read();
-    _zxCpu.registers.byte[Z80_F] = lhandle.read();
-    _zxCpu.registers.byte[Z80_A] = lhandle.read();
 
-    _zxCpu.alternates[Z80_HL] = _zxCpu.registers.word[Z80_HL];
-    _zxCpu.alternates[Z80_DE] = _zxCpu.registers.word[Z80_DE];
-    _zxCpu.alternates[Z80_BC] = _zxCpu.registers.word[Z80_BC];
-    _zxCpu.alternates[Z80_AF] = _zxCpu.registers.word[Z80_AF];
+    _zxCpu.alternates[Z80_HL] = readWordLE(lhandle);
+    _zxCpu.alternates[Z80_DE] = readWordLE(lhandle);
+    _zxCpu.alternates[Z80_BC] = readWordLE(lhandle);
+    _zxCpu.alternates[Z80_AF] = readWordLE(lhandle);
 
-    _zxCpu.registers.byte[Z80_L] = lhandle.read();
-    _zxCpu.registers.byte[Z80_H] = lhandle.read();
-    _zxCpu.registers.byte[Z80_E] = lhandle.read();
-    _zxCpu.registers.byte[Z80_D] = lhandle.read();
-    _zxCpu.registers.byte[Z80_C] = lhandle.read();
-    _zxCpu.registers.byte[Z80_B] = lhandle.read();
-    _zxCpu.registers.byte[Z80_IYL] = lhandle.read();
-    _zxCpu.registers.byte[Z80_IYH] = lhandle.read();
-    _zxCpu.registers.byte[Z80_IXL] = lhandle.read();
-    _zxCpu.registers.byte[Z80_IXH] = lhandle.read();
+    _zxCpu.registers.word[Z80_HL] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_DE] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_BC] = readWordLE(lhandle);
 
-    byte inter = lhandle.read();
+    _zxCpu.registers.word[Z80_IY] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_IX] = readWordLE(lhandle);
+
+    uint8_t inter = lhandle.read();
     _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
+    _zxCpu.iff1 = _zxCpu.iff2;
     _zxCpu.r = lhandle.read();
 
-    _zxCpu.registers.byte[Z80_F] = lhandle.read();
-    _zxCpu.registers.byte[Z80_A] = lhandle.read();
-
-    sp_l = lhandle.read();
-    sp_h = lhandle.read();
-    _zxCpu.registers.word[Z80_SP] = sp_l + sp_h * 0x100;
+    _zxCpu.registers.word[Z80_AF] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_SP] = readWordLE(lhandle);
 
     _zxCpu.im = lhandle.read();
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+    z80.setRegI(lhandle.read());
+
+    z80.setRegHLx(readWordLE(lhandle));
+    z80.setRegDEx(readWordLE(lhandle));
+    z80.setRegBCx(readWordLE(lhandle));
+    z80.setRegAFx(readWordLE(lhandle));
+
+    z80.setRegHL(readWordLE(lhandle));
+    z80.setRegDE(readWordLE(lhandle));
+    z80.setRegBC(readWordLE(lhandle));
+
+    z80.setRegIY(readWordLE(lhandle));
+    z80.setRegIX(readWordLE(lhandle));
+
+    uint8_t inter = lhandle.read();
+    z80.setIFF2((inter & 0x04) ? true : false);
+    z80.setIFF1(z80.isIFF2());
+    z80.setRegR(lhandle.read());
+
+    z80.setRegAF(readWordLE(lhandle));
+    z80.setRegSP(readWordLE(lhandle));
+
+    z80.setIM((Z80::IntMode)lhandle.read());
+#endif  // CPU_JLSANCHEZ
+
     byte bordercol = lhandle.read();
-
     ESPectrum::borderColor = bordercol;
-
-    _zxCpu.iff1 = _zxCpu.iff2;
 
     if (sna_size == SNA_48K_SIZE)
     {
         fileArch = "48K";
 
-        uint16_t thestack = _zxCpu.registers.word[Z80_SP];
-        uint16_t buf_p = 0x4000;
+        uint16_t offset = 0x4000;
         while (lhandle.available()) {
-            writebyte(buf_p, lhandle.read());
-            buf_p++;
+            writebyte(offset, lhandle.read());
+            offset++;
         }
 
-        // uint16_t offset = thestack - 0x4000;
-        // retaddr = ram5[offset] + 0x100 * ram5[offset + 1];
-        retaddr = readword(thestack);
-        Serial.printf("%x\n", retaddr);
-        _zxCpu.registers.word[Z80_SP]++;
-        _zxCpu.registers.word[Z80_SP]++;
+#ifdef CPU_LINKEFONG
+        uint16_t SP = _zxCpu.registers.word[Z80_SP];
+        retaddr = readword(SP);
+        _zxCpu.pc = retaddr;
+        _zxCpu.registers.word[Z80_SP] = SP + 2;
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+        uint16_t SP = z80.getRegSP();
+        retaddr = readword(SP);
+        z80.setRegPC(retaddr);
+        z80.setRegSP(SP + 2);
+#endif  // CPU_JLSANCHEZ
     }
     else
     {
-        fileArch = "128K";
+        // TBD        
+        // fileArch = "128K";
 
-        uint16_t buf_p;
-        for (buf_p = 0x4000; buf_p < 0x8000; buf_p++) {
-            writebyte(buf_p, lhandle.read());
-        }
-        for (buf_p = 0x8000; buf_p < 0xc000; buf_p++) {
-            writebyte(buf_p, lhandle.read());
-        }
+        // uint16_t buf_p;
+        // for (buf_p = 0x4000; buf_p < 0x8000; buf_p++) {
+        //     writebyte(buf_p, lhandle.read());
+        // }
+        // for (buf_p = 0x8000; buf_p < 0xc000; buf_p++) {
+        //     writebyte(buf_p, lhandle.read());
+        // }
 
-        for (buf_p = 0xc000; buf_p < 0xffff; buf_p++) {
-            writebyte(buf_p, lhandle.read());
-        }
+        // for (buf_p = 0xc000; buf_p < 0xffff; buf_p++) {
+        //     writebyte(buf_p, lhandle.read());
+        // }
 
-        byte machine_b = lhandle.read();
-        Serial.printf("Machine: %x\n", machine_b);
-        byte retaddr_l = lhandle.read();
-        byte retaddr_h = lhandle.read();
-        retaddr = retaddr_l + retaddr_h * 0x100;
-        byte tmp_port = lhandle.read();
+        // byte machine_b = lhandle.read();
+        // Serial.printf("Machine: %x\n", machine_b);
+        // byte retaddr_l = lhandle.read();
+        // byte retaddr_h = lhandle.read();
+        // retaddr = retaddr_l + retaddr_h * 0x100;
+        // byte tmp_port = lhandle.read();
 
-        byte tmp_byte;
-        for (int a = 0xc000; a < 0xffff; a++) {
-            Mem::bankLatch = 0;
-            tmp_byte = readbyte(a);
-            Mem::bankLatch = tmp_port & 0x07;
-            writebyte(a, tmp_byte);
-        }
+        // byte tmp_byte;
+        // for (int a = 0xc000; a < 0xffff; a++) {
+        //     Mem::bankLatch = 0;
+        //     tmp_byte = readbyte(a);
+        //     Mem::bankLatch = tmp_port & 0x07;
+        //     writebyte(a, tmp_byte);
+        // }
 
-        byte tr_dos = lhandle.read();
-        byte tmp_latch = tmp_port & 0x7;
-        for (int page = 0; page < 8; page++) {
-            if (page != tmp_latch && page != 2 && page != 5) {
-                Mem::bankLatch = page;
-                Serial.printf("Page %d actual_latch: %d\n", page, Mem::bankLatch);
-                for (buf_p = 0xc000; buf_p <= 0xFFFF; buf_p++) {
-                    writebyte(buf_p, lhandle.read());
-                }
-            }
-        }
+        // byte tr_dos = lhandle.read();
+        // byte tmp_latch = tmp_port & 0x7;
+        // for (int page = 0; page < 8; page++) {
+        //     if (page != tmp_latch && page != 2 && page != 5) {
+        //         Mem::bankLatch = page;
+        //         Serial.printf("Page %d actual_latch: %d\n", page, Mem::bankLatch);
+        //         for (buf_p = 0xc000; buf_p <= 0xFFFF; buf_p++) {
+        //             writebyte(buf_p, lhandle.read());
+        //         }
+        //     }
+        // }
 
-        Mem::videoLatch = bitRead(tmp_port, 3);
-        Mem::romLatch = bitRead(tmp_port, 4);
-        Mem::pagingLock = bitRead(tmp_port, 5);
-        Mem::bankLatch = tmp_latch;
-        Mem::romInUse = Mem::romLatch;
+        // Mem::videoLatch = bitRead(tmp_port, 3);
+        // Mem::romLatch = bitRead(tmp_port, 4);
+        // Mem::pagingLock = bitRead(tmp_port, 5);
+        // Mem::bankLatch = tmp_latch;
+        // Mem::romInUse = Mem::romLatch;
+
+        // _zxCpu.pc = retaddr;
     }
     lhandle.close();
 
@@ -191,11 +229,11 @@ bool FileSNA::load(String sna_fn)
         }
     }
 
-    _zxCpu.pc = retaddr;
-    Serial.printf("%s SNA: %u\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
-    Serial.printf("Ret address: %x Stack: %x AF: %x Border: %x sna_size: %d rom: %d bank: %x\n", retaddr,
-                  _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], ESPectrum::borderColor, sna_size, Mem::romInUse,
-                  Mem::bankLatch);
+    // Serial.printf("%s SNA: %u\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
+    // Serial.printf("Ret address: %x Stack: %x AF: %x Border: %x sna_size: %d rom: %d bank: %x\n", retaddr,
+    //               _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], ESPectrum::borderColor, sna_size, Mem::romInUse,
+    //               Mem::bankLatch);
+
     KB_INT_START;
 }
 

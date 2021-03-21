@@ -22,16 +22,9 @@
 #include "AySound.h"
 
 // works, but not needed for now
-// #pragma GCC optimize ("O3")
-
-// EXTERN VARS
-extern CONTEXT _zxContext;
-extern Z80_STATE _zxCpu;
-extern int _total;
-extern int _next_total;
+#pragma GCC optimize ("O3")
 
 // EXTERN METHODS
-
 void setup_cpuspeed();
 
 // ESPectrum graphics variables
@@ -85,6 +78,13 @@ static uint16_t *param;
 #define VGA_AR_MODE MODE320x240
 #endif
 
+bool isLittleEndian()
+{
+	uint16_t val16 = 0x1;
+	uint8_t* ptr8 = (uint8_t*)(&val16);
+	return (*ptr8 == 1);
+}
+
 void ESPectrum::setup()
 {
 #ifndef WIIMOTE_PRESENT
@@ -96,6 +96,9 @@ void ESPectrum::setup()
     Serial.begin(115200);
 
     Serial.println("ZX-ESPectrum + Wiimote initializing...");
+
+	if (isLittleEndian()) Serial.println("Running on little endian CPU");
+	else                  Serial.println("Running on big endian CPU"   );
 
     if (Config::slog_on) {
         Serial.println(MSG_VGA_INIT);
@@ -342,7 +345,7 @@ void ESPectrum::videoTask(void *unused) {
         if (idle < target)
             delayMicroseconds(idle);
 
-// #define LOG_DEBUG_TIMING
+#define LOG_DEBUG_TIMING
 
 #ifdef LOG_DEBUG_TIMING
         static int ctr = 0;
