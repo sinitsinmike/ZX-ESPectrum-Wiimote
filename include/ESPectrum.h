@@ -50,6 +50,8 @@ public:
     static uint8_t* rom2;
     static uint8_t* rom3;
 
+    static uint8_t* rom[4];
+
     static uint8_t* ram0;
     static uint8_t* ram1;
     static uint8_t* ram2;
@@ -59,6 +61,8 @@ public:
     static uint8_t* ram6;
     static uint8_t* ram7;
 
+    static uint8_t* ram[8];
+
     static volatile uint8_t bankLatch;
     static volatile uint8_t videoLatch;
     static volatile uint8_t romLatch;
@@ -67,6 +71,46 @@ public:
     static uint8_t romSP3;
     static uint8_t romInUse;
 };
+
+extern "C" inline uint8_t readbyte(uint16_t addr) {
+    uint8_t page = addr >> 14;
+    switch (page) {
+    case 0:
+        return Mem::rom[Mem::romInUse][addr];
+    case 1:
+        return Mem::ram5[addr - 0x4000];
+    case 2:
+        return Mem::ram2[addr - 0x8000];
+    case 3:
+        return Mem::ram[Mem::bankLatch][addr - 0xC000];
+    }
+}
+
+extern "C" inline uint16_t readword(uint16_t addr) { return ((readbyte(addr + 1) << 8) | readbyte(addr)); }
+
+extern "C" inline void writebyte(uint16_t addr, uint8_t data)
+{
+    uint8_t page = addr >> 14;
+    switch (page) {
+    case 0:
+        return;
+    case 1:
+        Mem::ram5[addr - 0x4000] = data;
+        break;
+    case 2:
+        Mem::ram2[addr - 0x8000] = data;
+        break;
+    case 3:
+        Mem::ram[Mem::bankLatch][addr - 0xC000] = data;
+        break;
+    }
+    return;
+}
+
+extern "C" inline void writeword(uint16_t addr, uint16_t data) {
+    writebyte(addr, (uint8_t)data);
+    writebyte(addr + 1, (uint8_t)(data >> 8));
+}
 
 class Ports
 {

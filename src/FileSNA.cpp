@@ -13,7 +13,6 @@
 #ifdef CPU_JLSANCHEZ
 #include "Z80.h"
 
-extern Z80 z80;
 #endif
 
 #ifdef USE_INT_FLASH
@@ -101,29 +100,29 @@ bool FileSNA::load(String sna_fn)
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
-    z80.setRegI(lhandle.read());
+    Z80::setRegI(lhandle.read());
 
-    z80.setRegHLx(readWordLE(lhandle));
-    z80.setRegDEx(readWordLE(lhandle));
-    z80.setRegBCx(readWordLE(lhandle));
-    z80.setRegAFx(readWordLE(lhandle));
+    Z80::setRegHLx(readWordLE(lhandle));
+    Z80::setRegDEx(readWordLE(lhandle));
+    Z80::setRegBCx(readWordLE(lhandle));
+    Z80::setRegAFx(readWordLE(lhandle));
 
-    z80.setRegHL(readWordLE(lhandle));
-    z80.setRegDE(readWordLE(lhandle));
-    z80.setRegBC(readWordLE(lhandle));
+    Z80::setRegHL(readWordLE(lhandle));
+    Z80::setRegDE(readWordLE(lhandle));
+    Z80::setRegBC(readWordLE(lhandle));
 
-    z80.setRegIY(readWordLE(lhandle));
-    z80.setRegIX(readWordLE(lhandle));
+    Z80::setRegIY(readWordLE(lhandle));
+    Z80::setRegIX(readWordLE(lhandle));
 
     uint8_t inter = lhandle.read();
-    z80.setIFF2((inter & 0x04) ? true : false);
-    z80.setIFF1(z80.isIFF2());
-    z80.setRegR(lhandle.read());
+    Z80::setIFF2((inter & 0x04) ? true : false);
+    Z80::setIFF1(Z80::isIFF2());
+    Z80::setRegR(lhandle.read());
 
-    z80.setRegAF(readWordLE(lhandle));
-    z80.setRegSP(readWordLE(lhandle));
+    Z80::setRegAF(readWordLE(lhandle));
+    Z80::setRegSP(readWordLE(lhandle));
 
-    z80.setIM((Z80::IntMode)lhandle.read());
+    Z80::setIM((Z80::IntMode)lhandle.read());
 #endif  // CPU_JLSANCHEZ
 
     byte bordercol = lhandle.read();
@@ -147,10 +146,10 @@ bool FileSNA::load(String sna_fn)
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
-        uint16_t SP = z80.getRegSP();
+        uint16_t SP = Z80::getRegSP();
         retaddr = readword(SP);
-        z80.setRegPC(retaddr);
-        z80.setRegSP(SP + 2);
+        Z80::setRegPC(retaddr);
+        Z80::setRegSP(SP + 2);
 #endif  // CPU_JLSANCHEZ
     }
     else
