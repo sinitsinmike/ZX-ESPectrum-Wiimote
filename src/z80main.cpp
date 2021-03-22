@@ -64,7 +64,7 @@ static unsigned char wait_states[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
 // from paragraph which starts with "The 50 Hz interrupt is synchronized with..."
 // if you only read from https://worldofspectrum.org/faq/reference/48kreference.htm#Contention
 // without reading the previous paragraphs about line timings, it may be confusing.
-static unsigned char delay_contention(uint16_t address, unsigned int tstates)
+static inline unsigned char delay_contention(uint16_t address, unsigned int tstates)
 {
 	// delay states one t-state BEFORE the first pixel to be drawn
 	tstates += 1;
@@ -86,93 +86,86 @@ static unsigned char delay_contention(uint16_t address, unsigned int tstates)
 
 #define ADDRESS_IN_LOW_RAM(addr) (1 == (addr >> 14))
 
-class MyZ80 : public Z80operations
-{
-    public:
-    /* Read opcode from RAM */
-    uint8_t fetchOpcode(uint16_t address) {
-        // 3 clocks to fetch opcode from RAM and 1 execution clock
-        if (ADDRESS_IN_LOW_RAM(address))
-            tstates += delay_contention(address, tstates);
+/* Read opcode from RAM */
+uint8_t z80ops_fetchOpcode(uint16_t address) {
+    // 3 clocks to fetch opcode from RAM and 1 execution clock
+    if (ADDRESS_IN_LOW_RAM(address))
+        tstates += delay_contention(address, tstates);
 
-        tstates += 4;
-        return readbyte(address);
-    }
+    tstates += 4;
+    return readbyte(address);
+}
 
-    /* Read/Write byte from/to RAM */
-    uint8_t peek8(uint16_t address) {
-        // 3 clocks for read byte from RAM
-        if (ADDRESS_IN_LOW_RAM(address))
-            tstates += delay_contention(address, tstates);
+/* Read/Write byte from/to RAM */
+uint8_t z80ops_peek8(uint16_t address) {
+    // 3 clocks for read byte from RAM
+    if (ADDRESS_IN_LOW_RAM(address))
+        tstates += delay_contention(address, tstates);
 
-        tstates += 3;
-        return readbyte(address);
-    }
-    void poke8(uint16_t address, uint8_t value) {
-        // 3 clocks for write byte to RAM
-        if (ADDRESS_IN_LOW_RAM(address))
-            tstates += delay_contention(address, tstates);
+    tstates += 3;
+    return readbyte(address);
+}
+void z80ops_poke8(uint16_t address, uint8_t value) {
+    // 3 clocks for write byte to RAM
+    if (ADDRESS_IN_LOW_RAM(address))
+        tstates += delay_contention(address, tstates);
 
-        tstates += 3;
-        writebyte(address, value);
-    }
+    tstates += 3;
+    writebyte(address, value);
+}
 
-    /* Read/Write word from/to RAM */
-    uint16_t peek16(uint16_t address) {
-        // Order matters, first read lsb, then read msb, don't "optimize"
-        uint8_t lsb = peek8(address);
-        uint8_t msb = peek8(address + 1);
-        return (msb << 8) | lsb;
-    }
-    void poke16(uint16_t address, RegisterPair word) {
-        // Order matters, first write lsb, then write msb, don't "optimize"
-        poke8(address, word.byte8.lo);
-        poke8(address + 1, word.byte8.hi);
-    }
+/* Read/Write word from/to RAM */
+uint16_t z80ops_peek16(uint16_t address) {
+    // Order matters, first read lsb, then read msb, don't "optimize"
+    uint8_t lsb = z80ops_peek8(address);
+    uint8_t msb = z80ops_peek8(address + 1);
+    return (msb << 8) | lsb;
+}
+void z80ops_poke16(uint16_t address, RegisterPair word) {
+    // Order matters, first write lsb, then write msb, don't "optimize"
+    z80ops_poke8(address, word.byte8.lo);
+    z80ops_poke8(address + 1, word.byte8.hi);
+}
 
-    /* In/Out byte from/to IO Bus */
-    uint8_t inPort(uint16_t port) {
-        // 3 clocks for read byte from bus
-        tstates += 3;
-        uint8_t hiport = port >> 8;
-        uint8_t loport = port & 0xFF;
-        return input(loport, hiport);
-    }
-    void outPort(uint16_t port, uint8_t value) {
-        // 4 clocks for write byte to bus
-        tstates += 4;
-        uint8_t hiport = port >> 8;
-        uint8_t loport = port & 0xFF;
-        output(loport, hiport, value);
-    }
+/* In/Out byte from/to IO Bus */
+uint8_t z80ops_inPort(uint16_t port) {
+    // 3 clocks for read byte from bus
+    tstates += 3;
+    uint8_t hiport = port >> 8;
+    uint8_t loport = port & 0xFF;
+    return input(loport, hiport);
+}
+void z80ops_outPort(uint16_t port, uint8_t value) {
+    // 4 clocks for write byte to bus
+    tstates += 4;
+    uint8_t hiport = port >> 8;
+    uint8_t loport = port & 0xFF;
+    output(loport, hiport, value);
+}
 
-    /* Put an address on bus lasting 'tstates' cycles */
-    void addressOnBus(uint16_t address, int32_t wstates){
-    	// Additional clocks to be added on some instructions
-        if (ADDRESS_IN_LOW_RAM(address)) {
-            for (int idx = 0; idx < wstates; idx++) {
-                tstates += delay_contention(address, tstates) + 1;
-            }
+/* Put an address on bus lasting 'tstates' cycles */
+void z80ops_addressOnBus(uint16_t address, int32_t wstates){
+    // Additional clocks to be added on some instructions
+    if (ADDRESS_IN_LOW_RAM(address)) {
+        for (int idx = 0; idx < wstates; idx++) {
+            tstates += delay_contention(address, tstates) + 1;
         }
-        else
-            tstates += wstates;
     }
+    else
+        tstates += wstates;
+}
 
-    /* Clocks needed for processing INT and NMI */
-    void interruptHandlingTime(int32_t wstates) {
-    	tstates += wstates;
-    }
+/* Clocks needed for processing INT and NMI */
+void z80ops_interruptHandlingTime(int32_t wstates) {
+    tstates += wstates;
+}
 
-    /* Callback to know when the INT signal is active */
-    bool isActiveINT(void) {
-        if (!interruptPending) return false;
-        interruptPending = false;
-        return true;
-    }
-};
-
-MyZ80 myZ80;
-Z80 z80(&myZ80);
+/* Callback to know when the INT signal is active */
+bool z80ops_isActiveINT(void) {
+    if (!interruptPending) return false;
+    interruptPending = false;
+    return true;
+}
 
 #endif  // CPU_JLSANCHEZ
 
@@ -184,6 +177,10 @@ void zx_setup() {
     _zxContext.writebyte = writebyte;
     _zxContext.input = input;
     _zxContext.output = output;
+#endif
+
+#ifdef CPU_JLSANCHEZ
+    Z80::create();
 #endif
 
     zx_reset();
@@ -209,7 +206,7 @@ void zx_reset() {
 #endif
 
 #ifdef CPU_JLSANCHEZ
-    z80.reset();
+    Z80::reset();
 #endif 
 }
 
@@ -281,123 +278,27 @@ int32_t zx_loop()
 
     tstates = 0;
 	uint32_t prevTstates = 0;
+    uint32_t partTstates = 0;
+#define PIT_PERIOD 200
 
 	while (tstates < cycleTstates)
 	{
-		z80.execute();
+		Z80::execute();
 #ifdef USE_PER_INSTRUCTION_TIMING
-        delay_instruction(tstates);
+        if (partTstates > PIT_PERIOD) {
+            delay_instruction(tstates);
+            partTstates -= PIT_PERIOD;
+        } 
+        else
+            partTstates += (tstates - prevTstates);
 #endif
 		prevTstates = tstates;
 	}
+    delay_instruction(tstates);
 
     interruptPending = true;
 #endif
     return result;
-}
-
-extern "C" uint8_t readbyte(uint16_t addr) {
-    uint8_t page = addr >> 14;
-    switch (page) {
-    case 0:
-        switch (Mem::romInUse) {
-        case 0:
-            return Mem::rom0[addr];
-        case 1:
-            return Mem::rom1[addr];
-        case 2:
-            return Mem::rom2[addr];
-        case 3:
-            return Mem::rom3[addr];
-        }
-    case 1:
-        return Mem::ram5[addr - 0x4000];
-        break;
-    case 2:
-        return Mem::ram2[addr - 0x8000];
-        break;
-    case 3:
-        switch (Mem::bankLatch) {
-        case 0:
-            return Mem::ram0[addr - 0xc000];
-            break;
-        case 1:
-            return Mem::ram1[addr - 0xc000];
-            break;
-        case 2:
-            return Mem::ram2[addr - 0xc000];
-            break;
-        case 3:
-            return Mem::ram3[addr - 0xc000];
-            break;
-        case 4:
-            return Mem::ram4[addr - 0xc000];
-            break;
-        case 5:
-            return Mem::ram5[addr - 0xc000];
-            break;
-        case 6:
-            return Mem::ram6[addr - 0xc000];
-            break;
-        case 7:
-            return Mem::ram7[addr - 0xc000];
-            break;
-        }
-        // Serial.printf("Address: %x Returned address %x  Bank: %x\n",addr,addr-0xc000,Mem::bankLatch);
-        break;
-    }
-}
-
-extern "C" uint16_t readword(uint16_t addr) { return ((readbyte(addr + 1) << 8) | readbyte(addr)); }
-
-extern "C" void writebyte(uint16_t addr, uint8_t data)
-{
-    uint8_t page = addr >> 14;
-    switch (page) {
-    case 0:
-        return;
-    case 1:
-        Mem::ram5[addr - 0x4000] = data;
-        break;
-    case 2:
-        Mem::ram2[addr - 0x8000] = data;
-        break;
-    case 3:
-        switch (Mem::bankLatch) {
-        case 0:
-            Mem::ram0[addr - 0xc000] = data;
-            break;
-        case 1:
-            Mem::ram1[addr - 0xc000] = data;
-            break;
-        case 2:
-            Mem::ram2[addr - 0xc000] = data;
-            break;
-        case 3:
-            Mem::ram3[addr - 0xc000] = data;
-            break;
-        case 4:
-            Mem::ram4[addr - 0xc000] = data;
-            break;
-        case 5:
-            Mem::ram5[addr - 0xc000] = data;
-            break;
-        case 6:
-            Mem::ram6[addr - 0xc000] = data;
-            break;
-        case 7:
-            Mem::ram7[addr - 0xc000] = data;
-            break;
-        }
-        // Serial.println("plin");
-        break;
-    }
-    return;
-}
-
-extern "C" void writeword(uint16_t addr, uint16_t data) {
-    writebyte(addr, (uint8_t)data);
-    writebyte(addr + 1, (uint8_t)(data >> 8));
 }
 
 #ifdef ZX_KEYB_PRESENT

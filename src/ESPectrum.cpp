@@ -36,6 +36,7 @@ uint8_t* Mem::rom0 = NULL;
 uint8_t* Mem::rom1 = NULL;
 uint8_t* Mem::rom2 = NULL;
 uint8_t* Mem::rom3 = NULL;
+uint8_t* Mem::rom[4];
 
 uint8_t* Mem::ram0 = NULL;
 uint8_t* Mem::ram1 = NULL;
@@ -45,6 +46,7 @@ uint8_t* Mem::ram4 = NULL;
 uint8_t* Mem::ram5 = NULL;
 uint8_t* Mem::ram6 = NULL;
 uint8_t* Mem::ram7 = NULL;
+uint8_t* Mem::ram[8];
 
 volatile uint8_t Mem::bankLatch = 0;
 volatile uint8_t Mem::videoLatch = 0;
@@ -138,6 +140,20 @@ void ESPectrum::setup()
     Mem::ram2 = (byte *)malloc(16384);
     Mem::ram5 = (byte *)malloc(16384);
 #endif
+
+    Mem::rom[0] = Mem::rom0;
+    Mem::rom[1] = Mem::rom1;
+    Mem::rom[2] = Mem::rom2;
+    Mem::rom[3] = Mem::rom3;
+
+    Mem::ram[0] = Mem::ram0;
+    Mem::ram[1] = Mem::ram1;
+    Mem::ram[2] = Mem::ram2;
+    Mem::ram[3] = Mem::ram3;
+    Mem::ram[4] = Mem::ram4;
+    Mem::ram[5] = Mem::ram5;
+    Mem::ram[6] = Mem::ram6;
+    Mem::ram[7] = Mem::ram7;
 
     Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
 
