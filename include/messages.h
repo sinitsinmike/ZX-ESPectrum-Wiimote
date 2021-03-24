@@ -47,9 +47,10 @@
 #define OSD_PSNA_NOT_AVAIL "No Persist Snapshot Available"
 #define OSD_PSNA_LOADING "Loading Persist Snapshot..."
 #define OSD_PSNA_SAVING "Saving Persist Snapshot..."
-#define OSD_PSNA_SAVE_ERR "ERROR Saving Quick Snapshot"
+#define OSD_PSNA_SAVE_WARN "Disk error. Trying slow mode, be patient"
+#define OSD_PSNA_SAVE_ERR "ERROR Saving Persist Snapshot"
 #define OSD_PSNA_LOADED "Persist Snapshot Loaded"
-#define OSD_PSNA_LOAD_ERR "ERROR Loading Quick Snapshot"
+#define OSD_PSNA_LOAD_ERR "ERROR Loading Persist Snapshot"
 #define OSD_PSNA_SAVED "Persist Snapshot Saved"
 
 #define MENU_SNA_TITLE "Select Snapshot"

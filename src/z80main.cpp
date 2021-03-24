@@ -279,7 +279,7 @@ int32_t zx_loop()
     tstates = 0;
 	uint32_t prevTstates = 0;
     uint32_t partTstates = 0;
-#define PIT_PERIOD 200
+#define PIT_PERIOD 50
 
 	while (tstates < cycleTstates)
 	{
