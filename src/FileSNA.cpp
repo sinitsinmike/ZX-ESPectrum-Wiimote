@@ -29,19 +29,7 @@
 #define THE_FS SD
 #endif
 
-static uint16_t readWordLE(File f)
-{
-    uint8_t lo = f.read();
-    uint8_t hi = f.read();
-    return lo | (hi << 8);
-}
 
-static uint16_t readWordBE(File f)
-{
-    uint8_t hi = f.read();
-    uint8_t lo = f.read();
-    return lo | (hi << 8);
-}
 
 bool FileSNA::load(String sna_fn)
 {
@@ -61,7 +49,7 @@ bool FileSNA::load(String sna_fn)
     sna_size = lhandle.size();
 
     if (sna_size < SNA_48K_SIZE) {
-        Serial.printf("FileSNA::load: bad SNA %s: size < %d", sna_fn.c_str(), SNA_48K_SIZE);
+        Serial.printf("FileSNA::load: bad SNA %s: size = %d < %d\n", sna_fn.c_str(), sna_size, SNA_48K_SIZE);
         KB_INT_START;
         return false;
     }
@@ -74,81 +62,76 @@ bool FileSNA::load(String sna_fn)
 
     // Read in the registers
 #ifdef CPU_LINKEFONG
-    _zxCpu.i = lhandle.read();
+    _zxCpu.i = readByteFile(lhandle);
 
-    _zxCpu.alternates[Z80_HL] = readWordLE(lhandle);
-    _zxCpu.alternates[Z80_DE] = readWordLE(lhandle);
-    _zxCpu.alternates[Z80_BC] = readWordLE(lhandle);
-    _zxCpu.alternates[Z80_AF] = readWordLE(lhandle);
+    _zxCpu.alternates[Z80_HL] = readWordFileLE(lhandle);
+    _zxCpu.alternates[Z80_DE] = readWordFileLE(lhandle);
+    _zxCpu.alternates[Z80_BC] = readWordFileLE(lhandle);
+    _zxCpu.alternates[Z80_AF] = readWordFileLE(lhandle);
 
-    _zxCpu.registers.word[Z80_HL] = readWordLE(lhandle);
-    _zxCpu.registers.word[Z80_DE] = readWordLE(lhandle);
-    _zxCpu.registers.word[Z80_BC] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_HL] = readWordFileLE(lhandle);
+    _zxCpu.registers.word[Z80_DE] = readWordFileLE(lhandle);
+    _zxCpu.registers.word[Z80_BC] = readWordFileLE(lhandle);
 
-    _zxCpu.registers.word[Z80_IY] = readWordLE(lhandle);
-    _zxCpu.registers.word[Z80_IX] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_IY] = readWordFileLE(lhandle);
+    _zxCpu.registers.word[Z80_IX] = readWordFileLE(lhandle);
 
-    uint8_t inter = lhandle.read();
+    uint8_t inter = readByteFile(lhandle);
     _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
     _zxCpu.iff1 = _zxCpu.iff2;
-    _zxCpu.r = lhandle.read();
+    _zxCpu.r = readByteFile(lhandle);
 
-    _zxCpu.registers.word[Z80_AF] = readWordLE(lhandle);
-    _zxCpu.registers.word[Z80_SP] = readWordLE(lhandle);
+    _zxCpu.registers.word[Z80_AF] = readWordFileLE(lhandle);
+    _zxCpu.registers.word[Z80_SP] = readWordFileLE(lhandle);
 
-    _zxCpu.im = lhandle.read();
+    _zxCpu.im = readByteFile(lhandle);
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
-    Z80::setRegI(lhandle.read());
+    Z80::setRegI(readByteFile(lhandle));
 
-    Z80::setRegHLx(readWordLE(lhandle));
-    Z80::setRegDEx(readWordLE(lhandle));
-    Z80::setRegBCx(readWordLE(lhandle));
-    Z80::setRegAFx(readWordLE(lhandle));
+    Z80::setRegHLx(readWordFileLE(lhandle));
+    Z80::setRegDEx(readWordFileLE(lhandle));
+    Z80::setRegBCx(readWordFileLE(lhandle));
+    Z80::setRegAFx(readWordFileLE(lhandle));
 
-    Z80::setRegHL(readWordLE(lhandle));
-    Z80::setRegDE(readWordLE(lhandle));
-    Z80::setRegBC(readWordLE(lhandle));
+    Z80::setRegHL(readWordFileLE(lhandle));
+    Z80::setRegDE(readWordFileLE(lhandle));
+    Z80::setRegBC(readWordFileLE(lhandle));
 
-    Z80::setRegIY(readWordLE(lhandle));
-    Z80::setRegIX(readWordLE(lhandle));
+    Z80::setRegIY(readWordFileLE(lhandle));
+    Z80::setRegIX(readWordFileLE(lhandle));
 
-    uint8_t inter = lhandle.read();
+    uint8_t inter = readByteFile(lhandle);
     Z80::setIFF2((inter & 0x04) ? true : false);
     Z80::setIFF1(Z80::isIFF2());
-    Z80::setRegR(lhandle.read());
+    Z80::setRegR(readByteFile(lhandle));
 
-    Z80::setRegAF(readWordLE(lhandle));
-    Z80::setRegSP(readWordLE(lhandle));
+    Z80::setRegAF(readWordFileLE(lhandle));
+    Z80::setRegSP(readWordFileLE(lhandle));
 
-    Z80::setIM((Z80::IntMode)lhandle.read());
+    Z80::setIM((Z80::IntMode)readByteFile(lhandle));
 #endif  // CPU_JLSANCHEZ
 
-    byte bordercol = lhandle.read();
-    ESPectrum::borderColor = bordercol;
+    ESPectrum::borderColor = readByteFile(lhandle);
 
     if (sna_size == SNA_48K_SIZE)
     {
         fileArch = "48K";
 
-        uint16_t offset = 0x4000;
-        while (lhandle.available()) {
-            writebyte(offset, lhandle.read());
-            offset++;
-        }
+        lhandle.read(Mem::ram5, 0x4000);
+        lhandle.read(Mem::ram2, 0x4000);
+        lhandle.read(Mem::ram0, 0x4000);
 
 #ifdef CPU_LINKEFONG
         uint16_t SP = _zxCpu.registers.word[Z80_SP];
-        retaddr = readword(SP);
-        _zxCpu.pc = retaddr;
+        _zxCpu.pc = readword(SP);
         _zxCpu.registers.word[Z80_SP] = SP + 2;
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
         uint16_t SP = Z80::getRegSP();
-        retaddr = readword(SP);
-        Z80::setRegPC(retaddr);
+        Z80::setRegPC(readword(SP));
         Z80::setRegSP(SP + 2);
 #endif  // CPU_JLSANCHEZ
     }
@@ -243,6 +226,15 @@ bool FileSNA::isPersistAvailable()
 }
 
 bool FileSNA::save(String sna_file) {
+    // try to save using pages
+    if (FileSNA::save(sna_file, true))
+        return true;
+    OSD::osdCenteredMsg(OSD_PSNA_SAVE_WARN, 2);
+    // try to save byte-by-byte
+    return FileSNA::save(sna_file, false);
+}
+
+bool FileSNA::save(String sna_file, bool writePages) {
     KB_INT_STOP;
 
     // only 48K snapshot supported at the moment
@@ -253,89 +245,116 @@ bool FileSNA::save(String sna_file) {
     }
 
     // open file
-    File f = THE_FS.open(sna_file, FILE_WRITE);
-    if (!f) {
+    File file = THE_FS.open(sna_file, FILE_WRITE);
+    if (!file) {
         Serial.printf("FileSNA::save: failed to open %s for writing\n", sna_file.c_str());
         KB_INT_START;
         return false;
     }
 
+#ifdef CPU_LINKEFONG
     // write registers: begin with I
-    f.write(_zxCpu.i);
+    writeByteFile(_zxCpu.i, file);
 
-    // store registers
-    unsigned short HL = _zxCpu.registers.word[Z80_HL];
-    unsigned short DE = _zxCpu.registers.word[Z80_DE];
-    unsigned short BC = _zxCpu.registers.word[Z80_BC];
-    unsigned short AF = _zxCpu.registers.word[Z80_AF];
+    writeWordFileLE(_zxCpu.alternates[Z80_HL], file);
+    writeWordFileLE(_zxCpu.alternates[Z80_DE], file);
+    writeWordFileLE(_zxCpu.alternates[Z80_BC], file);
+    writeWordFileLE(_zxCpu.alternates[Z80_AF], file);
 
-    // put alternates in registers
-    _zxCpu.registers.word[Z80_HL] = _zxCpu.alternates[Z80_HL];
-    _zxCpu.registers.word[Z80_DE] = _zxCpu.alternates[Z80_DE];
-    _zxCpu.registers.word[Z80_BC] = _zxCpu.alternates[Z80_BC];
-    _zxCpu.registers.word[Z80_AF] = _zxCpu.alternates[Z80_AF];
+    writeWordFileLE(_zxCpu.registers.word[Z80_HL], file);
+    writeWordFileLE(_zxCpu.registers.word[Z80_DE], file);
+    writeWordFileLE(_zxCpu.registers.word[Z80_BC], file);
 
-    // write alternates
-    f.write(_zxCpu.registers.byte[Z80_L]);
-    f.write(_zxCpu.registers.byte[Z80_H]);
-    f.write(_zxCpu.registers.byte[Z80_E]);
-    f.write(_zxCpu.registers.byte[Z80_D]);
-    f.write(_zxCpu.registers.byte[Z80_C]);
-    f.write(_zxCpu.registers.byte[Z80_B]);
-    f.write(_zxCpu.registers.byte[Z80_F]);
-    f.write(_zxCpu.registers.byte[Z80_A]);
-
-    // restore registers
-    _zxCpu.registers.word[Z80_HL] = HL;
-    _zxCpu.registers.word[Z80_DE] = DE;
-    _zxCpu.registers.word[Z80_BC] = BC;
-    _zxCpu.registers.word[Z80_AF] = AF;
-
-    // write registers
-    f.write(_zxCpu.registers.byte[Z80_L]);
-    f.write(_zxCpu.registers.byte[Z80_H]);
-    f.write(_zxCpu.registers.byte[Z80_E]);
-    f.write(_zxCpu.registers.byte[Z80_D]);
-    f.write(_zxCpu.registers.byte[Z80_C]);
-    f.write(_zxCpu.registers.byte[Z80_B]);
-    f.write(_zxCpu.registers.byte[Z80_IYL]);
-    f.write(_zxCpu.registers.byte[Z80_IYH]);
-    f.write(_zxCpu.registers.byte[Z80_IXL]);
-    f.write(_zxCpu.registers.byte[Z80_IXH]);
+    writeWordFileLE(_zxCpu.registers.word[Z80_IY], file);
+    writeWordFileLE(_zxCpu.registers.word[Z80_IX], file);
 
     byte inter = _zxCpu.iff2 ? 0x04 : 0;
-    f.write(inter);
-    f.write(_zxCpu.r);
+    writeByteFile(inter, file);
+    writeByteFile(_zxCpu.r, file);
 
-    f.write(_zxCpu.registers.byte[Z80_F]);
-    f.write(_zxCpu.registers.byte[Z80_A]);
+    writeWordFileLE(_zxCpu.registers.word[Z80_AF], file);
 
     // read stack pointer and decrement it for pushing PC
-    unsigned short SP = _zxCpu.registers.word[Z80_SP];
-    SP -= 2;
-    byte sp_l = SP & 0xFF;
-    byte sp_h = SP >> 8;
-    f.write(sp_l);
-    f.write(sp_h);
+    uint16_t SP = _zxCpu.registers.word[Z80_SP] - 2;
+    writeWordFileLE(SP, file);
 
-    f.write(_zxCpu.im);
+    writeByteFile(_zxCpu.im, file);
     byte bordercol = ESPectrum::borderColor;
-    f.write(bordercol);
+    writeByteFile(bordercol, file);
 
-    // push PC to stack
-    unsigned short PC = _zxCpu.pc;
-    byte pc_l = PC & 0xFF;
-    byte pc_h = PC >> 8;
-    writebyte(SP+0, pc_l);
-    writebyte(SP+1, pc_h);
+    // push PC to stack, before dumping memory
+    writeword(SP, _zxCpu.pc);
 
-    // dump memory to file
-    for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
-        byte b = readbyte(addr);
-        f.write(b);
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+    // write registers: begin with I
+    writeByteFile(Z80::getRegI(), file);
+
+    writeWordFileLE(Z80::getRegHLx(), file);
+    writeWordFileLE(Z80::getRegDEx(), file);
+    writeWordFileLE(Z80::getRegBCx(), file);
+    writeWordFileLE(Z80::getRegAFx(), file);
+
+    writeWordFileLE(Z80::getRegHL(), file);
+    writeWordFileLE(Z80::getRegDE(), file);
+    writeWordFileLE(Z80::getRegBC(), file);
+
+    writeWordFileLE(Z80::getRegIY(), file);
+    writeWordFileLE(Z80::getRegIX(), file);
+
+    byte inter = Z80::isIFF2() ? 0x04 : 0;
+    writeByteFile(inter, file);
+    writeByteFile(Z80::getRegR(), file);
+
+    writeWordFileLE(Z80::getRegAF(), file);
+
+    // read stack pointer and decrement it for pushing PC
+    uint16_t SP = Z80::getRegSP() - 2;
+    writeWordFileLE(SP, file);
+
+    writeByteFile(Z80::getIM(), file);
+    byte bordercol = ESPectrum::borderColor;
+    writeByteFile(bordercol, file);
+
+    // push PC to stack, before dumping memory
+    writeword(SP, Z80::getRegPC());
+#endif  // CPU_JLSANCHEZ
+
+#ifdef CPU_JLSANCHEZ
+#endif  // CPU_JLSANCHEZ
+
+
+    if (writePages) {
+        // writing pages should be faster, but fails some times when flash is getting full.
+        uint16_t pageSize = 0x4000;
+        uint8_t pages[3] = {5, 2, 8};
+        for (uint8_t ipage = 0; ipage < 3; ipage++) {
+            uint8_t page = pages[ipage];
+            uint16_t bytesWritten = file.write(Mem::ram[page], pageSize);
+            //Serial.printf("page %d: %d bytes written\n", page, bytesWritten);
+            if (bytesWritten != pageSize) {
+                Serial.printf("error writing page %d: %d of %d bytes written\n", page, bytesWritten, pageSize);
+                file.close();
+                KB_INT_START;
+                return false;
+            }
+        }
+    }
+    else {
+        // dump memory to file
+        for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
+            byte b = readbyte(addr);
+            if (1 != file.write(b)) {
+                Serial.printf("error writing byte from RAM address %d\n", addr);
+                file.close();
+                KB_INT_START;
+                return false;
+            }
+        }
     }
 
-    f.close();
+    file.close();
     KB_INT_START;
     return true;
 }
@@ -375,80 +394,81 @@ bool FileSNA::saveQuick()
 
     byte* snaptr = snabuf;
 
+#ifdef CPU_LINKEFONG
     // write registers: begin with I
-    *snaptr++ = _zxCpu.i;
+    writeByteMem(_zxCpu.i, snaptr);
 
-    // store registers
-    unsigned short HL = _zxCpu.registers.word[Z80_HL];
-    unsigned short DE = _zxCpu.registers.word[Z80_DE];
-    unsigned short BC = _zxCpu.registers.word[Z80_BC];
-    unsigned short AF = _zxCpu.registers.word[Z80_AF];
+    writeWordMemLE(_zxCpu.alternates[Z80_HL], snaptr);
+    writeWordMemLE(_zxCpu.alternates[Z80_DE], snaptr);
+    writeWordMemLE(_zxCpu.alternates[Z80_BC], snaptr);
+    writeWordMemLE(_zxCpu.alternates[Z80_AF], snaptr);
 
-    // put alternates in registers
-    _zxCpu.registers.word[Z80_HL] = _zxCpu.alternates[Z80_HL];
-    _zxCpu.registers.word[Z80_DE] = _zxCpu.alternates[Z80_DE];
-    _zxCpu.registers.word[Z80_BC] = _zxCpu.alternates[Z80_BC];
-    _zxCpu.registers.word[Z80_AF] = _zxCpu.alternates[Z80_AF];
+    writeWordMemLE(_zxCpu.registers.word[Z80_HL], snaptr);
+    writeWordMemLE(_zxCpu.registers.word[Z80_DE], snaptr);
+    writeWordMemLE(_zxCpu.registers.word[Z80_BC], snaptr);
 
-    // write alternates
-    *snaptr++ = _zxCpu.registers.byte[Z80_L];
-    *snaptr++ = _zxCpu.registers.byte[Z80_H];
-    *snaptr++ = _zxCpu.registers.byte[Z80_E];
-    *snaptr++ = _zxCpu.registers.byte[Z80_D];
-    *snaptr++ = _zxCpu.registers.byte[Z80_C];
-    *snaptr++ = _zxCpu.registers.byte[Z80_B];
-    *snaptr++ = _zxCpu.registers.byte[Z80_F];
-    *snaptr++ = _zxCpu.registers.byte[Z80_A];
-
-    // restore registers
-    _zxCpu.registers.word[Z80_HL] = HL;
-    _zxCpu.registers.word[Z80_DE] = DE;
-    _zxCpu.registers.word[Z80_BC] = BC;
-    _zxCpu.registers.word[Z80_AF] = AF;
-
-    // write registers
-    *snaptr++ = _zxCpu.registers.byte[Z80_L];
-    *snaptr++ = _zxCpu.registers.byte[Z80_H];
-    *snaptr++ = _zxCpu.registers.byte[Z80_E];
-    *snaptr++ = _zxCpu.registers.byte[Z80_D];
-    *snaptr++ = _zxCpu.registers.byte[Z80_C];
-    *snaptr++ = _zxCpu.registers.byte[Z80_B];
-    *snaptr++ = _zxCpu.registers.byte[Z80_IYL];
-    *snaptr++ = _zxCpu.registers.byte[Z80_IYH];
-    *snaptr++ = _zxCpu.registers.byte[Z80_IXL];
-    *snaptr++ = _zxCpu.registers.byte[Z80_IXH];
+    writeWordMemLE(_zxCpu.registers.word[Z80_IY], snaptr);
+    writeWordMemLE(_zxCpu.registers.word[Z80_IX], snaptr);
 
     byte inter = _zxCpu.iff2 ? 0x04 : 0;
-    *snaptr++ = inter;
-    *snaptr++ = _zxCpu.r;
+    writeByteMem(inter, snaptr);
+    writeByteMem(_zxCpu.r, snaptr);
 
-    *snaptr++ = _zxCpu.registers.byte[Z80_F];
-    *snaptr++ = _zxCpu.registers.byte[Z80_A];
+    writeWordMemLE(_zxCpu.registers.word[Z80_AF], snaptr);
 
     // read stack pointer and decrement it for pushing PC
-    unsigned short SP = _zxCpu.registers.word[Z80_SP];
-    SP -= 2;
-    byte sp_l = SP & 0xFF;
-    byte sp_h = SP >> 8;
-    *snaptr++ = sp_l;
-    *snaptr++ = sp_h;
+    uint16_t SP = _zxCpu.registers.word[Z80_SP] - 2;
+    writeWordMemLE(SP, snaptr);
 
-    *snaptr++ = _zxCpu.im;
+    writeByteMem(_zxCpu.im, snaptr);
     byte bordercol = ESPectrum::borderColor;
-    *snaptr++ = bordercol;
+    writeByteMem(bordercol, snaptr);
 
-    // push PC to stack
-    unsigned short PC = _zxCpu.pc;
-    byte pc_l = PC & 0xFF;
-    byte pc_h = PC >> 8;
-    writebyte(SP+0, pc_l);
-    writebyte(SP+1, pc_h);
+    // push PC to stack, before dumping memory
+    writeword(SP, _zxCpu.pc);
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+    // write registers: begin with I
+    writeByteMem(Z80::getRegI(), snaptr);
+
+    writeWordMemLE(Z80::getRegHLx(), snaptr);
+    writeWordMemLE(Z80::getRegDEx(), snaptr);
+    writeWordMemLE(Z80::getRegBCx(), snaptr);
+    writeWordMemLE(Z80::getRegAFx(), snaptr);
+
+    writeWordMemLE(Z80::getRegHL(), snaptr);
+    writeWordMemLE(Z80::getRegDE(), snaptr);
+    writeWordMemLE(Z80::getRegBC(), snaptr);
+
+    writeWordMemLE(Z80::getRegIY(), snaptr);
+    writeWordMemLE(Z80::getRegIX(), snaptr);
+
+    byte inter = Z80::isIFF2() ? 0x04 : 0;
+    writeByteMem(inter, snaptr);
+    writeByteMem(Z80::getRegR(), snaptr);
+
+    writeWordMemLE(Z80::getRegAF(), snaptr);
+
+    // read stack pointer and decrement it for pushing PC
+    uint16_t SP = Z80::getRegSP() - 2;
+    writeWordMemLE(SP, snaptr);
+
+    writeByteMem(Z80::getIM(), snaptr);
+    byte bordercol = ESPectrum::borderColor;
+    writeByteMem(bordercol, snaptr);
+
+    // push PC to stack, before dumping memory
+    writeword(SP, Z80::getRegPC());
+#endif  // CPU_JLSANCHEZ
+
+
 
     // dump memory to file
-    for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
-        byte b = readbyte(addr);
-        *snaptr++ = b;
-    }
+    uint16_t pageSize = 0x4000;
+    memcpy(snaptr, Mem::ram[5], pageSize); snaptr += pageSize;
+    memcpy(snaptr, Mem::ram[2], pageSize); snaptr += pageSize;
+    memcpy(snaptr, Mem::ram[0], pageSize); snaptr += pageSize;
 
     KB_INT_START;
     return true;
@@ -470,64 +490,78 @@ bool FileSNA::loadQuick()
         return false;
     }
 
-    byte* snaptr = snabuf;
+    uint8_t* snaptr = snabuf;
 
-    // Read in the registers
-    _zxCpu.i = *snaptr++;
-    _zxCpu.registers.byte[Z80_L] = *snaptr++;
-    _zxCpu.registers.byte[Z80_H] = *snaptr++;
-    _zxCpu.registers.byte[Z80_E] = *snaptr++;
-    _zxCpu.registers.byte[Z80_D] = *snaptr++;
-    _zxCpu.registers.byte[Z80_C] = *snaptr++;
-    _zxCpu.registers.byte[Z80_B] = *snaptr++;
-    _zxCpu.registers.byte[Z80_F] = *snaptr++;
-    _zxCpu.registers.byte[Z80_A] = *snaptr++;
+#ifdef CPU_LINKEFONG
+    _zxCpu.i = readByteMem(snaptr);
 
-    _zxCpu.alternates[Z80_HL] = _zxCpu.registers.word[Z80_HL];
-    _zxCpu.alternates[Z80_DE] = _zxCpu.registers.word[Z80_DE];
-    _zxCpu.alternates[Z80_BC] = _zxCpu.registers.word[Z80_BC];
-    _zxCpu.alternates[Z80_AF] = _zxCpu.registers.word[Z80_AF];
+    _zxCpu.alternates[Z80_HL] = readWordMemLE(snaptr);
+    _zxCpu.alternates[Z80_DE] = readWordMemLE(snaptr);
+    _zxCpu.alternates[Z80_BC] = readWordMemLE(snaptr);
+    _zxCpu.alternates[Z80_AF] = readWordMemLE(snaptr);
 
-    _zxCpu.registers.byte[Z80_L] = *snaptr++;
-    _zxCpu.registers.byte[Z80_H] = *snaptr++;
-    _zxCpu.registers.byte[Z80_E] = *snaptr++;
-    _zxCpu.registers.byte[Z80_D] = *snaptr++;
-    _zxCpu.registers.byte[Z80_C] = *snaptr++;
-    _zxCpu.registers.byte[Z80_B] = *snaptr++;
-    _zxCpu.registers.byte[Z80_IYL] = *snaptr++;
-    _zxCpu.registers.byte[Z80_IYH] = *snaptr++;
-    _zxCpu.registers.byte[Z80_IXL] = *snaptr++;
-    _zxCpu.registers.byte[Z80_IXH] = *snaptr++;
+    _zxCpu.registers.word[Z80_HL] = readWordMemLE(snaptr);
+    _zxCpu.registers.word[Z80_DE] = readWordMemLE(snaptr);
+    _zxCpu.registers.word[Z80_BC] = readWordMemLE(snaptr);
 
-    byte inter = *snaptr++;
+    _zxCpu.registers.word[Z80_IY] = readWordMemLE(snaptr);
+    _zxCpu.registers.word[Z80_IX] = readWordMemLE(snaptr);
+
+    uint8_t inter = readByteMem(snaptr);
     _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
-    _zxCpu.r = *snaptr++;
-
-    _zxCpu.registers.byte[Z80_F] = *snaptr++;
-    _zxCpu.registers.byte[Z80_A] = *snaptr++;
-
-    byte sp_l = *snaptr++;
-    byte sp_h = *snaptr++;
-    _zxCpu.registers.word[Z80_SP] = sp_l + sp_h * 0x100;
-
-    _zxCpu.im = *snaptr++;
-    byte bordercol = *snaptr++;
-
-    ESPectrum::borderColor = bordercol;
-
     _zxCpu.iff1 = _zxCpu.iff2;
+    _zxCpu.r = readByteMem(snaptr);
 
-    uint16_t thestack = _zxCpu.registers.word[Z80_SP];
-    for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
-        writebyte(addr, *snaptr++);
-    }
+    _zxCpu.registers.word[Z80_AF] = readWordMemLE(snaptr);
+    _zxCpu.registers.word[Z80_SP] = readWordMemLE(snaptr);
 
-    uint16_t retaddr = readword(thestack);
-    Serial.printf("%x\n", retaddr);
-    _zxCpu.registers.word[Z80_SP]++;
-    _zxCpu.registers.word[Z80_SP]++;
+    _zxCpu.im = readByteMem(snaptr);
+#endif // CPU_LINKEFONG
 
-    _zxCpu.pc = retaddr;
+#ifdef CPU_JLSANCHEZ
+    Z80::setRegI(readByteMem(snaptr));
+
+    Z80::setRegHLx(readWordMemLE(snaptr));
+    Z80::setRegDEx(readWordMemLE(snaptr));
+    Z80::setRegBCx(readWordMemLE(snaptr));
+    Z80::setRegAFx(readWordMemLE(snaptr));
+
+    Z80::setRegHL(readWordMemLE(snaptr));
+    Z80::setRegDE(readWordMemLE(snaptr));
+    Z80::setRegBC(readWordMemLE(snaptr));
+
+    Z80::setRegIY(readWordMemLE(snaptr));
+    Z80::setRegIX(readWordMemLE(snaptr));
+
+    uint8_t inter = readByteMem(snaptr);
+    Z80::setIFF2((inter & 0x04) ? true : false);
+    Z80::setIFF1(Z80::isIFF2());
+    Z80::setRegR(readByteMem(snaptr));
+
+    Z80::setRegAF(readWordMemLE(snaptr));
+    Z80::setRegSP(readWordMemLE(snaptr));
+
+    Z80::setIM((Z80::IntMode)readByteMem(snaptr));
+#endif  // CPU_JLSANCHEZ
+
+    ESPectrum::borderColor = readByteMem(snaptr);
+
+    uint16_t pageSize = 0x4000;
+    memcpy(Mem::ram[5], snaptr, pageSize); snaptr += pageSize;
+    memcpy(Mem::ram[2], snaptr, pageSize); snaptr += pageSize;
+    memcpy(Mem::ram[0], snaptr, pageSize); snaptr += pageSize;
+
+#ifdef CPU_LINKEFONG
+        uint16_t SP = _zxCpu.registers.word[Z80_SP];
+        _zxCpu.pc = readword(SP);
+        _zxCpu.registers.word[Z80_SP] = SP + 2;
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+        uint16_t SP = Z80::getRegSP();
+        Z80::setRegPC(readword(SP));
+        Z80::setRegSP(SP + 2);
+#endif  // CPU_JLSANCHEZ
 
     KB_INT_START;
     return true;

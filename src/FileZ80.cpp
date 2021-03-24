@@ -1,10 +1,10 @@
+#include "hardconfig.h"
 #include "FileZ80.h"
-
 #include <FS.h>
-
 #include "FileUtils.h"
 #include "PS2Kbd.h"
 #include "z80main.h"
+#include "z80.h"
 #include "ESPectrum.h"
 #include "messages.h"
 #include "osd.h"
@@ -28,18 +28,6 @@
 #endif
 
 static uint16_t mkword(uint8_t lobyte, uint8_t hibyte) {
-    return lobyte | (hibyte << 8);
-}
-
-static uint16_t readWordLE(File f) {
-    uint8_t lobyte = f.read();
-    uint8_t hibyte = f.read();
-    return lobyte | (hibyte << 8);
-}
-
-static uint16_t readWordBE(File f) {
-    uint8_t hibyte = f.read();
-    uint8_t lobyte = f.read();
     return lobyte | (hibyte << 8);
 }
 
@@ -75,15 +63,16 @@ bool FileZ80::load(String sna_fn)
     uint8_t b12, b29;
 
     // begin loading registers
-    _zxCpu.registers.byte[Z80_A]  = header[0];
-    _zxCpu.registers.byte[Z80_F]  = header[1];
+#ifdef CPU_LINKEFONG
+    _zxCpu.registers.byte[Z80_A]  =        header[0];
+    _zxCpu.registers.byte[Z80_F]  =        header[1];
     _zxCpu.registers.word[Z80_BC] = mkword(header[2], header[3]);
     _zxCpu.registers.word[Z80_HL] = mkword(header[4], header[5]);
     _zxCpu.pc                     = mkword(header[6], header[7]);
     _zxCpu.registers.word[Z80_SP] = mkword(header[8], header[9]);
-    _zxCpu.i                      = header[10];
-    _zxCpu.r                      = header[11];
-    b12                           = header[12];
+    _zxCpu.i                      =        header[10];
+    _zxCpu.r                      =        header[11];
+    b12                           =        header[12];
     _zxCpu.registers.word[Z80_DE] = mkword(header[13], header[14]);
     _zxCpu.alternates    [Z80_BC] = mkword(header[15], header[16]);
     _zxCpu.alternates    [Z80_DE] = mkword(header[17], header[18]);
@@ -91,11 +80,39 @@ bool FileZ80::load(String sna_fn)
     _zxCpu.alternates    [Z80_AF] = mkword(header[22], header[21]); // watch out for order!!!
     _zxCpu.registers.word[Z80_IY] = mkword(header[23], header[24]);
     _zxCpu.registers.word[Z80_IX] = mkword(header[25], header[26]);
-    _zxCpu.iff1                   = header[27];
-    _zxCpu.iff2                   = header[28];
-    b29                           = header[29];
-    
+    _zxCpu.iff1                   =        header[27];
+    _zxCpu.iff2                   =        header[28];
+    b29                           =        header[29];
     _zxCpu.im                     = (b29 & 0x03);
+
+    uint16_t RegPC = _zxCpu.pc;
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+    Z80::setRegA  (       header[0]);
+    Z80::setFlags (       header[1]);
+    Z80::setRegBC (mkword(header[2], header[3]));
+    Z80::setRegHL (mkword(header[4], header[5]));
+    Z80::setRegPC (mkword(header[6], header[7]));
+    Z80::setRegSP (mkword(header[8], header[9]));
+    Z80::setRegI  (       header[10]);
+    Z80::setRegR  (       header[11]);
+    b12 =                 header[12];
+    Z80::setRegDE (mkword(header[13], header[14]));
+    Z80::setRegBCx(mkword(header[15], header[16]));
+    Z80::setRegDEx(mkword(header[17], header[18]));
+    Z80::setRegHLx(mkword(header[19], header[20]));
+    Z80::setRegAFx(mkword(header[22], header[21])); // watch out for order!!!
+    Z80::setRegIY (mkword(header[23], header[24]));
+    Z80::setRegIX (mkword(header[25], header[26]));
+    Z80::setIFF1  (       header[27] ? true : false);
+    Z80::setIFF2  (       header[28] ? true : false);
+    b29 =                 header[29];
+    Z80::setIM((Z80::IntMode)(b29 & 0x03));
+
+    uint16_t RegPC = Z80::getRegPC();
+#endif // CPU_JLSANCHEZ
+
 
     ESPectrum::borderColor = (b12 >> 1) & 0x07;
 
@@ -105,7 +122,7 @@ bool FileZ80::load(String sna_fn)
 
 #define LOG_Z80_DETAILS
 
-    if (_zxCpu.pc != 0)
+    if (RegPC != 0)
     {
         // version 1, the simplest, 48K only.
 #ifdef LOG_Z80_DETAILS
@@ -117,7 +134,7 @@ bool FileZ80::load(String sna_fn)
         Serial.printf("file length: %d\n", file_size);
         Serial.printf("data length: %d\n", memRawLength);
         Serial.printf("b12: %d\n", b12);
-        Serial.printf("pc: %d\n", _zxCpu.pc);
+        Serial.printf("pc: %d\n", RegPC);
         Serial.printf("border: %d\n", ESPectrum::borderColor);
 #endif
 
@@ -171,7 +188,14 @@ bool FileZ80::load(String sna_fn)
         }
 
         // program counter
-        _zxCpu.pc = mkword(header[32], header[33]);
+        RegPC = mkword(header[32], header[33]);
+#ifdef CPU_LINKEFONG
+        _zxCpu.pc = RegPC;
+#endif // CPU_LINKEFONG
+
+#ifdef CPU_JLSANCHEZ
+        Z80::setRegPC(RegPC);
+#endif // CPU_JLSANCHEZ
 
         // hardware mode
         uint8_t b34 = header[34];
@@ -198,7 +222,7 @@ bool FileZ80::load(String sna_fn)
         Serial.printf("file length: %d\n", file_size);
         Serial.printf("b12: %d\n", b12);
         Serial.printf("b34: %d\n", b34);
-        Serial.printf("pc: %d\n", _zxCpu.pc);
+        Serial.printf("pc: %d\n", RegPC);
         Serial.printf("border: %d\n", ESPectrum::borderColor);
 #endif
 
