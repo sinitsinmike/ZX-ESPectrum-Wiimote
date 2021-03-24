@@ -87,6 +87,23 @@ bool isLittleEndian()
 	return (*ptr8 == 1);
 }
 
+static uint8_t staticMemPage[0x4000];
+
+static void tryAllocateSRamThenPSRam(uint8_t*& page, const char* pagename)
+{
+    page = (uint8_t*)malloc(0x4000);
+    if (page != NULL) {
+        Serial.printf("Page %s allocated into SRAM (fast)\n", pagename);
+        return;
+    }
+    page = (uint8_t*)ps_malloc(0x4000);
+    if (page != NULL) {
+        Serial.printf("Page %s allocated into PSRAM (slow)\n", pagename);
+        return;
+    }
+    Serial.printf("ERROR: unable to allocate page %s\n", pagename);
+}
+
 void ESPectrum::setup()
 {
 #ifndef WIIMOTE_PRESENT
@@ -119,20 +136,48 @@ void ESPectrum::setup()
 
     Serial.printf("HEAP AFTER FILESYSTEM %d\n", ESP.getFreeHeap());
 
-#ifdef BOARD_HAS_PSRAM
-    Mem::rom0 = (byte *)ps_malloc(16384);
-    Mem::rom1 = (byte *)ps_malloc(16384);
-    Mem::rom2 = (byte *)ps_malloc(16384);
-    Mem::rom3 = (byte *)ps_malloc(16384);
+#ifdef COLOR_3B
+    vga.init(vga.VGA_AR_MODE, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
+#endif
 
-    Mem::ram0 = (byte *)ps_malloc(16384);
-    Mem::ram1 = (byte *)ps_malloc(16384);
-    Mem::ram2 = (byte *)ps_malloc(16384);
-    Mem::ram3 = (byte *)ps_malloc(16384);
-    Mem::ram4 = (byte *)ps_malloc(16384);
-    Mem::ram5 = (byte *)malloc(16384);
-    Mem::ram6 = (byte *)ps_malloc(16384);
-    Mem::ram7 = (byte *)malloc(16384);
+#ifdef COLOR_6B
+    const int redPins[] = {RED_PINS_6B};
+    const int grePins[] = {GRE_PINS_6B};
+    const int bluPins[] = {BLU_PINS_6B};
+    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+#endif
+
+#ifdef COLOR_14B
+    const int redPins[] = {RED_PINS_14B};
+    const int grePins[] = {GRE_PINS_14B};
+    const int bluPins[] = {BLU_PINS_14B};
+    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+#endif
+
+    // precalculate colors for current VGA mode
+    precalcColors();
+
+    vga.clear(0);
+
+    Serial.printf("HEAP after vga  %d \n", ESP.getFreeHeap());
+
+#ifdef BOARD_HAS_PSRAM
+    Mem::ram5 = staticMemPage;
+    Serial.printf("Page RAM5 statically allocated (fastest)\n");
+    tryAllocateSRamThenPSRam(Mem::ram2, "RAM2");
+    tryAllocateSRamThenPSRam(Mem::ram0, "RAM0");
+    tryAllocateSRamThenPSRam(Mem::rom0, "ROM0");
+
+    tryAllocateSRamThenPSRam(Mem::ram7, "RAM7");
+    tryAllocateSRamThenPSRam(Mem::ram1, "RAM1");
+    tryAllocateSRamThenPSRam(Mem::ram3, "RAM3");
+    tryAllocateSRamThenPSRam(Mem::ram4, "RAM4");
+    tryAllocateSRamThenPSRam(Mem::ram6, "RAM6");
+
+    tryAllocateSRamThenPSRam(Mem::rom1, "ROM1");
+    tryAllocateSRamThenPSRam(Mem::rom2, "ROM2");
+    tryAllocateSRamThenPSRam(Mem::rom3, "ROM3");
+
 #else
     Mem::rom0 = (byte *)malloc(16384);
 
@@ -156,31 +201,6 @@ void ESPectrum::setup()
     Mem::ram[7] = Mem::ram7;
 
     Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
-
-#ifdef COLOR_3B
-    vga.init(vga.VGA_AR_MODE, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
-#endif
-
-#ifdef COLOR_6B
-    const int redPins[] = {RED_PINS_6B};
-    const int grePins[] = {GRE_PINS_6B};
-    const int bluPins[] = {BLU_PINS_6B};
-    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
-#endif
-
-#ifdef COLOR_14B
-    const int redPins[] = {RED_PINS_14B};
-    const int grePins[] = {GRE_PINS_14B};
-    const int bluPins[] = {BLU_PINS_14B};
-    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
-#endif
-
-    // precalculate colors for current VGA mode
-    precalcColors();
-
-    Serial.printf("HEAP after vga  %d \n", ESP.getFreeHeap());
-
-    vga.clear(0);
 
 #ifdef SPEAKER_PRESENT
     pinMode(SPEAKER_PIN, OUTPUT);
@@ -356,12 +376,12 @@ void ESPectrum::videoTask(void *unused) {
         uint32_t ts_end = micros();
 
         uint32_t elapsed = ts_end - ts_start;
-        uint32_t target = 20000;
+        uint32_t target = 19968;
         uint32_t idle = target - elapsed;
         if (idle < target)
             delayMicroseconds(idle);
 
-#define LOG_DEBUG_TIMING
+//#define LOG_DEBUG_TIMING
 
 #ifdef LOG_DEBUG_TIMING
         static int ctr = 0;
@@ -470,7 +490,7 @@ void ESPectrum::loop() {
     uint32_t ts_end = micros();
 
     uint32_t elapsed = ts_end - ts_start;
-    uint32_t target = 20000;
+    uint32_t target = 19968;
     uint32_t idle = target - elapsed;
     // if (idle < target)
     //     delayMicroseconds(idle);
