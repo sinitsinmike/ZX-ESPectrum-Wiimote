@@ -17,9 +17,9 @@
 
 int CalcTStates() {
     if (Config::getArch() == "48K") {
-        return CPU_SPEED_MHZ_ZX48 * FRAME_PERIOD_MS * 1000;
+        return 69888;
     } else {
-        return CPU_SPEED_MHZ_ZX128 * FRAME_PERIOD_MS * 1000;
+        return 70908;
     }
 }
 
@@ -219,7 +219,9 @@ void zx_reset() {
 #ifdef USE_PER_INSTRUCTION_TIMING
 
 static uint32_t ts_start;
-static uint32_t ts_target_frame = 20000;
+//  48K: 69888 / 3.5    = 19968
+// 128K: 70908 / 3.5469 = 19992
+static uint32_t ts_target_frame = 19968;
 static uint32_t target_cycle_count;
 
 static inline void begin_timing(uint32_t _target_cycle_count)
@@ -294,7 +296,9 @@ int32_t zx_loop()
 #endif
 		prevTstates = tstates;
 	}
+#ifdef USE_PER_INSTRUCTION_TIMING
     delay_instruction(tstates);
+#endif
 
     interruptPending = true;
 #endif
