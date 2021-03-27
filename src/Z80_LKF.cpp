@@ -1,16 +1,20 @@
-/* z80emu.c
+/* Z80_LKF.cpp
  * Z80 processor emulator.
  *
  * Copyright (c) 2012-2017 Lin Ke-Fong
+ * 
+ * Minor changes and adaptations (including single instruction execution,
+ * and better handling of contended memory for LDIR/LDDR/CPIR/CPDR)
+ * Copyright (c) 2020-2021 David Crespo
  *
  * This code is free, do whatever you want with it.
  */
-#include "z80emu/z80emu.h"
+#include "Z80_LKF/z80emu.h"
 #include "Arduino.h"
-#include "z80emu/instructions.h"
-#include "z80emu/macros.h"
-#include "z80emu/tables.h"
-#include "z80user.h"
+#include "Z80_LKF/instructions.h"
+#include "Z80_LKF/macros.h"
+#include "Z80_LKF/tables.h"
+#include "Z80_LKF/z80user.h"
 
 /* Indirect (HL) or prefixed indexed (IX + d) and (IY + d) memory operands are
  * encoded using the 3 bits "110" (0x06).
@@ -55,13 +59,12 @@ static const int OVERFLOW_TABLE[4] = {
 
 };
 
-unsigned long ts1;
-
 static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_cycles, void *context);
 
 void Z80Reset(Z80_STATE *state) {
     int i;
 
+    state->halted = false;
     state->status = 0;
     AF = 0xffff;
     SP = 0xffff;
@@ -127,6 +130,7 @@ void Z80Reset(Z80_STATE *state) {
 
 int Z80Interrupt(Z80_STATE *state, int data_on_bus, void *context) {
     state->status = 0;
+    state->halted = 0;
     if (state->iff1) {
 
         state->iff1 = state->iff2 = 0;
@@ -184,6 +188,7 @@ int Z80NonMaskableInterrupt(Z80_STATE *state, void *context) {
     int elapsed_cycles;
 
     state->status = 0;
+    state->halted = false;
 
     state->iff2 = state->iff1;
     state->iff1 = 0;
@@ -197,66 +202,28 @@ int Z80NonMaskableInterrupt(Z80_STATE *state, void *context) {
     return elapsed_cycles + 11;
 }
 
-#define USE_PER_INSTRUCTION_TIMING
-
-//#define LOG_DEBUG_TIMING
-
-#ifdef USE_PER_INSTRUCTION_TIMING
-
-static uint32_t ts_start;
-static uint32_t ts_target_frame = 20000;
-static uint32_t target_cycle_count;
-
-static inline void begin_timing(uint32_t _target_cycle_count)
-{
-    ts_start = micros();
-    target_cycle_count = _target_cycle_count;
-
-#ifdef LOG_DEBUG_TIMING
-    static int ctr = 0;
-    if (ctr == 0) {
-        ctr = 50;
-        Serial.printf("begin_timing: %u\n", _target_cycle_count);
-    }
-    else ctr--;
-#endif
-}
-
-static inline void delay_instruction(uint32_t elapsed_cycles)
-{
-    uint32_t ts_current = micros() - ts_start;
-    uint32_t ts_target = ts_target_frame * elapsed_cycles / target_cycle_count;
-    if (ts_target > ts_current) {
-        uint32_t us_to_wait = ts_target - ts_current;
-        if (us_to_wait < ts_target_frame)
-            delayMicroseconds(us_to_wait);
-    }
-
-#ifdef LOG_DEBUG_TIMING
-    static int ctr = 0;
-    if (ctr == 0) {
-        ctr = 200000;
-        Serial.printf("ts_current: Tstate = %u, ts_target = %u, ts_current = %u\n", elapsed_cycles, ts_target, ts_current);
-    }
-    else ctr--;
-#endif
-}
-
-#endif  // USE_PER_INSTRUCTION_TIMING
-
-int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
+int Z80ExecuteCycles(Z80_STATE *state, int number_cycles, void *context) {
     int elapsed_cycles, pc, opcode;
 
     state->status = 0;
     elapsed_cycles = 0;
-    ts1 = millis();
     pc = state->pc;
     Z80_FETCH_BYTE(pc, opcode);
     state->pc = pc + 1;
-#ifdef USE_PER_INSTRUCTION_TIMING
-    begin_timing(number_cycles);
-#endif
     return emulate(state, opcode, elapsed_cycles, number_cycles, context);
+}
+
+int Z80ExecuteInstruction(Z80_STATE *state, int elapsed_cycles, void *context)
+{
+    if (state->halted)
+        return elapsed_cycles + 4;
+
+    int pc, opcode;
+    state->status = 0;
+    pc = state->pc;
+    Z80_FETCH_BYTE(pc, opcode);
+    state->pc = pc + 1;
+    return emulate(state, opcode, elapsed_cycles, elapsed_cycles+1, context);
 }
 
 /* Actual emulation function. opcode is the first opcode to emulate, this is
@@ -266,7 +233,6 @@ int Z80Emulate(Z80_STATE *state, int number_cycles, void *context) {
 static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_cycles, void *context) {
     int pc, r;
 
-    int last_cycles = 0;
     pc = state->pc;
     r = state->r & 0x7f;
 
@@ -283,12 +249,6 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
     start_emulation:
 
         registers = state->register_table;
-
-#ifdef USE_PER_INSTRUCTION_TIMING
-        delay_instruction(elapsed_cycles);
-#endif
-
-        last_cycles = elapsed_cycles;
 
     emulate_next_opcode:
 
@@ -564,9 +524,10 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
             int n, f, d;
 
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(DE, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(DE))
+            elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(DE, elapsed_cycles);
+            elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles -= 2;
 
             READ_BYTE(HL, n);
@@ -626,22 +587,23 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
                 hl += d;
                 de += d;
 
+
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(de, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(de, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
 
                 if (--bc) {
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(de, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(de)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles -= 5;
 
                     elapsed_cycles += 17;
@@ -703,15 +665,15 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
             z = a - n;
 
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(HL)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(HL)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(HL)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(HL)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles++;
-            elapsed_cycles += delay_contention(HL, elapsed_cycles);
+            if (ADDRESS_IN_LOW_RAM(HL)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
             elapsed_cycles -= 5;
 
             HL += opcode == OPCODE_CPI ? +1 : -1;
@@ -755,28 +717,28 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
                 z = a - n;
 
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 elapsed_cycles++;
-                elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                 
                 hl += d;
                 if (--bc && z) {
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles++;
-                    elapsed_cycles += delay_contention(hl, elapsed_cycles);
+                    if (ADDRESS_IN_LOW_RAM(hl)) elapsed_cycles += CPU::delayContention(elapsed_cycles);
                     elapsed_cycles -= 10;
 
                     elapsed_cycles += 21;
@@ -1205,6 +1167,7 @@ static int emulate(Z80_STATE *state, int opcode, int elapsed_cycles, int number_
             elapsed_cycles += 4;
 
 #else
+            state->halted = true;
 
             /* If an HALT instruction is executed, the Z80
              * keeps executing NOPs until an interrupt is
@@ -2524,37 +2487,4 @@ stop_emulation:
     state->r = (state->r & 0x80) | (r & 0x7f);
     state->pc = pc & 0xffff;
     return elapsed_cycles;
-}
-
-// sequence of wait states
-static unsigned char wait_states[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
-
-// delay contention: emulates wait states introduced by the ULA (graphic chip)
-// whenever there is a memory access to contended memory (shared between ULA and CPU).
-// detailed info: https://worldofspectrum.org/faq/reference/48kreference.htm#ZXSpectrum
-// from paragraph which starts with "The 50 Hz interrupt is synchronized with..."
-// if you only read from https://worldofspectrum.org/faq/reference/48kreference.htm#Contention
-// without reading the previous paragraphs about line timings, it may be confusing.
-unsigned char delay_contention(word address, unsigned int tstates)
-{
-    // delay for contended memory is only effective in the graphic memory range
-    if (address < 0x4000 || address > 0x7fff)
-        return 0;
-
-    // delay states one t-state BEFORE the first pixel to be drawn
-    tstates += 1;
-
-    // each line spans 224 t-states
-    int line = tstates / 224;
-
-    // only the 192 lines between 64 and 255 have graphic data, the rest is border
-    if (line < 64 || line >= 256) return 0;
-
-    // only the first 128 t-states of each line correspond to a graphic data transfer
-    // the remaining 96 t-states correspond to border
-    int halfpix = tstates % 224;
-    if (halfpix >= 128) return 0;
-
-    int modulo = halfpix % 8;
-    return wait_states[modulo];
 }

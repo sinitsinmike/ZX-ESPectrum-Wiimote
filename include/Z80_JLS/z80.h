@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// z80cpp - Z80 emulator core
+//
+// Copyright (c) 2017, 2018, 2019, 2020 jsanchezv - https://github.com/jsanchezv
+//
+// Heretic optimizations and minor adaptations
+// Copyright (c) 2021 dcrespo3d - https://github.com/dcrespo3d
+//
+
 // Converted to C++ from Java at
 //... https://github.com/jsanchezv/Z80Core
 //... commit c4f267e3564fa89bd88fd2d1d322f4d6b0069dbd

@@ -130,6 +130,7 @@ enum {
 
 typedef struct Z80_STATE {
 
+        bool            halted;
         int             status;
 
         union {
@@ -179,9 +180,17 @@ extern int      Z80NonMaskableInterrupt (Z80_STATE *state, void *context);
  * (see z80user.h) also control the emulation.
  */
 
-extern int      Z80Emulate (Z80_STATE *state,
+extern int      Z80ExecuteCycles (Z80_STATE *state,
 			int number_cycles,
 			void *context);
+
+
+/* Execute a single instruction
+ */ 
+extern int      Z80ExecuteInstruction (Z80_STATE *state,
+                        int elapsed_cycles,
+                        void *context);
+
 
 #ifdef __cplusplus
 }

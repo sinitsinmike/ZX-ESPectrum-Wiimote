@@ -15,33 +15,37 @@ Quick start from PlatformIO:
 - Execute task: Upload
 - Enjoy
 
-If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
+If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
 
 ## Features
 
-- VGA output, 3 bit (default), 6 bit, 14 bit.
-- Beeper digital output.
-- AY-3-8912 sound chip emulation (incomplete but working).
-- Accurate Z80 emulation, with enhanced timing and fast video generation.
 - Spectrum 16/48 architecture emulation without PSRAM.
 - Spectrum 128/+2/+3 architecture emulation with PSRAM.
-- PS/2 Keyboard.
+- VGA output, 3 bit, 6 bit (default), 14 bit (untested).
+- Accurate Z80 emulation, with enhanced timing and fast video generation.
+- Dual Z80 emulators, selectable in compile time using #defines: the precise one (JLS), and the fast one (LKF)
+- Contended memory algorithm for very precise timing on 48K, a little less precise on 128K.
+- 48K sound: beeper digital output, good PWM sound using JLS CPU core.
+- 128K sound: AY-3-8912 sound chip emulation (incomplete but working).
+- PS/2 Keyboard used as input for Spectrum keys.
 - Wiimote support with per-game key assignments.
 - VGA OSD menu: Configuration, architecture, ROM and SNA/Z80 selection.
 - Support for two aspect ratios: 16:9 or 4:3 monitors (using 360x200 or 320x240 modes)
-- Tape saving and loading.
+- Tape saving and loading (untested).
 - SNA snapshot loading.
 - Z80 snapshot loading.
-- Quick snapshot saving and loading (SNA, only 48K supported).
+- Quick (to memory) snapshot saving and loading (SNA, only 48K supported).
 - Internal SPIFFS support / external SD card support (only one of both, see hardconfig.h).
 
 ## Work in progress
 
-- Better AY-3-8912 emulation (sound is still a little dirty).
+- Synchronizing video generation with CPU T-states, for allowing some tricky multi-colour modes to work.
+- TAP tape image loading (still investigating how to do it).
+- Better AY-3-8912 emulation (128K sound is still a little dirty).
 
 ## Compiling and installing
 
-Windows, GNU/Linux and MacOS/X. This version has been developed using platformIO.
+Windows, GNU/Linux and MacOS/X. This version has been developed using PlatformIO.
 
 #### Install platformIO:
 
@@ -73,7 +77,7 @@ NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo
 
 #### Using a external micro SD Card and copying games into it
 
-If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself).
+If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself, so boot.cfg is on the root folder).
 
 The SD card should be formatted in FAT16 / FAT32.
 
@@ -105,7 +109,7 @@ All 4 leds will flash during connection phase, and only LED 1 will be ON when co
 
 Important note: wiimote suport is NOT enabled by default on the TTGO. I have experienced slowness at least once when developing, but seems to have gone forever. It may happen when the option is enabled, but a Wiimote has never been paired. I'm not completely sure, your mileage may vary.
 
-You can enable wiimote support uncommenting `#define WIIMOTE_PRESENT` in config.h
+You can enable wiimote support uncommenting `#define WIIMOTE_PRESENT` in hardconfig.h
 
 ## OSD Menu
 
@@ -161,8 +165,8 @@ I have write a detailed story, with photos, of the development process of this e
 - PS/2 keyboard support based on [ps2kbdlib](https://github.com/michalhol/ps2kbdlib).
 - PS/2 boot for some keyboards from [PS2KeyAdvanced](https://github.com/techpaul/PS2KeyAdvanced).
 - Wiimote library from [ESP32Wiimote by bigw00d](https://github.com/bigw00d/Arduino-ESP32Wiimote).
-- Z80 Emulation derived from [z80emu](https://github.com/anotherlin/z80emu) authored by Lin Ke-Fong.
-- DivIDE ideas (work in progress) taken from the work of Dusan Gallo.
+- Z80 Emulation (precise) derived from [z80cpp](https://github.com/jsanchezv/z80cpp), authored by José Luis Sánchez.
+- Z80 Emulation (fast) derived from [z80emu](https://github.com/anotherlin/z80emu), authored by Lin Ke-Fong.
 - AY sound hardware emulation from [AVR-AY](https://www.avray.ru/).
 - [Amstrad PLC](http://www.amstrad.com) for the ZX-Spectrum ROM binaries [liberated for emulation purposes](http://www.worldofspectrum.org/permits/amstrad-roms.txt).
 - [Nine Tiles Networs Ltd](http://www.worldofspectrum.org/sinclairbasic/index.html) for Sinclair BASIC.
@@ -170,8 +174,8 @@ I have write a detailed story, with photos, of the development process of this e
 - [Retroleum](http://blog.retroleum.co.uk/electronics-articles/a-diagnostic-rom-image-for-the-zx-spectrum/) for the diagnostics ROM.
 - Emil Vikström for his [ArduinoSort](https://github.com/emilv/ArduinoSort) library.
 - [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
-- Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (for now, it's a great library).
-- [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip.
+- Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (but it's a great library).
+- [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip, and for discussing details about this development.
 
 ## And all the involved people from the golden age
 
@@ -180,11 +184,12 @@ I have write a detailed story, with photos, of the development process of this e
 - [The Sinclair Team](https://en.wikipedia.org/wiki/Sinclair_Research).
 - [Lord Alan Michael Sugar](https://en.wikipedia.org/wiki/Alan_Sugar).
 - [Investrónica team](https://es.wikipedia.org/wiki/Investr%C3%B3nica).
+- [Matthew Smith](https://en.wikipedia.org/wiki/Matthew_Smith_(games_programmer)) for [Manic Miner](https://en.wikipedia.org/wiki/Manic_Miner).
 - [Sovietic cloners](https://en.wikipedia.org/wiki/List_of_ZX_Spectrum_clones).
+- DCrespo's uncle Pedro for giving him his first computer: a [Sinclair ZX81](https://en.wikipedia.org/wiki/ZX81).
 - Queru's uncle Roberto for introducing him into the microcomputing world with a [Commodore VIC-20](https://en.wikipedia.org/wiki/Commodore_VIC-20).
 - Queru's uncle Manolito for introducing him into the ZX-Spectrum world.
 - Rampa's mother for the [Oric 1](https://en.wikipedia.org/wiki/Oric#Oric-1) and for inculcate her passion for electronics.
-- DCrespo's uncle Pedro for giving him his first computer: a [Sinclair ZX81](https://en.wikipedia.org/wiki/ZX81).
 
 ## And all the writters, hobbist and documenters
 
@@ -193,7 +198,6 @@ I have write a detailed story, with photos, of the development process of this e
 - Chris Smith for the The [ZX-Spectrum ULA book](http://www.zxdesign.info/book/).
 - Users from [Abadiaretro](https://abadiaretro.com/) and its Telegram group.
 - Users from [El Mundo del Spectrum](http://www.elmundodelspectrum.com/) and its Telegram group.
-- Users from Hardware Devs group.
 - [The World of Spectrum](http://www.worldofspectrum.org/).
 
 ## A lot of programmers, especially

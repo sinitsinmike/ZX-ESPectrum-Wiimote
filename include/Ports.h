@@ -27,56 +27,27 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-#ifndef AySound_h
-#define AySound_h
+#ifndef Ports_h
+#define Ports_h
 
-#include "hardconfig.h"
+#include <inttypes.h>
 
-class AySound
+class Ports
 {
 public:
-#ifndef USE_AY_SOUND
-    static void initialize() {}
-    static void update() {}
-    static void resetSound() {}
-    static void silenceAllChannels(bool flag) {}
-    static uint8_t getRegisterData() { return 0; }
-    static void selectRegister(uint8_t data) {}
-    static void setRegisterData(uint8_t data) {}
-#else
-    static void initialize();
+    // keyboard ports read from PS2 keyboard
+    static volatile uint8_t base[128];
 
-    static void update();
+    // keyboard ports read from Wiimote
+    static volatile uint8_t wii[128];
 
-    static void resetSound();
-    static void silenceAllChannels(bool silence);
+    // read port
+    static uint8_t input(uint8_t portLow, uint8_t portHigh);
 
-    static uint8_t getRegisterData();
-    static void selectRegister(uint8_t data);
-    static void setRegisterData(uint8_t data);
-
-private:
-    static uint8_t finePitchChannelA;
-    static uint8_t coarsePitchChannelA;
-    static uint8_t finePitchChannelB;
-    static uint8_t coarsePitchChannelB;
-    static uint8_t finePitchChannelC;
-    static uint8_t coarsePitchChannelC;
-    static uint8_t noisePitch;
-    static uint8_t mixer;
-    static uint8_t volumeChannelA;
-    static uint8_t volumeChannelB;
-    static uint8_t volumeChannelC;
-    static uint8_t envelopeFineDuration;
-    static uint8_t envelopeCoarseDuration;
-    static uint8_t envelopeShape;
-    static uint8_t ioPortA;
-
-    // Status
-    static uint8_t selectedRegister;
-    static uint8_t channelVolume[3];
-    static uint16_t channelFrequency[3];
-#endif
+    // write port
+    static void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
 };
 
-#endif // AySound_h
+
+
+#endif // Ports_h

@@ -1,10 +1,39 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// ZX-ESPectrum - ZX Spectrum emulator for ESP32
+//
+// Copyright (c) 2020, 2021 David Crespo [dcrespo3d]
+// https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote
+//
+// Based on previous work by Ramón Martinez, Jorge Fuertes and many others
+// https://github.com/rampa069/ZX-ESPectrum
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+
 #include "hardconfig.h"
 #include "FileZ80.h"
 #include <FS.h>
 #include "FileUtils.h"
 #include "PS2Kbd.h"
-#include "z80main.h"
-#include "z80.h"
+#include "CPU.h"
+#include "Mem.h"
 #include "ESPectrum.h"
 #include "messages.h"
 #include "osd.h"
@@ -13,6 +42,21 @@
 #include "Config.h"
 #include "FileUtils.h"
 
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef CPU_LINKEFONG
+#include "Z80_LKF/z80emu.h"
+extern Z80_STATE _zxCpu;
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef CPU_JLSANCHEZ
+#include "Z80_JLS/z80.h"
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef USE_INT_FLASH
 // using internal storage (spi flash)
 #include <SPIFFS.h>
@@ -20,12 +64,16 @@
 #define THE_FS SPIFFS
 #endif
 
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef USE_SD_CARD
 // using external storage (SD card)
 #include <SD.h>
 // set The Filesystem to SD
 #define THE_FS SD
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
 
 static uint16_t mkword(uint8_t lobyte, uint8_t hibyte) {
     return lobyte | (hibyte << 8);
@@ -152,7 +200,7 @@ bool FileZ80::load(String sna_fn)
 
             // load uncompressed data into memory
             for (int i = 0; i < dataLen; i++)
-                writebyte(0x4000 + i, f.read());
+                Mem::writebyte(0x4000 + i, f.read());
         }
 
         // latches for 48K
@@ -338,14 +386,14 @@ void FileZ80::loadCompressedMemData(File f, uint16_t dataLen, uint16_t memoff, u
         uint8_t databyte = f.read();
         if (ed_cnt == 0) {
             if (databyte != 0xED)
-                writebyte(memoff + memidx++, databyte);
+                Mem::writebyte(memoff + memidx++, databyte);
             else
                 ed_cnt++;
         }
         else if (ed_cnt == 1) {
             if (databyte != 0xED) {
-                writebyte(memoff + memidx++, 0xED);
-                writebyte(memoff + memidx++, databyte);
+                Mem::writebyte(memoff + memidx++, 0xED);
+                Mem::writebyte(memoff + memidx++, databyte);
                 ed_cnt = 0;
             }
             else
@@ -358,7 +406,7 @@ void FileZ80::loadCompressedMemData(File f, uint16_t dataLen, uint16_t memoff, u
         else if (ed_cnt == 3) {
             repval = databyte;
             for (uint16_t i = 0; i < repcnt; i++)
-                writebyte(memoff + memidx++, repval);
+                Mem::writebyte(memoff + memidx++, repval);
             ed_cnt = 0;
         }
     }

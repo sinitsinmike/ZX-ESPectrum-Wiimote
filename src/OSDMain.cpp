@@ -1,7 +1,36 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// ZX-ESPectrum - ZX Spectrum emulator for ESP32
+//
+// Copyright (c) 2020, 2021 David Crespo [dcrespo3d]
+// https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote
+//
+// Based on previous work by Ramón Martinez, Jorge Fuertes and many others
+// https://github.com/rampa069/ZX-ESPectrum
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+
 #include "osd.h"
 #include "FileUtils.h"
 #include "PS2Kbd.h"
-#include "z80main.h"
+#include "CPU.h"
 #include "ESPectrum.h"
 #include "messages.h"
 #include "Wiimote2Keys.h"
@@ -189,7 +218,7 @@ void OSD::do_OSD() {
 
                     Config::save();
                     vTaskDelay(2);
-                    zx_reset();
+                    ESPectrum::reset();
                 }
             }
         }
@@ -210,7 +239,7 @@ void OSD::do_OSD() {
             byte opt2 = menuRun(MENU_RESET);
             if (opt2 == 1) {
                 // Soft
-                zx_reset();
+                ESPectrum::reset();
                 if (Config::ram_file != (String)NO_RAM_FILE)
                     FileSNA::load("/sna/" + Config::ram_file);
             }
@@ -218,7 +247,7 @@ void OSD::do_OSD() {
                 // Hard
                 Config::ram_file = (String)NO_RAM_FILE;
                 Config::save();
-                zx_reset();
+                ESPectrum::reset();
                 ESP.restart();
             }
             else if (opt2 == 3) {
@@ -357,14 +386,14 @@ void OSD::changeSnapshot(String filename)
     if (FileUtils::hasSNAextension(filename))
     {
         osdCenteredMsg((String)MSG_LOADING_SNA + ": " + filename, LEVEL_INFO);
-        zx_reset();
+        ESPectrum::reset();
         Serial.printf("Loading SNA: %s\n", filename.c_str());
         FileSNA::load((String)DISK_SNA_DIR + "/" + filename);
     }
     else if (FileUtils::hasZ80extension(filename))
     {
         osdCenteredMsg((String)MSG_LOADING_Z80 + ": " + filename, LEVEL_INFO);
-        zx_reset();
+        ESPectrum::reset();
         Serial.printf("Loading Z80: %s\n", filename.c_str());
         FileZ80::load((String)DISK_SNA_DIR + "/" + filename);
     }
