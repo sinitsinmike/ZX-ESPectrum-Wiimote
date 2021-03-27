@@ -11,7 +11,11 @@
 #define __Z80USER_INCLUDED__
 
 #include <stdint.h>
-#include "z80emu/z80emu.h"
+#include "z80emu.h"
+
+#include "../CPU.h"
+#include "../Mem.h"
+#include "../Ports.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,51 +90,47 @@ extern "C" {
  *      instruction     Type of the currently executing instruction, see
  *                      instructions.h for a list.
  */
-unsigned char delay_contention(word address, unsigned int tstates);
 
-typedef struct CONTEXT {
-	uint8_t(*readbyte)(uint16_t);
-	uint16_t(*readword)(uint16_t);
-	void(*writebyte)(uint16_t, uint8_t);
-	void(*writeword)(uint16_t, uint16_t);
-	uint8_t(*input)(uint8_t, uint8_t);
-	void(*output)(uint8_t, uint8_t, uint8_t);
-} CONTEXT;
-
-#define Z80_READ_BYTE(address, x)                               \
-{                                                               \
-	(x) = ((CONTEXT*)context)->readbyte(address);               \
-	elapsed_cycles += delay_contention(address,elapsed_cycles); \
+#define Z80_READ_BYTE(address, x)                                   \
+{                                                                   \
+    (x) = Mem::readbyte(address);                                   \
+    if (ADDRESS_IN_LOW_RAM(address))                                \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);     \
 }
 
-#define Z80_WRITE_BYTE(address, x)                              \
-{                                                               \
-	((CONTEXT*)context)->writebyte(address, x);                 \
-	elapsed_cycles += delay_contention(address,elapsed_cycles); \
+#define Z80_WRITE_BYTE(address, x)                                  \
+{                                                                   \
+    Mem::writebyte(address, x);                                     \
+    if (ADDRESS_IN_LOW_RAM(address))                                \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);     \
 }
 
-#define Z80_READ_WORD(address, x)                                 \
-{                                                                 \
-	(x) = ((CONTEXT*)context)->readword(address);                 \
-	elapsed_cycles += delay_contention(address,elapsed_cycles);   \
-	elapsed_cycles += delay_contention(address+1,elapsed_cycles); \
+#define Z80_READ_WORD(address, x)                                     \
+{                                                                     \
+    (x) = Mem::readword(address);                                     \
+    if (ADDRESS_IN_LOW_RAM(address))                                  \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);       \
+    if (ADDRESS_IN_LOW_RAM(address+1))                                \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);       \
 }
 
-#define Z80_WRITE_WORD(address, x)                                \
-{                                                                 \
-	((CONTEXT*)context)->writeword(address, x);                   \
-	elapsed_cycles += delay_contention(address,elapsed_cycles);   \
-	elapsed_cycles += delay_contention(address+1,elapsed_cycles); \
+#define Z80_WRITE_WORD(address, x)                                    \
+{                                                                     \
+    Mem::writeword(address, x);                                       \
+    if (ADDRESS_IN_LOW_RAM(address))                                  \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);       \
+    if (ADDRESS_IN_LOW_RAM(address))                                  \
+        elapsed_cycles += CPU::delayContention(elapsed_cycles);       \
 }
 
 #define Z80_INPUT_BYTE(portLow, portHigh, x)               \
 {                                                          \
-	(x) = ((CONTEXT*)context)->input(portLow, portHigh);   \
+    (x) = Ports::input(portLow, portHigh);                 \
 }
 
 #define Z80_OUTPUT_BYTE(portLow, portHigh, x)              \
 {                                                          \
-	((CONTEXT*)context)->output(portLow, portHigh, x);     \
+    Ports::output(portLow, portHigh, x);                   \
 }
 
 #define Z80_FETCH_BYTE(address, x)		Z80_READ_BYTE((address), (x))

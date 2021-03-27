@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// z80cpp - Z80 emulator core
+//
+// Copyright (c) 2017, 2018, 2019, 2020 jsanchezv - https://github.com/jsanchezv
+//
+// Heretic optimizations and minor adaptations
+// Copyright (c) 2021 dcrespo3d - https://github.com/dcrespo3d
+//
+
 // Converted to C++ from Java at
 //... https://github.com/jsanchezv/Z80Core
 //... commit c4f267e3564fa89bd88fd2d1d322f4d6b0069dbd
@@ -5,16 +15,12 @@
 //... v1.0.0 (13/02/2017)
 //    quick & dirty conversion by dddddd (AKA deesix)
 
-#include "z80.h"
+#include "Z80_JLS/z80.h"
 
 #pragma GCC optimize ("O3")
 
-
-
-
-
-
-
+///////////////////////////////////////////////////////////////////////////////
+// miembros estáticos
 
 uint8_t Z80::opCode;
 uint8_t Z80::prefixOpcode = { 0x00 };
@@ -46,13 +52,7 @@ uint8_t Z80::sz53pn_addTable[256];
 uint8_t Z80::sz53n_subTable[256];
 uint8_t Z80::sz53pn_subTable[256];
 
-
-
-
-
-
-
-
+///////////////////////////////////////////////////////////////////////////////
 
 // Constructor de la clase
 void Z80::create() {

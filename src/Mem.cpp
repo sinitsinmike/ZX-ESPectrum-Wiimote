@@ -27,56 +27,30 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-#ifndef AySound_h
-#define AySound_h
+#include "Mem.h"
+#include <stddef.h>
 
-#include "hardconfig.h"
+uint8_t* Mem::rom0 = NULL;
+uint8_t* Mem::rom1 = NULL;
+uint8_t* Mem::rom2 = NULL;
+uint8_t* Mem::rom3 = NULL;
+uint8_t* Mem::rom[4];
 
-class AySound
-{
-public:
-#ifndef USE_AY_SOUND
-    static void initialize() {}
-    static void update() {}
-    static void resetSound() {}
-    static void silenceAllChannels(bool flag) {}
-    static uint8_t getRegisterData() { return 0; }
-    static void selectRegister(uint8_t data) {}
-    static void setRegisterData(uint8_t data) {}
-#else
-    static void initialize();
+uint8_t* Mem::ram0 = NULL;
+uint8_t* Mem::ram1 = NULL;
+uint8_t* Mem::ram2 = NULL;
+uint8_t* Mem::ram3 = NULL;
+uint8_t* Mem::ram4 = NULL;
+uint8_t* Mem::ram5 = NULL;
+uint8_t* Mem::ram6 = NULL;
+uint8_t* Mem::ram7 = NULL;
+uint8_t* Mem::ram[8];
 
-    static void update();
+volatile uint8_t Mem::bankLatch = 0;
+volatile uint8_t Mem::videoLatch = 0;
+volatile uint8_t Mem::romLatch = 0;
+volatile uint8_t Mem::pagingLock = 0;
+uint8_t Mem::modeSP3 = 0;
+uint8_t Mem::romSP3 = 0;
+uint8_t Mem::romInUse = 0;
 
-    static void resetSound();
-    static void silenceAllChannels(bool silence);
-
-    static uint8_t getRegisterData();
-    static void selectRegister(uint8_t data);
-    static void setRegisterData(uint8_t data);
-
-private:
-    static uint8_t finePitchChannelA;
-    static uint8_t coarsePitchChannelA;
-    static uint8_t finePitchChannelB;
-    static uint8_t coarsePitchChannelB;
-    static uint8_t finePitchChannelC;
-    static uint8_t coarsePitchChannelC;
-    static uint8_t noisePitch;
-    static uint8_t mixer;
-    static uint8_t volumeChannelA;
-    static uint8_t volumeChannelB;
-    static uint8_t volumeChannelC;
-    static uint8_t envelopeFineDuration;
-    static uint8_t envelopeCoarseDuration;
-    static uint8_t envelopeShape;
-    static uint8_t ioPortA;
-
-    // Status
-    static uint8_t selectedRegister;
-    static uint8_t channelVolume[3];
-    static uint16_t channelFrequency[3];
-#endif
-};
-
-#endif // AySound_h

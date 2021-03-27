@@ -1,7 +1,37 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// ZX-ESPectrum - ZX Spectrum emulator for ESP32
+//
+// Copyright (c) 2020, 2021 David Crespo [dcrespo3d]
+// https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote
+//
+// Based on previous work by Ramón Martinez, Jorge Fuertes and many others
+// https://github.com/rampa069/ZX-ESPectrum
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+
 #include "hardconfig.h"
 #include "FileUtils.h"
 #include "PS2Kbd.h"
-#include "z80main.h"
+#include "CPU.h"
+#include "Mem.h"
 #include "ESPectrum.h"
 #include "messages.h"
 #include "osd.h"
@@ -10,9 +40,13 @@
 #include "Config.h"
 #include "FileSNA.h"
 
-#ifdef CPU_JLSANCHEZ
-#include "Z80.h"
+#ifdef CPU_LINKEFONG
+#include "Z80_LKF/z80emu.h"
+extern Z80_STATE _zxCpu;
+#endif
 
+#ifdef CPU_JLSANCHEZ
+#include "Z80_JLS/z80.h"
 #endif
 
 #ifdef USE_INT_FLASH
@@ -36,7 +70,7 @@ bool FileSNA::load(String sna_fn)
     File lhandle;
     uint16_t retaddr;
     int sna_size;
-    zx_reset();
+    ESPectrum::reset();
 
     Serial.printf("%s SNA: %ub\n", MSG_FREE_HEAP_BEFORE, ESP.getFreeHeap());
 
@@ -125,13 +159,13 @@ bool FileSNA::load(String sna_fn)
 
 #ifdef CPU_LINKEFONG
         uint16_t SP = _zxCpu.registers.word[Z80_SP];
-        _zxCpu.pc = readword(SP);
+        _zxCpu.pc = Mem::readword(SP);
         _zxCpu.registers.word[Z80_SP] = SP + 2;
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
         uint16_t SP = Z80::getRegSP();
-        Z80::setRegPC(readword(SP));
+        Z80::setRegPC(Mem::readword(SP));
         Z80::setRegSP(SP + 2);
 #endif  // CPU_JLSANCHEZ
     }
@@ -283,7 +317,7 @@ bool FileSNA::save(String sna_file, bool writePages) {
     writeByteFile(bordercol, file);
 
     // push PC to stack, before dumping memory
-    writeword(SP, _zxCpu.pc);
+    Mem::writeword(SP, _zxCpu.pc);
 
 #endif // CPU_LINKEFONG
 
@@ -318,7 +352,7 @@ bool FileSNA::save(String sna_file, bool writePages) {
     writeByteFile(bordercol, file);
 
     // push PC to stack, before dumping memory
-    writeword(SP, Z80::getRegPC());
+    Mem::writeword(SP, Z80::getRegPC());
 #endif  // CPU_JLSANCHEZ
 
 #ifdef CPU_JLSANCHEZ
@@ -344,7 +378,7 @@ bool FileSNA::save(String sna_file, bool writePages) {
     else {
         // dump memory to file
         for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
-            byte b = readbyte(addr);
+            byte b = Mem::readbyte(addr);
             if (1 != file.write(b)) {
                 Serial.printf("error writing byte from RAM address %d\n", addr);
                 file.close();
@@ -425,7 +459,7 @@ bool FileSNA::saveQuick()
     writeByteMem(bordercol, snaptr);
 
     // push PC to stack, before dumping memory
-    writeword(SP, _zxCpu.pc);
+    Mem::writeword(SP, _zxCpu.pc);
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
@@ -459,7 +493,7 @@ bool FileSNA::saveQuick()
     writeByteMem(bordercol, snaptr);
 
     // push PC to stack, before dumping memory
-    writeword(SP, Z80::getRegPC());
+    Mem::writeword(SP, Z80::getRegPC());
 #endif  // CPU_JLSANCHEZ
 
 
@@ -553,13 +587,13 @@ bool FileSNA::loadQuick()
 
 #ifdef CPU_LINKEFONG
         uint16_t SP = _zxCpu.registers.word[Z80_SP];
-        _zxCpu.pc = readword(SP);
+        _zxCpu.pc = Mem::readword(SP);
         _zxCpu.registers.word[Z80_SP] = SP + 2;
 #endif // CPU_LINKEFONG
 
 #ifdef CPU_JLSANCHEZ
         uint16_t SP = Z80::getRegSP();
-        Z80::setRegPC(readword(SP));
+        Z80::setRegPC(Mem::readword(SP));
         Z80::setRegSP(SP + 2);
 #endif  // CPU_JLSANCHEZ
 

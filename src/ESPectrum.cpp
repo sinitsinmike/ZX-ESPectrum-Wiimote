@@ -1,7 +1,36 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// ZX-ESPectrum - ZX Spectrum emulator for ESP32
+//
+// Copyright (c) 2020, 2021 David Crespo [dcrespo3d]
+// https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote
+//
+// Based on previous work by Ramón Martinez, Jorge Fuertes and many others
+// https://github.com/rampa069/ZX-ESPectrum
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+
 #include "PS2Kbd.h"
-#include "z80emu/z80emu.h"
-#include "z80main.h"
-#include "z80user.h"
+#include "Z80_LKF/z80emu.h"
+#include "CPU.h"
+#include "z80_LKF/z80user.h"
 #include <Arduino.h>
 
 #include "hardpins.h"
@@ -19,6 +48,8 @@
 #include "FileUtils.h"
 #include "osd.h"
 
+#include "Ports.h"
+#include "Mem.h"
 #include "AySound.h"
 
 // works, but not needed for now
@@ -30,35 +61,6 @@ void setup_cpuspeed();
 // ESPectrum graphics variables
 byte ESPectrum::borderColor = 7;
 VGA ESPectrum::vga;
-
-// Memory
-uint8_t* Mem::rom0 = NULL;
-uint8_t* Mem::rom1 = NULL;
-uint8_t* Mem::rom2 = NULL;
-uint8_t* Mem::rom3 = NULL;
-uint8_t* Mem::rom[4];
-
-uint8_t* Mem::ram0 = NULL;
-uint8_t* Mem::ram1 = NULL;
-uint8_t* Mem::ram2 = NULL;
-uint8_t* Mem::ram3 = NULL;
-uint8_t* Mem::ram4 = NULL;
-uint8_t* Mem::ram5 = NULL;
-uint8_t* Mem::ram6 = NULL;
-uint8_t* Mem::ram7 = NULL;
-uint8_t* Mem::ram[8];
-
-volatile uint8_t Mem::bankLatch = 0;
-volatile uint8_t Mem::videoLatch = 0;
-volatile uint8_t Mem::romLatch = 0;
-volatile uint8_t Mem::pagingLock = 0;
-uint8_t Mem::modeSP3 = 0;
-uint8_t Mem::romSP3 = 0;
-uint8_t Mem::romInUse = 0;
-
-// Ports
-volatile uint8_t Ports::base[128];
-volatile uint8_t Ports::wii[128];
 
 volatile byte flashing = 0;
 const int SAMPLING_RATE = 44100;
@@ -91,10 +93,14 @@ static uint8_t staticMemPage[0x4000];
 
 static void tryAllocateSRamThenPSRam(uint8_t*& page, const char* pagename)
 {
-    page = (uint8_t*)malloc(0x4000);
-    if (page != NULL) {
-        Serial.printf("Page %s allocated into SRAM (fast)\n", pagename);
-        return;
+    // only try allocating in SRAM when there are 64K free at least
+    if (ESP.getFreeHeap() >= 65536)
+    {
+        page = (uint8_t*)malloc(0x4000);
+        if (page != NULL) {
+            Serial.printf("Page %s allocated into SRAM (fast)\n", pagename);
+            return;
+        }
     }
     page = (uint8_t*)ps_malloc(0x4000);
     if (page != NULL) {
@@ -124,17 +130,17 @@ void ESPectrum::setup()
     }
 
     Serial.printf("PSRAM size: %d\n", ESP.getPsramSize());
-    Serial.printf("HEAP BEGIN %d\n", ESP.getFreeHeap());
+    Serial.printf("Free heap at begin of setup: %d\n", ESP.getFreeHeap());
 
     initWiimote2Keys();
 
-    Serial.printf("HEAP AFTER WIIMOTE %d\n", ESP.getFreeHeap());
+    Serial.printf("Free heap after wiimote: %d\n", ESP.getFreeHeap());
 
     FileUtils::initFileSystem();
     Config::load();
     Config::loadSnapshotLists();
 
-    Serial.printf("HEAP AFTER FILESYSTEM %d\n", ESP.getFreeHeap());
+    Serial.printf("Free heap after filesystem: %d\n", ESP.getFreeHeap());
 
 #ifdef COLOR_3B
     vga.init(vga.VGA_AR_MODE, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
@@ -159,7 +165,7 @@ void ESPectrum::setup()
 
     vga.clear(0);
 
-    Serial.printf("HEAP after vga  %d \n", ESP.getFreeHeap());
+    Serial.printf("Free heap after vga: %d \n", ESP.getFreeHeap());
 
 #ifdef BOARD_HAS_PSRAM
     Mem::ram5 = staticMemPage;
@@ -200,7 +206,7 @@ void ESPectrum::setup()
     Mem::ram[6] = Mem::ram6;
     Mem::ram[7] = Mem::ram7;
 
-    Serial.printf("HEAP AFTER RAM %d\n", ESP.getFreeHeap());
+    Serial.printf("Free heap after allocating emulated ram: %d\n", ESP.getFreeHeap());
 
 #ifdef SPEAKER_PRESENT
     pinMode(SPEAKER_PIN, OUTPUT);
@@ -216,12 +222,9 @@ void ESPectrum::setup()
 
     PS2Keyboard::initialize();
 
-    Serial.printf("%s bank %u: %ub\n", MSG_FREE_HEAP_AFTER, 0, ESP.getFreeHeap());
-    Serial.printf("CALC TSTATES/PERIOD %u\n", CalcTStates());
-
     // START Z80
     Serial.println(MSG_Z80_RESET);
-    zx_setup();
+    CPU::setup();
 
     // make sure keyboard ports are FF
     for (int t = 0; t < 32; t++) {
@@ -230,7 +233,6 @@ void ESPectrum::setup()
     }
 
     Serial.printf("%s %u\n", MSG_EXEC_ON_CORE, xPortGetCoreID());
-    Serial.printf("%s Z80 RESET: %ub\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
 
     vidQueue = xQueueCreate(1, sizeof(uint16_t *));
     xTaskCreatePinnedToCore(&ESPectrum::videoTask, "videoTask", 1024 * 4, NULL, 5, &videoTaskHandle, 0);
@@ -255,7 +257,25 @@ void ESPectrum::setup()
     }
 #endif // ZX_KEYB_PRESENT
 
-    Serial.println("End of setup");
+    Serial.printf("Free heap at end of setup: %d\n", ESP.getFreeHeap());
+}
+
+void ESPectrum::reset()
+{
+    for (uint8_t i = 0; i < 128; i++) {
+        Ports::base[i] == 0x1F;
+        Ports::wii[i] == 0x1F;
+    }
+    ESPectrum::borderColor = 7;
+    Mem::bankLatch = 0;
+    Mem::videoLatch = 0;
+    Mem::romLatch = 0;
+    Mem::pagingLock = 0;
+    Mem::modeSP3 = 0;
+    Mem::romSP3 = 0;
+    Mem::romInUse = 0;
+
+    CPU::reset();
 }
 
 #define NUM_SPECTRUM_COLORS 16
@@ -376,12 +396,12 @@ void ESPectrum::videoTask(void *unused) {
         uint32_t ts_end = micros();
 
         uint32_t elapsed = ts_end - ts_start;
-        uint32_t target = 19968;
+        uint32_t target = CPU::microsPerFrame();
         uint32_t idle = target - elapsed;
+#ifdef VIDEO_FRAME_TIMING
         if (idle < target)
             delayMicroseconds(idle);
-
-//#define LOG_DEBUG_TIMING
+#endif
 
 #ifdef LOG_DEBUG_TIMING
         static int ctr = 0;
@@ -485,17 +505,17 @@ void ESPectrum::loop() {
     xQueueSend(vidQueue, &param, portMAX_DELAY);
     uint32_t ts_start = micros();
 
-    zx_loop();
+    CPU::loop();
 
     uint32_t ts_end = micros();
 
+#ifdef LOG_DEBUG_TIMING
     uint32_t elapsed = ts_end - ts_start;
-    uint32_t target = 19968;
+    uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;
     // if (idle < target)
     //     delayMicroseconds(idle);
 
-#ifdef LOG_DEBUG_TIMING
     static int ctr = 0;
     if (ctr == 0) {
         ctr = 50;
