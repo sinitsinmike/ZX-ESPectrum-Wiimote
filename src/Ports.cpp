@@ -146,6 +146,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 }
 
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
+    // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
     uint8_t tmp_data = data;
     switch (portLow) {
     case 0xFE:
@@ -173,6 +174,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
                 AySound::selectRegister(data);
                 break;
             case 0xBF:
+            case 0xBE:
                 AySound::setRegisterData(data);
                 break;
 #endif
