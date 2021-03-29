@@ -77,17 +77,46 @@ static void detectZXKeyCombinationForMenu()
 }
 #endif // ZX_KEYB_PRESENT
 
+// using partial port address decoding
+// see https://worldofspectrum.org/faq/reference/ports.htm
+//
+//        Peripheral: 48K ULA
+//        Port: ---- ---- ---- ---0
+//
+//        Peripheral: Kempston Joystick.
+//        Port: ---- ---- 000- ---- 
+//
+//        Peripheral: 128K AY Register
+//        Port: 11-- ---- ---- --0-
+//
+//        Peripheral: 128K AY (Data)
+//        Port: 10-- ---- ---- --0-
+//
+//        Peripheral: ZX Spectrum 128K / +2 Memory Control
+//        Port: 0--- ---- ---- --0-
+//
+//        Peripheral: ZX Spectrum +2A / +3 Primary Memory Control
+//        Port: 01-- ---- ---- --0-
+//
+//        Peripheral: ZX Spectrum +2A / +3 Secondary Memory Control
+//        Port: 0001 ---- ---- --0-
+//
+
+
 uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 {
-    if (portLow == 0xFE) {
+    // 48K ULA
+    if ((portLow & 0x01) == 0x00) // (portLow == 0xFE) 
+    {
+        // all result bits initially set to 1, may be set to 0 eventually
         uint8_t result = 0xFF;
 
+        #ifdef EAR_PRESENT
         // EAR_PIN
         if (portHigh == 0xFE) {
-#ifdef EAR_PRESENT
             bitWrite(result, 6, digitalRead(EAR_PIN));
-#endif
         }
+        #endif
 
         // Keyboard
         if (~(portHigh | 0xFE)&0xFF) result &= (base[0] & wii[0]);
@@ -99,7 +128,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         if (~(portHigh | 0xBF)&0xFF) result &= (base[6] & wii[6]);
         if (~(portHigh | 0x7F)&0xFF) result &= (base[7] & wii[7]);
 
-#ifdef ZX_KEYB_PRESENT
+        #ifdef ZX_KEYB_PRESENT
         detectZXKeyCombinationForMenu();
         
         uint8_t zxkbres = 0xFF;
@@ -117,26 +146,24 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         bitWrite(zxkbres, 4, digitalRead(DB4));
         // combine physical keyboard value read
         result &= zxkbres;
-#endif // ZX_KEYB_PRESENT
+        #endif // ZX_KEYB_PRESENT
 
         return result;
     }
+
     // Kempston
-    if (portLow == 0x1F) {
+    if ((portLow & 0xE0) == 0x00) // (portLow == 0x1F)
+    {
         return base[31];
     }
-    // Sound (AY-3-8912)
 
-#ifdef USE_AY_SOUND
-    if (portLow == 0xFD) {
-        switch (portHigh) {
-        case 0xFF:
-            // Serial.println("Read AY register");
-            //return _ay3_8912.getRegisterData();
-            return AySound::getRegisterData();
-        }
+    // Sound (AY-3-8912)
+    #ifdef USE_AY_SOUND
+    if ((portHigh & 0xC0) == 0xC0 && (portLow & 0x02) == 0x00)  // 0xFFFD
+    {
+        return AySound::getRegisterData();
     }
-#endif
+    #endif
 
     uint8_t data = port_data;
     data |= (0xe0); /* Set bits 5-7 - as reset above */
@@ -147,60 +174,56 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
-    uint8_t tmp_data = data;
-    switch (portLow) {
-    case 0xFE:
-        // delayMicroseconds(CONTENTION_TIME);
-        // border color (no bright colors)
-        bitWrite(ESPectrum::borderColor, 0, bitRead(data, 0));
-        bitWrite(ESPectrum::borderColor, 1, bitRead(data, 1));
-        bitWrite(ESPectrum::borderColor, 2, bitRead(data, 2));
 
-#ifdef SPEAKER_PRESENT
+    // 48K ULA
+    if ((portLow & 0x01) == 0x00)
+    {
+        ESPectrum::borderColor = data & 0x07;
+
+        #ifdef SPEAKER_PRESENT
         digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
-#endif
+        #endif
 
-#ifdef MIC_PRESENT
+        #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
-#endif
-        base[0x20] = data;
-        break;
-
-    case 0xFD: {
-        // Sound (AY-3-8912)
-        switch (portHigh) {
-#ifdef USE_AY_SOUND
-            case 0xFF:
-                AySound::selectRegister(data);
-                break;
-            case 0xBF:
-            case 0xBE:
-                AySound::setRegisterData(data);
-                break;
-#endif
-            case 0x7F:
-                if (!Mem::pagingLock) {
-                    Mem::pagingLock = bitRead(tmp_data, 5);
-                    Mem::romLatch = bitRead(tmp_data, 4);
-                    Mem::videoLatch = bitRead(tmp_data, 3);
-                    Mem::bankLatch = tmp_data & 0x7;
-                    bitWrite(Mem::romInUse, 1, Mem::romSP3);
-                    bitWrite(Mem::romInUse, 0, Mem::romLatch);
-                }
-                break;
-            case 0x1F:
-                Mem::modeSP3 = bitRead(data, 0);
-                Mem::romSP3 = bitRead(data, 2);
-                bitWrite(Mem::romInUse, 1, Mem::romSP3);
-                bitWrite(Mem::romInUse, 0, Mem::romLatch);
-
-                // Serial.printf("1FFD data: %x mode: %x rom bits: %x ROM chip: %x\n",data,Mem::modeSP3,Mem::romSP3, Mem::romInUse);
-                break;
-            }
-        }
-        break;
-        // default:
-        //    port_data = data;
-        break;
+        #endif
+        base[0x20] = data; // ? 
     }
+
+    if ((portLow & 0x02) == 0x00)
+    {
+        // 128K AY
+        #ifdef USE_AY_SOUND
+        if ((portHigh & 0x80) == 0x80)
+        {
+            if ((portHigh & 0x40) == 0x40)
+                AySound::selectRegister(data);
+            else
+                AySound::setRegisterData(data);
+        }
+        #endif
+
+        // will decode both
+        // 128K / +2 Memory Control
+        // +2A / +3 Memory Control
+        if ((portHigh & 0xC0) == 0x40)
+        {
+            Mem::pagingLock = bitRead(data, 5);
+            Mem::romLatch = bitRead(data, 4);
+            Mem::videoLatch = bitRead(data, 3);
+            Mem::bankLatch = data & 0x7;
+            bitWrite(Mem::romInUse, 1, Mem::romSP3);
+            bitWrite(Mem::romInUse, 0, Mem::romLatch);
+        }
+        
+        // +2A / +3 Secondary Memory Control
+        if ((portHigh & 0xF0) == 0x01)
+        {
+            Mem::modeSP3 = bitRead(data, 0);
+            Mem::romSP3 = bitRead(data, 2);
+            bitWrite(Mem::romInUse, 1, Mem::romSP3);
+            bitWrite(Mem::romInUse, 0, Mem::romLatch);
+        }
+    }
+
 }
