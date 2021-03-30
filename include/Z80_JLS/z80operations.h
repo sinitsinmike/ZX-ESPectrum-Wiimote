@@ -11,31 +11,42 @@
 #ifndef Z80OPERATIONS_H
 #define Z80OPERATIONS_H
 
+#include "../hardconfig.h"
+#ifdef CPU_JLSANCHEZ
+
 #include <stdint.h>
 
-/* Read opcode from RAM */
-uint8_t z80ops_fetchOpcode(uint16_t address);
+// Class grouping callbacks for Z80 operations
+// methods declared here should be defined elsewhere... for example, in CPU.cpp
 
-/* Read/Write byte from/to RAM */
-uint8_t z80ops_peek8(uint16_t address);
-void z80ops_poke8(uint16_t address, uint8_t value);
+class Z80Ops
+{
+public:
+    /* Read opcode from RAM */
+    static uint8_t fetchOpcode(uint16_t address);
 
-/* Read/Write word from/to RAM */
-uint16_t z80ops_peek16(uint16_t adddress);
-void z80ops_poke16(uint16_t address, RegisterPair word);
+    /* Read/Write byte from/to RAM */
+    static uint8_t peek8(uint16_t address);
+    static void poke8(uint16_t address, uint8_t value);
 
-/* In/Out byte from/to IO Bus */
-uint8_t z80ops_inPort(uint16_t port);
-void z80ops_outPort(uint16_t port, uint8_t value);
+    /* Read/Write word from/to RAM */
+    static uint16_t peek16(uint16_t adddress);
+    static void poke16(uint16_t address, RegisterPair word);
 
-/* Put an address on bus lasting 'tstates' cycles */
-void z80ops_addressOnBus(uint16_t address, int32_t wstates);
+    /* In/Out byte from/to IO Bus */
+    static uint8_t inPort(uint16_t port);
+    static void outPort(uint16_t port, uint8_t value);
 
-/* Clocks needed for processing INT and NMI */
-void z80ops_interruptHandlingTime(int32_t wstates);
+    /* Put an address on bus lasting 'tstates' cycles */
+    static void addressOnBus(uint16_t address, int32_t wstates);
 
-/* Callback to know when the INT signal is active */
-bool z80ops_isActiveINT(void);
+    /* Clocks needed for processing INT and NMI */
+    static void interruptHandlingTime(int32_t wstates);
 
+    /* Callback to know when the INT signal is active */
+    static bool isActiveINT(void);
+};
+
+#endif // CPU_JLSANCHEZ
 
 #endif // Z80OPERATIONS_H

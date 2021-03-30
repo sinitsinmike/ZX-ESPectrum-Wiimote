@@ -1,6 +1,9 @@
 #ifndef Z80EMU_INSTRUCTIONS_H
 #define Z80EMU_INSTRUCTIONS_H
 
+#include "../hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 /* instructions.h
  * Declaration of the "generic" instructions emulated.
  *
@@ -238,5 +241,7 @@ enum {
                                  */
 
 };
+
+#endif // CPU_LINKEFONG
 
 #endif // Z80EMU_INSTRUCTIONS_H

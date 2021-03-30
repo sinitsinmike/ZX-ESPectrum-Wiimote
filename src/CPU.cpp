@@ -192,7 +192,7 @@ void CPU::loop()
 #ifdef CPU_JLSANCHEZ
 
 /* Read opcode from RAM */
-uint8_t z80ops_fetchOpcode(uint16_t address) {
+uint8_t Z80Ops::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock
     if (ADDRESS_IN_LOW_RAM(address))
         CPU::tstates += CPU::delayContention(CPU::tstates);
@@ -202,7 +202,7 @@ uint8_t z80ops_fetchOpcode(uint16_t address) {
 }
 
 /* Read/Write byte from/to RAM */
-uint8_t z80ops_peek8(uint16_t address) {
+uint8_t Z80Ops::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     if (ADDRESS_IN_LOW_RAM(address))
         CPU::tstates += CPU::delayContention(CPU::tstates);
@@ -210,7 +210,7 @@ uint8_t z80ops_peek8(uint16_t address) {
     CPU::tstates += 3;
     return Mem::readbyte(address);
 }
-void z80ops_poke8(uint16_t address, uint8_t value) {
+void Z80Ops::poke8(uint16_t address, uint8_t value) {
     // 3 clocks for write byte to RAM
     if (ADDRESS_IN_LOW_RAM(address))
         CPU::tstates += CPU::delayContention(CPU::tstates);
@@ -220,27 +220,27 @@ void z80ops_poke8(uint16_t address, uint8_t value) {
 }
 
 /* Read/Write word from/to RAM */
-uint16_t z80ops_peek16(uint16_t address) {
+uint16_t Z80Ops::peek16(uint16_t address) {
     // Order matters, first read lsb, then read msb, don't "optimize"
-    uint8_t lsb = z80ops_peek8(address);
-    uint8_t msb = z80ops_peek8(address + 1);
+    uint8_t lsb = Z80Ops::peek8(address);
+    uint8_t msb = Z80Ops::peek8(address + 1);
     return (msb << 8) | lsb;
 }
-void z80ops_poke16(uint16_t address, RegisterPair word) {
+void Z80Ops::poke16(uint16_t address, RegisterPair word) {
     // Order matters, first write lsb, then write msb, don't "optimize"
-    z80ops_poke8(address, word.byte8.lo);
-    z80ops_poke8(address + 1, word.byte8.hi);
+    Z80Ops::poke8(address, word.byte8.lo);
+    Z80Ops::poke8(address + 1, word.byte8.hi);
 }
 
 /* In/Out byte from/to IO Bus */
-uint8_t z80ops_inPort(uint16_t port) {
+uint8_t Z80Ops::inPort(uint16_t port) {
     // 3 clocks for read byte from bus
     CPU::tstates += 3;
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
     return Ports::input(loport, hiport);
 }
-void z80ops_outPort(uint16_t port, uint8_t value) {
+void Z80Ops::outPort(uint16_t port, uint8_t value) {
     // 4 clocks for write byte to bus
     CPU::tstates += 4;
     uint8_t hiport = port >> 8;
@@ -249,7 +249,7 @@ void z80ops_outPort(uint16_t port, uint8_t value) {
 }
 
 /* Put an address on bus lasting 'tstates' cycles */
-void z80ops_addressOnBus(uint16_t address, int32_t wstates){
+void Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
     // Additional clocks to be added on some instructions
     if (ADDRESS_IN_LOW_RAM(address)) {
         for (int idx = 0; idx < wstates; idx++) {
@@ -261,12 +261,12 @@ void z80ops_addressOnBus(uint16_t address, int32_t wstates){
 }
 
 /* Clocks needed for processing INT and NMI */
-void z80ops_interruptHandlingTime(int32_t wstates) {
+void Z80Ops::interruptHandlingTime(int32_t wstates) {
     CPU::tstates += wstates;
 }
 
 /* Callback to know when the INT signal is active */
-bool z80ops_isActiveINT(void) {
+bool Z80Ops::isActiveINT(void) {
     if (!interruptPending) return false;
     interruptPending = false;
     return true;

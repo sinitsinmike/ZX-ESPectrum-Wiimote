@@ -1,6 +1,9 @@
 #ifndef Z80EMU_TABLES_H
 #define Z80EMU_TABLES_H
 
+#include "../hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 /* Generated file, see maketables.c. */
 
 static const unsigned char INSTRUCTION_TABLE[256] = {
@@ -952,5 +955,7 @@ static const unsigned char SZYXP_FLAGS_TABLE[256] = {
 	0xa8, 0xac, 0xac, 0xa8, 0xac, 0xa8, 0xa8, 0xac, 
 
 };
+
+#endif // CPU_LINKEFONG
 
 #endif // Z80EMU_TABLES_H

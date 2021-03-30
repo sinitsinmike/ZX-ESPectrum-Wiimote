@@ -10,6 +10,9 @@
 #ifndef __Z80EMU_INCLUDED__
 #define __Z80EMU_INCLUDED__
 
+#include "../hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -195,5 +198,7 @@ extern int      Z80ExecuteInstruction (Z80_STATE *state,
 #ifdef __cplusplus
 }
 #endif
+
+#endif // CPU_LINKEFONG
 
 #endif // __Z80EMU_INCLUDED__

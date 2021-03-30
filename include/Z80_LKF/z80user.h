@@ -10,6 +10,9 @@
 #ifndef __Z80USER_INCLUDED__
 #define __Z80USER_INCLUDED__
 
+#include "../hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 #include <stdint.h>
 #include "z80emu.h"
 
@@ -144,5 +147,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // CPU_LINKEFONG
 
 #endif
