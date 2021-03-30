@@ -34,7 +34,7 @@ If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master bran
 - Tape saving and loading (untested).
 - SNA snapshot loading.
 - Z80 snapshot loading.
-- Quick (to memory) snapshot saving and loading (SNA, only 48K supported).
+- Quick (to memory) and persistent snapshot saving and loading (both 48K and 128K supported).
 - Internal SPIFFS support / external SD card support (only one of both, see hardconfig.h).
 
 ## Work in progress

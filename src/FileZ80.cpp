@@ -168,13 +168,13 @@ bool FileZ80::load(String sna_fn)
     String fileArch = "48K";
     uint8_t memPagingReg = 0;
 
-#define LOG_Z80_DETAILS
+// #define LOG_Z80_DETAILS
 
     if (RegPC != 0)
     {
         // version 1, the simplest, 48K only.
-#ifdef LOG_Z80_DETAILS
         uint32_t memRawLength = file_size - dataOffset;
+#ifdef LOG_Z80_DETAILS
         Serial.printf("Z80 format version: %d\n", version);
         Serial.printf("machine type: %s\n", fileArch);
         Serial.printf("data offset: %d\n", dataOffset);
@@ -410,7 +410,9 @@ void FileZ80::loadCompressedMemData(File f, uint16_t dataLen, uint16_t memoff, u
             ed_cnt = 0;
         }
     }
-    Serial.printf("last byte: %d\n", (memoff+memidx-1));
+    #ifdef LOG_Z80_DETAILS
+        Serial.printf("last byte: %d\n", (memoff+memidx-1));
+    #endif
 }
 
 void FileZ80::loadCompressedMemPage(File f, uint16_t dataLen, uint8_t* memPage, uint16_t memlen)
@@ -449,5 +451,7 @@ void FileZ80::loadCompressedMemPage(File f, uint16_t dataLen, uint8_t* memPage, 
             ed_cnt = 0;
         }
     }
-    Serial.printf("last byte: %d\n", (memidx-1));
+    #ifdef LOG_Z80_DETAILS
+        Serial.printf("last byte: %d\n", (memoff+memidx-1));
+    #endif
 }

@@ -34,6 +34,8 @@
 
 #define ADDRESS_IN_LOW_RAM(addr) (1 == (addr >> 14))
 
+#define MEM_PG_SZ 0x4000
+
 class Mem
 {
 public:

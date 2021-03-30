@@ -66,6 +66,8 @@ private:
 #define DISK_PSNA_FILE "/persist/persist.sna"
 #define NO_RAM_FILE "none"
 #define SNA_48K_SIZE 49179
+#define SNA_128K_SIZE1 131103
+#define SNA_128K_SIZE2 147487
 
 
 // inline utility functions for uniform access to file/memory
@@ -90,6 +92,11 @@ static inline uint16_t readWordFileBE(File f)
     return lo | (hi << 8);
 }
 
+static inline size_t readBlockFile(File f, uint8_t* dstBuffer, size_t size)
+{
+    return f.read(dstBuffer, size);
+}
+
 static inline void writeByteFile(uint8_t value, File f)
 {
     f.write(value);
@@ -109,6 +116,11 @@ static inline void writeWordFileBE(uint16_t value, File f)
     uint8_t lo =  value       & 0xFF;
     f.write(hi);
     f.write(lo);
+}
+
+static inline size_t writeBlockFile(uint8_t* srcBuffer, File f, size_t size)
+{
+    return f.write(srcBuffer, size);
 }
 
 static inline uint8_t readByteMem(uint8_t*& ptr)
@@ -131,6 +143,13 @@ static inline uint16_t readWordMemBE(uint8_t*& ptr)
     return lo | (hi << 8);
 }
 
+static inline size_t readBlockMem(uint8_t*& srcBuffer, uint8_t* dstBuffer, size_t size)
+{
+    memcpy(dstBuffer, srcBuffer, size);
+    srcBuffer += size;
+    return size;
+}
+
 static inline void writeByteMem(uint8_t value, uint8_t*& ptr)
 {
     *ptr++ = value;
@@ -150,6 +169,13 @@ static inline void writeWordMemBE(uint16_t value, uint8_t*& ptr)
     uint8_t lo =  value       & 0xFF;
     *ptr++ = hi;
     *ptr++ = lo;
+}
+
+static inline size_t writeBlockMem(uint8_t* srcBuffer, uint8_t*& dstBuffer, size_t size)
+{
+    memcpy(dstBuffer, srcBuffer, size);
+    dstBuffer += size;
+    return size;
 }
 
 

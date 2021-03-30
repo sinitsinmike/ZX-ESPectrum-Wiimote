@@ -96,13 +96,13 @@ static void tryAllocateSRamThenPSRam(uint8_t*& page, const char* pagename)
     // only try allocating in SRAM when there are 64K free at least
     if (ESP.getFreeHeap() >= 65536)
     {
-        page = (uint8_t*)malloc(0x4000);
+        page = (uint8_t*)calloc(1, 0x4000);
         if (page != NULL) {
             Serial.printf("Page %s allocated into SRAM (fast)\n", pagename);
             return;
         }
     }
-    page = (uint8_t*)ps_malloc(0x4000);
+    page = (uint8_t*)ps_calloc(1, 0x4000);
     if (page != NULL) {
         Serial.printf("Page %s allocated into PSRAM (slow)\n", pagename);
         return;
