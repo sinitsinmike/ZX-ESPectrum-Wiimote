@@ -40,14 +40,110 @@
 #include "Config.h"
 #include "FileSNA.h"
 
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef CPU_LINKEFONG
 #include "Z80_LKF/z80emu.h"
 extern Z80_STATE _zxCpu;
-#endif
+
+#define Z80_SET_AF(v) _zxCpu.registers.word[Z80_AF] = (v)
+#define Z80_SET_BC(v) _zxCpu.registers.word[Z80_BC] = (v)
+#define Z80_SET_DE(v) _zxCpu.registers.word[Z80_DE] = (v)
+#define Z80_SET_HL(v) _zxCpu.registers.word[Z80_HL] = (v)
+
+#define Z80_SET_AFx(v) _zxCpu.alternates[Z80_AF] = (v)
+#define Z80_SET_BCx(v) _zxCpu.alternates[Z80_BC] = (v)
+#define Z80_SET_DEx(v) _zxCpu.alternates[Z80_DE] = (v)
+#define Z80_SET_HLx(v) _zxCpu.alternates[Z80_HL] = (v)
+
+#define Z80_SET_IY(v) _zxCpu.registers.word[Z80_IY] = (v)
+#define Z80_SET_IX(v) _zxCpu.registers.word[Z80_IX] = (v)
+
+#define Z80_SET_SP(v) _zxCpu.registers.word[Z80_SP] = (v)
+#define Z80_SET_PC(v) _zxCpu.pc = (v)
+
+#define Z80_SET_I(v) _zxCpu.i = (v)
+#define Z80_SET_R(v) _zxCpu.r = (v)
+#define Z80_SET_IM(v) _zxCpu.im = (v)
+#define Z80_SET_IFF1(v) _zxCpu.iff1 = (v)
+#define Z80_SET_IFF2(v) _zxCpu.iff2 = (v)
+
+#define Z80_GET_AF() (_zxCpu.registers.word[Z80_AF])
+#define Z80_GET_BC() (_zxCpu.registers.word[Z80_BC])
+#define Z80_GET_DE() (_zxCpu.registers.word[Z80_DE])
+#define Z80_GET_HL() (_zxCpu.registers.word[Z80_HL])
+
+#define Z80_GET_AFx() (_zxCpu.alternates[Z80_AF])
+#define Z80_GET_BCx() (_zxCpu.alternates[Z80_BC])
+#define Z80_GET_DEx() (_zxCpu.alternates[Z80_DE])
+#define Z80_GET_HLx() (_zxCpu.alternates[Z80_HL])
+
+#define Z80_GET_IY() (_zxCpu.registers.word[Z80_IY])
+#define Z80_GET_IX() (_zxCpu.registers.word[Z80_IX])
+
+#define Z80_GET_SP() (_zxCpu.registers.word[Z80_SP])
+#define Z80_GET_PC() (_zxCpu.pc)
+
+#define Z80_GET_I() (_zxCpu.i)
+#define Z80_GET_R() (_zxCpu.r)
+#define Z80_GET_IM() (_zxCpu.im)
+#define Z80_GET_IFF1() (_zxCpu.iff1)
+#define Z80_GET_IFF2() (_zxCpu.iff2)
+
+#endif // CPU_LINKEFONG
+
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef CPU_JLSANCHEZ
 #include "Z80_JLS/z80.h"
-#endif
+
+#define Z80_GET_AF() Z80::getRegAF()
+#define Z80_GET_BC() Z80::getRegBC()
+#define Z80_GET_DE() Z80::getRegDE()
+#define Z80_GET_HL() Z80::getRegHL()
+
+#define Z80_GET_AFx() Z80::getRegAFx()
+#define Z80_GET_BCx() Z80::getRegBCx()
+#define Z80_GET_DEx() Z80::getRegDEx()
+#define Z80_GET_HLx() Z80::getRegHLx()
+
+#define Z80_GET_IY() Z80::getRegIY()
+#define Z80_GET_IX() Z80::getRegIX()
+
+#define Z80_GET_SP() Z80::getRegSP()
+#define Z80_GET_PC() Z80::getRegPC()
+
+#define Z80_GET_I() Z80::getRegI()
+#define Z80_GET_R() Z80::getRegR()
+#define Z80_GET_IM() Z80::getIM()
+#define Z80_GET_IFF1() Z80::isIFF1()
+#define Z80_GET_IFF2() Z80::isIFF2()
+
+#define Z80_SET_AF(v) Z80::setRegAF(v)
+#define Z80_SET_BC(v) Z80::setRegBC(v)
+#define Z80_SET_DE(v) Z80::setRegDE(v)
+#define Z80_SET_HL(v) Z80::setRegHL(v)
+
+#define Z80_SET_AFx(v) Z80::setRegAFx(v)
+#define Z80_SET_BCx(v) Z80::setRegBCx(v)
+#define Z80_SET_DEx(v) Z80::setRegDEx(v)
+#define Z80_SET_HLx(v) Z80::setRegHLx(v)
+
+#define Z80_SET_IY(v) Z80::setRegIY(v)
+#define Z80_SET_IX(v) Z80::setRegIX(v)
+
+#define Z80_SET_SP(v) Z80::setRegSP(v)
+#define Z80_SET_PC(v) Z80::setRegPC(v)
+
+#define Z80_SET_I(v) Z80::setRegI(v)
+#define Z80_SET_R(v) Z80::setRegR(v)
+#define Z80_SET_IM(v) Z80::setIM((Z80::IntMode)(v))
+#define Z80_SET_IFF1(v) Z80::setIFF1(v)
+#define Z80_SET_IFF2(v) Z80::setIFF2(v)
+
+#endif  // CPU_JLSANCHEZ
+
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef USE_INT_FLASH
 // using internal storage (spi flash)
@@ -56,6 +152,8 @@ extern Z80_STATE _zxCpu;
 #define THE_FS SPIFFS
 #endif
 
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef USE_SD_CARD
 // using external storage (SD card)
 #include <SD.h>
@@ -63,11 +161,11 @@ extern Z80_STATE _zxCpu;
 #define THE_FS SD
 #endif
 
-
+///////////////////////////////////////////////////////////////////////////////
 
 bool FileSNA::load(String sna_fn)
 {
-    File lhandle;
+    File file;
     uint16_t retaddr;
     int sna_size;
     ESPectrum::reset();
@@ -79,8 +177,8 @@ bool FileSNA::load(String sna_fn)
     if (sna_fn != DISK_PSNA_FILE)
         loadKeytableForGame(sna_fn.c_str());
 
-    lhandle = FileUtils::safeOpenFileRead(sna_fn);
-    sna_size = lhandle.size();
+    file = FileUtils::safeOpenFileRead(sna_fn);
+    sna_size = file.size();
 
     if (sna_size < SNA_48K_SIZE) {
         Serial.printf("FileSNA::load: bad SNA %s: size = %d < %d\n", sna_fn.c_str(), sna_size, SNA_48K_SIZE);
@@ -88,170 +186,113 @@ bool FileSNA::load(String sna_fn)
         return false;
     }
 
-    String fileArch = "48K";
+    String snapshotArch = "48K";
 
     Mem::bankLatch = 0;
     Mem::pagingLock = 1;
     Mem::videoLatch = 0;
 
     // Read in the registers
-#ifdef CPU_LINKEFONG
-    _zxCpu.i = readByteFile(lhandle);
+    Z80_SET_I(readByteFile(file));
 
-    _zxCpu.alternates[Z80_HL] = readWordFileLE(lhandle);
-    _zxCpu.alternates[Z80_DE] = readWordFileLE(lhandle);
-    _zxCpu.alternates[Z80_BC] = readWordFileLE(lhandle);
-    _zxCpu.alternates[Z80_AF] = readWordFileLE(lhandle);
+    Z80_SET_HLx(readWordFileLE(file));
+    Z80_SET_DEx(readWordFileLE(file));
+    Z80_SET_BCx(readWordFileLE(file));
+    Z80_SET_AFx(readWordFileLE(file));
 
-    _zxCpu.registers.word[Z80_HL] = readWordFileLE(lhandle);
-    _zxCpu.registers.word[Z80_DE] = readWordFileLE(lhandle);
-    _zxCpu.registers.word[Z80_BC] = readWordFileLE(lhandle);
+    Z80_SET_HL(readWordFileLE(file));
+    Z80_SET_DE(readWordFileLE(file));
+    Z80_SET_BC(readWordFileLE(file));
 
-    _zxCpu.registers.word[Z80_IY] = readWordFileLE(lhandle);
-    _zxCpu.registers.word[Z80_IX] = readWordFileLE(lhandle);
+    Z80_SET_IY(readWordFileLE(file));
+    Z80_SET_IX(readWordFileLE(file));
 
-    uint8_t inter = readByteFile(lhandle);
-    _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
-    _zxCpu.iff1 = _zxCpu.iff2;
-    _zxCpu.r = readByteFile(lhandle);
+    uint8_t inter = readByteFile(file);
+    Z80_SET_IFF2((inter & 0x04) ? true : false);
+    Z80_SET_IFF1(Z80_GET_IFF2());
+    Z80_SET_R(readByteFile(file));
 
-    _zxCpu.registers.word[Z80_AF] = readWordFileLE(lhandle);
-    _zxCpu.registers.word[Z80_SP] = readWordFileLE(lhandle);
+    Z80_SET_AF(readWordFileLE(file));
+    Z80_SET_SP(readWordFileLE(file));
 
-    _zxCpu.im = readByteFile(lhandle);
-#endif // CPU_LINKEFONG
+    Z80_SET_IM(readByteFile(file));
 
-#ifdef CPU_JLSANCHEZ
-    Z80::setRegI(readByteFile(lhandle));
+    ESPectrum::borderColor = readByteFile(file);
 
-    Z80::setRegHLx(readWordFileLE(lhandle));
-    Z80::setRegDEx(readWordFileLE(lhandle));
-    Z80::setRegBCx(readWordFileLE(lhandle));
-    Z80::setRegAFx(readWordFileLE(lhandle));
-
-    Z80::setRegHL(readWordFileLE(lhandle));
-    Z80::setRegDE(readWordFileLE(lhandle));
-    Z80::setRegBC(readWordFileLE(lhandle));
-
-    Z80::setRegIY(readWordFileLE(lhandle));
-    Z80::setRegIX(readWordFileLE(lhandle));
-
-    uint8_t inter = readByteFile(lhandle);
-    Z80::setIFF2((inter & 0x04) ? true : false);
-    Z80::setIFF1(Z80::isIFF2());
-    Z80::setRegR(readByteFile(lhandle));
-
-    Z80::setRegAF(readWordFileLE(lhandle));
-    Z80::setRegSP(readWordFileLE(lhandle));
-
-    Z80::setIM((Z80::IntMode)readByteFile(lhandle));
-#endif  // CPU_JLSANCHEZ
-
-    ESPectrum::borderColor = readByteFile(lhandle);
+    // read 48K memory
+    readBlockFile(file, Mem::ram5, 0x4000);
+    readBlockFile(file, Mem::ram2, 0x4000);
+    readBlockFile(file, Mem::ram0, 0x4000);
 
     if (sna_size == SNA_48K_SIZE)
     {
-        fileArch = "48K";
+        snapshotArch = "48K";
 
-        lhandle.read(Mem::ram5, 0x4000);
-        lhandle.read(Mem::ram2, 0x4000);
-        lhandle.read(Mem::ram0, 0x4000);
-
-#ifdef CPU_LINKEFONG
-        uint16_t SP = _zxCpu.registers.word[Z80_SP];
-        _zxCpu.pc = Mem::readword(SP);
-        _zxCpu.registers.word[Z80_SP] = SP + 2;
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
-        uint16_t SP = Z80::getRegSP();
-        Z80::setRegPC(Mem::readword(SP));
-        Z80::setRegSP(SP + 2);
-#endif  // CPU_JLSANCHEZ
+        // in 48K mode, pop PC from stack
+        uint16_t SP = Z80_GET_SP();
+        Z80_SET_PC(Mem::readword(SP));
+        Z80_SET_SP(SP + 2);
     }
     else
     {
-        // TBD        
-        // fileArch = "128K";
+        snapshotArch = "128K";
 
-        // uint16_t buf_p;
-        // for (buf_p = 0x4000; buf_p < 0x8000; buf_p++) {
-        //     writebyte(buf_p, lhandle.read());
-        // }
-        // for (buf_p = 0x8000; buf_p < 0xc000; buf_p++) {
-        //     writebyte(buf_p, lhandle.read());
-        // }
+        // in 128K mode, recover stored PC
+        Z80_SET_PC(readWordFileLE(file));
 
-        // for (buf_p = 0xc000; buf_p < 0xffff; buf_p++) {
-        //     writebyte(buf_p, lhandle.read());
-        // }
+        // tmp_port contains page switching status, including current page number (latch)
+        uint8_t tmp_port = readByteFile(file);
+        uint8_t tmp_latch = tmp_port & 0x07;
 
-        // byte machine_b = lhandle.read();
-        // Serial.printf("Machine: %x\n", machine_b);
-        // byte retaddr_l = lhandle.read();
-        // byte retaddr_h = lhandle.read();
-        // retaddr = retaddr_l + retaddr_h * 0x100;
-        // byte tmp_port = lhandle.read();
+        // copy what was read into page 0 to correct page
+        memcpy(Mem::ram[tmp_latch], Mem::ram[0], 0x4000);
 
-        // byte tmp_byte;
-        // for (int a = 0xc000; a < 0xffff; a++) {
-        //     Mem::bankLatch = 0;
-        //     tmp_byte = readbyte(a);
-        //     Mem::bankLatch = tmp_port & 0x07;
-        //     writebyte(a, tmp_byte);
-        // }
+        uint8_t tr_dos = readByteFile(file);     // unused
+        
+        // read remaining pages
+        for (int page = 0; page < 8; page++) {
+            if (page != tmp_latch && page != 2 && page != 5) {
+                readBlockFile(file, Mem::ram[page], 0x4000);
+            }
+        }
 
-        // byte tr_dos = lhandle.read();
-        // byte tmp_latch = tmp_port & 0x7;
-        // for (int page = 0; page < 8; page++) {
-        //     if (page != tmp_latch && page != 2 && page != 5) {
-        //         Mem::bankLatch = page;
-        //         Serial.printf("Page %d actual_latch: %d\n", page, Mem::bankLatch);
-        //         for (buf_p = 0xc000; buf_p <= 0xFFFF; buf_p++) {
-        //             writebyte(buf_p, lhandle.read());
-        //         }
-        //     }
-        // }
+        // decode tmp_port
+        Mem::videoLatch = bitRead(tmp_port, 3);
+        Mem::romLatch = bitRead(tmp_port, 4);
+        Mem::pagingLock = bitRead(tmp_port, 5);
+        Mem::bankLatch = tmp_latch;
+        Mem::romInUse = Mem::romLatch;
 
-        // Mem::videoLatch = bitRead(tmp_port, 3);
-        // Mem::romLatch = bitRead(tmp_port, 4);
-        // Mem::pagingLock = bitRead(tmp_port, 5);
-        // Mem::bankLatch = tmp_latch;
-        // Mem::romInUse = Mem::romLatch;
-
-        // _zxCpu.pc = retaddr;
     }
-    lhandle.close();
+    file.close();
 
     // just architecturey things
     if (Config::getArch() == "128K")
     {
-        if (fileArch == "48K")
+        if (snapshotArch == "48K")
         {
-#ifdef SNAPSHOT_LOAD_FORCE_ARCH
-            Config::requestMachine("48K", "SINCLAIR", true);
-            Mem::romInUse = 0;
-#else
-            Mem::romInUse = 1;
-#endif
+            #ifdef SNAPSHOT_LOAD_FORCE_ARCH
+                Config::requestMachine("48K", "SINCLAIR", true);
+                Mem::romInUse = 0;
+            #else
+                Mem::romInUse = 1;
+            #endif
         }
     }
     else if (Config::getArch() == "48K")
     {
-        if (fileArch == "128K")
+        if (snapshotArch == "128K")
         {
             Config::requestMachine("128K", "SINCLAIR", true);
             Mem::romInUse = 1;
         }
     }
 
-    // Serial.printf("%s SNA: %u\n", MSG_FREE_HEAP_AFTER, ESP.getFreeHeap());
-    // Serial.printf("Ret address: %x Stack: %x AF: %x Border: %x sna_size: %d rom: %d bank: %x\n", retaddr,
-    //               _zxCpu.registers.word[Z80_SP], _zxCpu.registers.word[Z80_AF], ESPectrum::borderColor, sna_size, Mem::romInUse,
-    //               Mem::bankLatch);
-
     KB_INT_START;
+    return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 bool FileSNA::isPersistAvailable()
 {
@@ -259,24 +300,71 @@ bool FileSNA::isPersistAvailable()
     return THE_FS.exists(filename.c_str());
 }
 
-bool FileSNA::save(String sna_file) {
-    // try to save using pages
-    if (FileSNA::save(sna_file, true))
-        return true;
-    OSD::osdCenteredMsg(OSD_PSNA_SAVE_WARN, 2);
-    // try to save byte-by-byte
-    return FileSNA::save(sna_file, false);
+///////////////////////////////////////////////////////////////////////////////
+
+static bool IRAM_ATTR writeMemPage(uint8_t page, File file, bool blockMode)
+{
+    page = page & 0x07;
+    uint8_t* buffer = Mem::ram[page];
+
+    Serial.printf("writing page %d in [%s] mode\n", page, blockMode ? "block" : "byte");
+
+    if (blockMode) {
+        // writing blocks should be faster, but fails sometimes when flash is getting full.
+        uint16_t bytesWritten = file.write(buffer, MEM_PG_SZ);
+        if (bytesWritten != MEM_PG_SZ) {
+            Serial.printf("error writing page %d: %d of %d bytes written\n", page, bytesWritten, MEM_PG_SZ);
+            return false;
+        }
+    }
+    else {
+        for (int offset = 0; offset < MEM_PG_SZ; offset++) {
+            uint8_t b = buffer[offset];
+            if (1 != file.write(b)) {
+                Serial.printf("error writing byte from page %d at offset %d\n", page, offset);
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
-bool FileSNA::save(String sna_file, bool writePages) {
-    KB_INT_STOP;
+///////////////////////////////////////////////////////////////////////////////
 
-    // only 48K snapshot supported at the moment
-    if (Config::getArch() != "48K") {
-        Serial.println("FileSNA::save: only 48K supported at the moment");
-        KB_INT_START;
-        return false;
-    }
+bool FileSNA::save(String sna_file) {
+    // #define BENCHMARK_BOTH_SAVE_METHODS
+    #ifndef BENCHMARK_BOTH_SAVE_METHODS
+        // try to save using pages
+
+        if (FileSNA::save(sna_file, true))
+            return true;
+        OSD::osdCenteredMsg(OSD_PSNA_SAVE_WARN, 2);
+        // try to save byte-by-byte
+        return FileSNA::save(sna_file, false);
+    #else
+        uint32_t ts_start, ts_end;
+        bool ok;
+
+        ts_start = millis();
+        ok = FileSNA::save(sna_file, true);
+        ts_end = millis();
+
+        Serial.printf("save SNA [page]: ok = %d, millis = %d\n", ok, (ts_end - ts_start));
+
+        ts_start = millis();
+        ok = FileSNA::save(sna_file, false);
+        ts_end = millis();
+
+        Serial.printf("save SNA [byte]: ok = %d, millis = %d\n", ok, (ts_end - ts_start));
+
+        return ok;
+    #endif // BENCHMARK_BOTH_SAVE_METHODS
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool FileSNA::save(String sna_file, bool blockMode) {
+    KB_INT_STOP;
 
     // open file
     File file = THE_FS.open(sna_file, FILE_WRITE);
@@ -286,104 +374,79 @@ bool FileSNA::save(String sna_file, bool writePages) {
         return false;
     }
 
-#ifdef CPU_LINKEFONG
     // write registers: begin with I
-    writeByteFile(_zxCpu.i, file);
+    writeByteFile(Z80_GET_I(), file);
 
-    writeWordFileLE(_zxCpu.alternates[Z80_HL], file);
-    writeWordFileLE(_zxCpu.alternates[Z80_DE], file);
-    writeWordFileLE(_zxCpu.alternates[Z80_BC], file);
-    writeWordFileLE(_zxCpu.alternates[Z80_AF], file);
+    writeWordFileLE(Z80_GET_HLx(), file);
+    writeWordFileLE(Z80_GET_DEx(), file);
+    writeWordFileLE(Z80_GET_BCx(), file);
+    writeWordFileLE(Z80_GET_AFx(), file);
 
-    writeWordFileLE(_zxCpu.registers.word[Z80_HL], file);
-    writeWordFileLE(_zxCpu.registers.word[Z80_DE], file);
-    writeWordFileLE(_zxCpu.registers.word[Z80_BC], file);
+    writeWordFileLE(Z80_GET_HL(), file);
+    writeWordFileLE(Z80_GET_DE(), file);
+    writeWordFileLE(Z80_GET_BC(), file);
 
-    writeWordFileLE(_zxCpu.registers.word[Z80_IY], file);
-    writeWordFileLE(_zxCpu.registers.word[Z80_IX], file);
+    writeWordFileLE(Z80_GET_IY(), file);
+    writeWordFileLE(Z80_GET_IX(), file);
 
-    byte inter = _zxCpu.iff2 ? 0x04 : 0;
+    uint8_t inter = Z80_GET_IFF2() ? 0x04 : 0;
     writeByteFile(inter, file);
-    writeByteFile(_zxCpu.r, file);
+    writeByteFile(Z80_GET_R(), file);
 
-    writeWordFileLE(_zxCpu.registers.word[Z80_AF], file);
+    writeWordFileLE(Z80_GET_AF(), file);
 
-    // read stack pointer and decrement it for pushing PC
-    uint16_t SP = _zxCpu.registers.word[Z80_SP] - 2;
+    uint16_t SP = Z80_GET_SP();
+    if (Config::getArch() == "48K") {
+        // decrement stack pointer it for pushing PC to stack, only on 48K
+        SP -= 2;
+        Mem::writeword(SP, Z80_GET_PC());
+    }
     writeWordFileLE(SP, file);
 
-    writeByteFile(_zxCpu.im, file);
-    byte bordercol = ESPectrum::borderColor;
+    writeByteFile(Z80_GET_IM(), file);
+    uint8_t bordercol = ESPectrum::borderColor;
     writeByteFile(bordercol, file);
 
-    // push PC to stack, before dumping memory
-    Mem::writeword(SP, _zxCpu.pc);
+    // write RAM pages in 48K address space (0x4000 - 0xFFFF)
+    uint8_t pages[3] = {5, 2, 0};
+    if (Config::getArch() == "128K")
+        pages[2] = Mem::bankLatch;
 
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
-    // write registers: begin with I
-    writeByteFile(Z80::getRegI(), file);
-
-    writeWordFileLE(Z80::getRegHLx(), file);
-    writeWordFileLE(Z80::getRegDEx(), file);
-    writeWordFileLE(Z80::getRegBCx(), file);
-    writeWordFileLE(Z80::getRegAFx(), file);
-
-    writeWordFileLE(Z80::getRegHL(), file);
-    writeWordFileLE(Z80::getRegDE(), file);
-    writeWordFileLE(Z80::getRegBC(), file);
-
-    writeWordFileLE(Z80::getRegIY(), file);
-    writeWordFileLE(Z80::getRegIX(), file);
-
-    byte inter = Z80::isIFF2() ? 0x04 : 0;
-    writeByteFile(inter, file);
-    writeByteFile(Z80::getRegR(), file);
-
-    writeWordFileLE(Z80::getRegAF(), file);
-
-    // read stack pointer and decrement it for pushing PC
-    uint16_t SP = Z80::getRegSP() - 2;
-    writeWordFileLE(SP, file);
-
-    writeByteFile(Z80::getIM(), file);
-    byte bordercol = ESPectrum::borderColor;
-    writeByteFile(bordercol, file);
-
-    // push PC to stack, before dumping memory
-    Mem::writeword(SP, Z80::getRegPC());
-#endif  // CPU_JLSANCHEZ
-
-#ifdef CPU_JLSANCHEZ
-#endif  // CPU_JLSANCHEZ
-
-
-    if (writePages) {
-        // writing pages should be faster, but fails some times when flash is getting full.
-        uint16_t pageSize = 0x4000;
-        uint8_t pages[3] = {5, 2, 8};
-        for (uint8_t ipage = 0; ipage < 3; ipage++) {
-            uint8_t page = pages[ipage];
-            uint16_t bytesWritten = file.write(Mem::ram[page], pageSize);
-            //Serial.printf("page %d: %d bytes written\n", page, bytesWritten);
-            if (bytesWritten != pageSize) {
-                Serial.printf("error writing page %d: %d of %d bytes written\n", page, bytesWritten, pageSize);
-                file.close();
-                KB_INT_START;
-                return false;
-            }
+    for (uint8_t ipage = 0; ipage < 3; ipage++) {
+        uint8_t page = pages[ipage];
+        if (!writeMemPage(page, file, blockMode)) {
+            file.close();
+            KB_INT_START;
+            return false;
         }
     }
-    else {
-        // dump memory to file
-        for (int addr = 0x4000; addr <= 0xFFFF; addr++) {
-            byte b = Mem::readbyte(addr);
-            if (1 != file.write(b)) {
-                Serial.printf("error writing byte from RAM address %d\n", addr);
-                file.close();
-                KB_INT_START;
-                return false;
+
+    if (Config::getArch() == "48K")
+    {
+        // nothing to do here
+    }
+    else if (Config::getArch() == "128K")
+    {
+        // write pc
+        writeWordFileLE(Z80_GET_PC(), file);
+
+        // write mem bank control port
+        uint8_t tmp_port = Mem::bankLatch;
+        bitWrite(tmp_port, 3, Mem::videoLatch);
+        bitWrite(tmp_port, 4, Mem::romLatch);
+        bitWrite(tmp_port, 5, Mem::pagingLock);
+        writeByteFile(tmp_port, file);
+
+        writeByteFile(0, file);     // TR-DOS not paged
+
+        // write remaining ram pages
+        for (int page = 0; page < 8; page++) {
+            if (page != Mem::bankLatch && page != 2 && page != 5) {
+                if (!writeMemPage(page, file, blockMode)) {
+                    file.close();
+                    KB_INT_START;
+                    return false;
+                }
             }
         }
     }
@@ -393,210 +456,260 @@ bool FileSNA::save(String sna_file, bool writePages) {
     return true;
 }
 
-static byte* snabuf = NULL;
+///////////////////////////////////////////////////////////////////////////////
+
+static uint8_t* quick_sna_buffer = NULL;
+static uint32_t quick_sna_size   = 0;
 
 bool FileSNA::isQuickAvailable()
 {
-    return snabuf != NULL;
+    return quick_sna_buffer != NULL;
 }
 
 bool FileSNA::saveQuick()
 {
     KB_INT_STOP;
 
-    // only 48K snapshot supported at the moment
-    if (Config::getArch() != "48K") {
-        Serial.println("FileSNA::saveQuick: only 48K supported at the moment");
-        KB_INT_START;
-        return false;
-    }
-
-    // allocate buffer it not done yet
-    if (snabuf == NULL)
+    // deallocate buffer if it does not fit required size
+    if (quick_sna_buffer != NULL)
     {
-#ifdef BOARD_HAS_PSRAM
-        snabuf = (byte*)ps_malloc(49179);
-#else
-        snabuf = (byte*)malloc(49179);
-#endif
-        if (snabuf == NULL) {
-            Serial.println("FileSNA::saveQuick: cannot allocate memory for snapshot buffer");
+        if (quick_sna_size == SNA_48K_SIZE && Config::getArch() != "48K") {
+            free(quick_sna_buffer);
+            quick_sna_buffer = NULL;
+            quick_sna_size = 0;
+        }
+        else if (quick_sna_size != SNA_48K_SIZE && Config::getArch() == "48K") {
+            free(quick_sna_buffer);
+            quick_sna_buffer = NULL;
+            quick_sna_size = 0;
+        }
+    } 
+
+    // allocate buffer it not allocated
+    if (quick_sna_buffer == NULL)
+    {
+        uint32_t requested_sna_size = 0;
+        if (Config::getArch() == "48K")
+            requested_sna_size = SNA_48K_SIZE;
+        else
+            requested_sna_size = SNA_128K_SIZE2;
+
+        #ifdef BOARD_HAS_PSRAM
+            quick_sna_buffer = (uint8_t*)ps_calloc(1, requested_sna_size);
+        #else
+            quick_sna_buffer = (uint8_t*)calloc(1, requested_sna_size);
+        #endif
+        if (quick_sna_buffer == NULL) {
+            Serial.printf("FileSNA::saveQuick: cannot allocate %d bytes for snapshot buffer\n", requested_sna_size);
             KB_INT_START;
             return false;
         }
+        quick_sna_size = requested_sna_size;
+        Serial.printf("saveQuick: allocated %d bytes for snapshot buffer\n", quick_sna_size);
     }
 
-    byte* snaptr = snabuf;
-
-#ifdef CPU_LINKEFONG
-    // write registers: begin with I
-    writeByteMem(_zxCpu.i, snaptr);
-
-    writeWordMemLE(_zxCpu.alternates[Z80_HL], snaptr);
-    writeWordMemLE(_zxCpu.alternates[Z80_DE], snaptr);
-    writeWordMemLE(_zxCpu.alternates[Z80_BC], snaptr);
-    writeWordMemLE(_zxCpu.alternates[Z80_AF], snaptr);
-
-    writeWordMemLE(_zxCpu.registers.word[Z80_HL], snaptr);
-    writeWordMemLE(_zxCpu.registers.word[Z80_DE], snaptr);
-    writeWordMemLE(_zxCpu.registers.word[Z80_BC], snaptr);
-
-    writeWordMemLE(_zxCpu.registers.word[Z80_IY], snaptr);
-    writeWordMemLE(_zxCpu.registers.word[Z80_IX], snaptr);
-
-    byte inter = _zxCpu.iff2 ? 0x04 : 0;
-    writeByteMem(inter, snaptr);
-    writeByteMem(_zxCpu.r, snaptr);
-
-    writeWordMemLE(_zxCpu.registers.word[Z80_AF], snaptr);
-
-    // read stack pointer and decrement it for pushing PC
-    uint16_t SP = _zxCpu.registers.word[Z80_SP] - 2;
-    writeWordMemLE(SP, snaptr);
-
-    writeByteMem(_zxCpu.im, snaptr);
-    byte bordercol = ESPectrum::borderColor;
-    writeByteMem(bordercol, snaptr);
-
-    // push PC to stack, before dumping memory
-    Mem::writeword(SP, _zxCpu.pc);
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
-    // write registers: begin with I
-    writeByteMem(Z80::getRegI(), snaptr);
-
-    writeWordMemLE(Z80::getRegHLx(), snaptr);
-    writeWordMemLE(Z80::getRegDEx(), snaptr);
-    writeWordMemLE(Z80::getRegBCx(), snaptr);
-    writeWordMemLE(Z80::getRegAFx(), snaptr);
-
-    writeWordMemLE(Z80::getRegHL(), snaptr);
-    writeWordMemLE(Z80::getRegDE(), snaptr);
-    writeWordMemLE(Z80::getRegBC(), snaptr);
-
-    writeWordMemLE(Z80::getRegIY(), snaptr);
-    writeWordMemLE(Z80::getRegIX(), snaptr);
-
-    byte inter = Z80::isIFF2() ? 0x04 : 0;
-    writeByteMem(inter, snaptr);
-    writeByteMem(Z80::getRegR(), snaptr);
-
-    writeWordMemLE(Z80::getRegAF(), snaptr);
-
-    // read stack pointer and decrement it for pushing PC
-    uint16_t SP = Z80::getRegSP() - 2;
-    writeWordMemLE(SP, snaptr);
-
-    writeByteMem(Z80::getIM(), snaptr);
-    byte bordercol = ESPectrum::borderColor;
-    writeByteMem(bordercol, snaptr);
-
-    // push PC to stack, before dumping memory
-    Mem::writeword(SP, Z80::getRegPC());
-#endif  // CPU_JLSANCHEZ
-
-
-
-    // dump memory to file
-    uint16_t pageSize = 0x4000;
-    memcpy(snaptr, Mem::ram[5], pageSize); snaptr += pageSize;
-    memcpy(snaptr, Mem::ram[2], pageSize); snaptr += pageSize;
-    memcpy(snaptr, Mem::ram[0], pageSize); snaptr += pageSize;
-
+    bool result = saveToMem(quick_sna_buffer, quick_sna_size);
     KB_INT_START;
+    return result;
+}
+
+bool FileSNA::saveToMem(uint8_t* dstBuffer, uint32_t size)
+{
+    uint8_t* snaptr = dstBuffer;
+
+    // write registers: begin with I
+    writeByteMem(Z80_GET_I(), snaptr);
+
+    writeWordMemLE(Z80_GET_HLx(), snaptr);
+    writeWordMemLE(Z80_GET_DEx(), snaptr);
+    writeWordMemLE(Z80_GET_BCx(), snaptr);
+    writeWordMemLE(Z80_GET_AFx(), snaptr);
+
+    writeWordMemLE(Z80_GET_HL(), snaptr);
+    writeWordMemLE(Z80_GET_DE(), snaptr);
+    writeWordMemLE(Z80_GET_BC(), snaptr);
+
+    writeWordMemLE(Z80_GET_IY(), snaptr);
+    writeWordMemLE(Z80_GET_IX(), snaptr);
+
+    uint8_t inter = Z80_GET_IFF2() ? 0x04 : 0;
+    writeByteMem(inter, snaptr);
+    writeByteMem(Z80_GET_R(), snaptr);
+
+    writeWordMemLE(Z80_GET_AF(), snaptr);
+
+    uint16_t SP = Z80_GET_SP();
+    if (Config::getArch() == "48K") {
+        // decrement stack pointer it for pushing PC to stack, only on 48K
+        SP -= 2;
+        Mem::writeword(SP, Z80_GET_PC());
+    }
+    writeWordMemLE(SP, snaptr);
+
+    writeByteMem(Z80_GET_IM(), snaptr);
+    uint8_t bordercol = ESPectrum::borderColor;
+    writeByteMem(bordercol, snaptr);
+
+    // write RAM pages in 48K address space (0x4000 - 0xFFFF)
+    uint8_t pages[3] = {5, 2, 0};
+    if (Config::getArch() == "128K")
+        pages[2] = Mem::bankLatch;
+
+    for (uint8_t ipage = 0; ipage < 3; ipage++) {
+        uint8_t page = pages[ipage];
+        writeBlockMem(Mem::ram[page], snaptr, MEM_PG_SZ);
+    }
+
+    if (Config::getArch() == "48K")
+    {
+        // nothing to do here
+    }
+    else if (Config::getArch() == "128K")
+    {
+        // write pc
+        writeWordMemLE(Z80_GET_PC(), snaptr);
+
+        // write mem bank control port
+        uint8_t tmp_port = Mem::bankLatch;
+        bitWrite(tmp_port, 3, Mem::videoLatch);
+        bitWrite(tmp_port, 4, Mem::romLatch);
+        bitWrite(tmp_port, 5, Mem::pagingLock);
+        writeByteMem(tmp_port, snaptr);
+
+        writeByteMem(0, snaptr);     // TR-DOS not paged
+
+        // write remaining ram pages
+        for (int page = 0; page < 8; page++) {
+            if (page != Mem::bankLatch && page != 2 && page != 5) {
+                writeBlockMem(Mem::ram[page], snaptr, MEM_PG_SZ);
+            }
+        }
+    }
+
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 bool FileSNA::loadQuick()
 {
-    // only 48K snapshot supported at the moment
-    if (Config::getArch() != "48K") {
-        Serial.println("FileSNA::loadQuick(): only 48K supported at the moment");
-        KB_INT_START;
-        return false;
-    }
+    KB_INT_STOP;
 
-    if (NULL == snabuf) {
+    if (NULL == quick_sna_buffer) {
         // nothing to read
         Serial.println("FileSNA::loadQuick(): nothing to load");
         KB_INT_START;
         return false;
     }
 
-    uint8_t* snaptr = snabuf;
+    bool result = loadFromMem(quick_sna_buffer, quick_sna_size);
+    KB_INT_START;
+    return result;
+}
 
-#ifdef CPU_LINKEFONG
-    _zxCpu.i = readByteMem(snaptr);
+///////////////////////////////////////////////////////////////////////////////
 
-    _zxCpu.alternates[Z80_HL] = readWordMemLE(snaptr);
-    _zxCpu.alternates[Z80_DE] = readWordMemLE(snaptr);
-    _zxCpu.alternates[Z80_BC] = readWordMemLE(snaptr);
-    _zxCpu.alternates[Z80_AF] = readWordMemLE(snaptr);
+bool FileSNA::loadFromMem(uint8_t* srcBuffer, uint32_t size)
+{
+    uint8_t* snaptr = srcBuffer;
 
-    _zxCpu.registers.word[Z80_HL] = readWordMemLE(snaptr);
-    _zxCpu.registers.word[Z80_DE] = readWordMemLE(snaptr);
-    _zxCpu.registers.word[Z80_BC] = readWordMemLE(snaptr);
+    Z80_SET_I(readByteMem(snaptr));
 
-    _zxCpu.registers.word[Z80_IY] = readWordMemLE(snaptr);
-    _zxCpu.registers.word[Z80_IX] = readWordMemLE(snaptr);
+    Z80_SET_HLx(readWordMemLE(snaptr));
+    Z80_SET_DEx(readWordMemLE(snaptr));
+    Z80_SET_BCx(readWordMemLE(snaptr));
+    Z80_SET_AFx(readWordMemLE(snaptr));
 
-    uint8_t inter = readByteMem(snaptr);
-    _zxCpu.iff2 = (inter & 0x04) ? 1 : 0;
-    _zxCpu.iff1 = _zxCpu.iff2;
-    _zxCpu.r = readByteMem(snaptr);
+    Z80_SET_HL(readWordMemLE(snaptr));
+    Z80_SET_DE(readWordMemLE(snaptr));
+    Z80_SET_BC(readWordMemLE(snaptr));
 
-    _zxCpu.registers.word[Z80_AF] = readWordMemLE(snaptr);
-    _zxCpu.registers.word[Z80_SP] = readWordMemLE(snaptr);
-
-    _zxCpu.im = readByteMem(snaptr);
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
-    Z80::setRegI(readByteMem(snaptr));
-
-    Z80::setRegHLx(readWordMemLE(snaptr));
-    Z80::setRegDEx(readWordMemLE(snaptr));
-    Z80::setRegBCx(readWordMemLE(snaptr));
-    Z80::setRegAFx(readWordMemLE(snaptr));
-
-    Z80::setRegHL(readWordMemLE(snaptr));
-    Z80::setRegDE(readWordMemLE(snaptr));
-    Z80::setRegBC(readWordMemLE(snaptr));
-
-    Z80::setRegIY(readWordMemLE(snaptr));
-    Z80::setRegIX(readWordMemLE(snaptr));
+    Z80_SET_IY(readWordMemLE(snaptr));
+    Z80_SET_IX(readWordMemLE(snaptr));
 
     uint8_t inter = readByteMem(snaptr);
-    Z80::setIFF2((inter & 0x04) ? true : false);
-    Z80::setIFF1(Z80::isIFF2());
-    Z80::setRegR(readByteMem(snaptr));
+    Z80_SET_IFF2((inter & 0x04) ? true : false);
+    Z80_SET_IFF1(Z80_GET_IFF2());
+    Z80_SET_R(readByteMem(snaptr));
 
-    Z80::setRegAF(readWordMemLE(snaptr));
-    Z80::setRegSP(readWordMemLE(snaptr));
+    Z80_SET_AF(readWordMemLE(snaptr));
+    Z80_SET_SP(readWordMemLE(snaptr));
 
-    Z80::setIM((Z80::IntMode)readByteMem(snaptr));
-#endif  // CPU_JLSANCHEZ
+    Z80_SET_IM(readByteMem(snaptr));
 
     ESPectrum::borderColor = readByteMem(snaptr);
 
-    uint16_t pageSize = 0x4000;
-    memcpy(Mem::ram[5], snaptr, pageSize); snaptr += pageSize;
-    memcpy(Mem::ram[2], snaptr, pageSize); snaptr += pageSize;
-    memcpy(Mem::ram[0], snaptr, pageSize); snaptr += pageSize;
+    // read 48K memory
+    readBlockMem(snaptr, Mem::ram[5], MEM_PG_SZ);
+    readBlockMem(snaptr, Mem::ram[2], MEM_PG_SZ);
+    readBlockMem(snaptr, Mem::ram[0], MEM_PG_SZ);
 
-#ifdef CPU_LINKEFONG
-        uint16_t SP = _zxCpu.registers.word[Z80_SP];
-        _zxCpu.pc = Mem::readword(SP);
-        _zxCpu.registers.word[Z80_SP] = SP + 2;
-#endif // CPU_LINKEFONG
+    String snapshotArch;
 
-#ifdef CPU_JLSANCHEZ
-        uint16_t SP = Z80::getRegSP();
-        Z80::setRegPC(Mem::readword(SP));
-        Z80::setRegSP(SP + 2);
-#endif  // CPU_JLSANCHEZ
+    if (size == SNA_48K_SIZE)
+    {
+        snapshotArch = "48K";
 
-    KB_INT_START;
+        // in 48K mode, pop PC from stack
+        uint16_t SP = Z80_GET_SP();
+        Z80_SET_PC(Mem::readword(SP));
+        Z80_SET_SP(SP + 2);
+    }
+    else
+    {
+        snapshotArch = "128K";
+
+        // in 128K mode, recover stored PC
+        Z80_SET_PC(readWordMemLE(snaptr));
+
+        // tmp_port contains page switching status, including current page number (latch)
+        uint8_t tmp_port = readByteMem(snaptr);
+        uint8_t tmp_latch = tmp_port & 0x07;
+
+        // copy what was read into page 0 to correct page
+        memcpy(Mem::ram[tmp_latch], Mem::ram[0], 0x4000);
+
+        uint8_t tr_dos = readByteMem(snaptr);     // unused
+        
+        // read remaining pages
+        for (int page = 0; page < 8; page++) {
+            if (page != tmp_latch && page != 2 && page != 5) {
+                readBlockMem(snaptr, Mem::ram[page], 0x4000);
+            }
+        }
+
+        // decode tmp_port
+        Mem::videoLatch = bitRead(tmp_port, 3);
+        Mem::romLatch = bitRead(tmp_port, 4);
+        Mem::pagingLock = bitRead(tmp_port, 5);
+        Mem::bankLatch = tmp_latch;
+        Mem::romInUse = Mem::romLatch;
+    }
+
+    // just architecturey things
+    if (Config::getArch() == "128K")
+    {
+        if (snapshotArch == "48K")
+        {
+            #ifdef SNAPSHOT_LOAD_FORCE_ARCH
+                Config::requestMachine("48K", "SINCLAIR", true);
+                Mem::romInUse = 0;
+            #else
+                Mem::romInUse = 1;
+            #endif
+        }
+    }
+    else if (Config::getArch() == "48K")
+    {
+        if (snapshotArch == "128K")
+        {
+            Config::requestMachine("128K", "SINCLAIR", true);
+            Mem::romInUse = 1;
+        }
+    }
+
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
