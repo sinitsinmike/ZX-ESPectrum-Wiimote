@@ -38,8 +38,9 @@ public:
 #ifndef USE_AY_SOUND
     static void initialize() {}
     static void update() {}
-    static void resetSound() {}
-    static void silenceAllChannels(bool flag) {}
+    static void reset() {}
+    static void disable() {}
+    static void enable() {}
     static uint8_t getRegisterData() { return 0; }
     static void selectRegister(uint8_t data) {}
     static void setRegisterData(uint8_t data) {}
@@ -48,8 +49,10 @@ public:
 
     static void update();
 
-    static void resetSound();
-    static void silenceAllChannels(bool silence);
+    static void reset();
+
+    static void disable();
+    static void enable();
 
     static uint8_t getRegisterData();
     static void selectRegister(uint8_t data);
