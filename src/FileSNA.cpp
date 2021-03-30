@@ -191,6 +191,8 @@ bool FileSNA::load(String sna_fn)
     Mem::bankLatch = 0;
     Mem::pagingLock = 1;
     Mem::videoLatch = 0;
+    Mem::romLatch = 0;
+    Mem::romInUse = 0;
 
     // Read in the registers
     Z80_SET_I(readByteFile(file));
@@ -613,6 +615,14 @@ bool FileSNA::loadFromMem(uint8_t* srcBuffer, uint32_t size)
 {
     uint8_t* snaptr = srcBuffer;
 
+    String snapshotArch = "48K";
+
+    Mem::bankLatch = 0;
+    Mem::pagingLock = 1;
+    Mem::videoLatch = 0;
+    Mem::romLatch = 0;
+    Mem::romInUse = 0;
+
     Z80_SET_I(readByteMem(snaptr));
 
     Z80_SET_HLx(readWordMemLE(snaptr));
@@ -643,8 +653,6 @@ bool FileSNA::loadFromMem(uint8_t* srcBuffer, uint32_t size)
     readBlockMem(snaptr, Mem::ram[5], MEM_PG_SZ);
     readBlockMem(snaptr, Mem::ram[2], MEM_PG_SZ);
     readBlockMem(snaptr, Mem::ram[0], MEM_PG_SZ);
-
-    String snapshotArch;
 
     if (size == SNA_48K_SIZE)
     {
