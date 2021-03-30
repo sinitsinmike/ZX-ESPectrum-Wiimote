@@ -9,6 +9,10 @@
  *
  * This code is free, do whatever you want with it.
  */
+
+#include "hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 #include "Z80_LKF/z80emu.h"
 #include "Arduino.h"
 #include "Z80_LKF/instructions.h"
@@ -2488,3 +2492,5 @@ stop_emulation:
     state->pc = pc & 0xffff;
     return elapsed_cycles;
 }
+
+#endif // CPU_LINKEFONG

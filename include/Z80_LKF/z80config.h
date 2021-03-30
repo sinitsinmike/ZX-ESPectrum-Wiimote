@@ -9,6 +9,9 @@
 #ifndef __Z80CONFIG_INCLUDED__
 #define __Z80CONFIG_INCLUDED__
 
+#include "../hardconfig.h"
+#ifdef CPU_LINKEFONG
+
 /* Define this macro if the host processor is big endian. */
 
 /* #define Z80_BIG_ENDIAN */
@@ -78,5 +81,7 @@
  */
 
 //#define Z80_MASK_IM2_VECTOR_ADDRESS
+
+#endif // CPU_LINKEFONG
 
 #endif // __Z80CONFIG_INCLUDED__
