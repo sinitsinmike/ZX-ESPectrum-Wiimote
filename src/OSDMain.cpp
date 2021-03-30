@@ -130,6 +130,7 @@ static void quickLoad()
         delay(1000);
         return;
     }
+    if (Config::getArch() == "48K") AySound::reset();
     OSD::osdCenteredMsg(OSD_QSNA_LOADED, LEVEL_INFO);
     delay(200);
 }
@@ -159,6 +160,7 @@ static void persistLoad()
     //     osdCenteredMsg(OSD_PSNA_LOAD_ERR, LEVEL_WARN);
     //     delay(1000);
     // }
+    if (Config::getArch() == "48K") AySound::reset();
     OSD::osdCenteredMsg(OSD_PSNA_LOADED, LEVEL_INFO);
     delay(400);
 }
@@ -168,31 +170,36 @@ void OSD::do_OSD() {
     VGA& vga = ESPectrum::vga;
     static byte last_sna_row = 0;
     static unsigned int last_demo_ts = millis() / 1000;
-    boolean cycle_sna = false;
-    if (PS2Keyboard::checkAndCleanKey(KEY_F12)) {
-        cycle_sna = true;
-    }
-    else if (PS2Keyboard::checkAndCleanKey(KEY_PAUSE)) {
+    if (PS2Keyboard::checkAndCleanKey(KEY_PAUSE)) {
+        AySound::disable();
         osdCenteredMsg(OSD_PAUSE, LEVEL_INFO);
         while (!PS2Keyboard::checkAndCleanKey(KEY_PAUSE)) {
             delay(5);
         }
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
+        AySound::disable();
         quickSave();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
+        AySound::disable();
         quickLoad();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
+        AySound::disable();
         persistSave();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F5)) {
+        AySound::disable();
         persistLoad();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
-        AySound::resetSound();
-        AySound::silenceAllChannels(true);
+        AySound::disable();
 
         // Main menu
         byte opt = menuRun(MENU_MAIN);
@@ -269,7 +276,7 @@ void OSD::do_OSD() {
             }
         }
         
-        AySound::silenceAllChannels(false);
+        AySound::enable();
         // Exit
     }
 }
@@ -381,8 +388,6 @@ String OSD::rowGet(String menu, unsigned short row) {
 // Change running snapshot
 void OSD::changeSnapshot(String filename)
 {
-    AySound::resetSound();
-
     if (FileUtils::hasSNAextension(filename))
     {
         osdCenteredMsg((String)MSG_LOADING_SNA + ": " + filename, LEVEL_INFO);
@@ -400,5 +405,7 @@ void OSD::changeSnapshot(String filename)
     osdCenteredMsg(MSG_SAVE_CONFIG, LEVEL_WARN);
     Config::ram_file = filename;
     Config::save();
+
+    if (Config::getArch() == "48K") AySound::reset();
 }
 

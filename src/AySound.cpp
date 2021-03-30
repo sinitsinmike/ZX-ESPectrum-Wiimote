@@ -76,9 +76,14 @@ void AySound::initialize()
 	}
 }
 
-void AySound::silenceAllChannels(bool silence)
+void AySound::enable()
 {
-    _soundGenerator.play(!silence);
+    _soundGenerator.play(true);
+}
+
+void AySound::disable()
+{
+    _soundGenerator.play(false);
 }
 
 // Reference frequency is calculated like this:
@@ -278,7 +283,7 @@ void AySound::setRegisterData(uint8_t data)
     update();
 }
 
-void AySound::resetSound()
+void AySound::reset()
 {
 	finePitchChannelA = 0xFF;
 	coarsePitchChannelA = 0xFF;
