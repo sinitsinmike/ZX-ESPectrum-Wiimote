@@ -77,7 +77,7 @@ void IRAM_ATTR FileUtils::initFileSystem() {
 
     customSPI.begin(SDCARD_CLK, SDCARD_MISO, SDCARD_MOSI, SDCARD_CS);
 
-    if (!SD.begin(13, customSPI, 4000000, "/sd")) {
+    if (!SD.begin(SDCARD_CS, customSPI, 4000000, "/sd")) {
         Serial.println("Card Mount Failed");
         OSD::errorHalt(ERR_FS_EXT_FAIL);
         return;
