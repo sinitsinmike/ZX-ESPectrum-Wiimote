@@ -182,9 +182,11 @@
 #define PS2_ARROWKEYS_AS_CURSOR
 #define PS2_ARROWKEYS_AS_KEMPSTON
 
-// define PS2_CONVENIENCE_KEYS_EN for using convenience keys for
-// english keyboard: [backspace][,][.][/][;][´][-][=]
+// for using convenience keys, define just ONE of
+// PS2_CONVENIENCE_KEYS_EN for english keyboard: [backspace][,][.][/][;][´][-][=]
+// PS2_CONVENIENCE_KEYS_EN for SPANISH keyboard: [backspace][,][.][-][´][+]
 #define PS2_CONVENIENCE_KEYS_EN
+// #define PS2_CONVENIENCE_KEYS_ES
 
 ///////////////////////////////////////////////////////////////////////////////
 
