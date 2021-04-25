@@ -518,7 +518,17 @@ void ESPectrum::processKeyboard() {
     evalConvKey(KEY_COMMA,     7, 1, 7, 3);    // ,    (Ctrl + N)
     evalConvKey(KEY_DOT,       7, 1, 7, 2);    // .    (Ctrl + M)
     evalConvKey(KEY_DIV,       7, 1, 0, 4);    // /    (Ctrl + V)
-#endif    
+#endif // PS2_CONVENIENCE_KEYS_EN
+
+    // Convenience keys for spanish keyboard
+#ifdef PS2_CONVENIENCE_KEYS_ES
+    evalConvKey(102,  0, 0, 4, 0);    // BKSP (Shift + 0)
+    evalConvKey(91,   7, 1, 6, 2);    // +    (Ctrl + K)
+    evalConvKey(82,   7, 1, 4, 3);    // '    (Ctrl + 7)
+    evalConvKey(65,   7, 1, 7, 3);    // ,    (Ctrl + N)
+    evalConvKey(73,   7, 1, 7, 2);    // .    (Ctrl + M)
+    evalConvKey(74,   7, 1, 6, 3);    // -    (Ctrl + J)
+#endif // PS2_CONVENIENCE_KEYS_ES
 }
 
 /* +-------------+
