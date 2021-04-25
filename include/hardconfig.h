@@ -174,6 +174,18 @@
 
 #define PS2_KEYB_PRESENT
 #define PS2_KEYB_FORCE_INIT
+
+// define NONE, ONE or BOTH of this
+// PS2_ARROWKEYS_AS_CURSOR will use arrow keys 
+// PS2_ARROWKEYS_AS_KEMPSTON will use arrow keys as kempston joystick
+// directions, with AltGr a fire button.
+#define PS2_ARROWKEYS_AS_CURSOR
+#define PS2_ARROWKEYS_AS_KEMPSTON
+
+// define PS2_CONVENIENCE_KEYS_EN for using convenience keys for
+// english keyboard: [backspace][,][.][/][;][´][-][=]
+#define PS2_CONVENIENCE_KEYS_EN
+
 ///////////////////////////////////////////////////////////////////////////////
 
 
