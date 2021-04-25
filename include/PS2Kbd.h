@@ -91,4 +91,13 @@ public:
 #define KEY_PAGE_DOWN    0xE07A
 #define KEY_PAUSE        0xE11477E1F014E077
 
+#define KEY_COMMA     0x41
+#define KEY_DOT       0x49
+#define KEY_DIV       0x4A
+#define KEY_SEMI      0x4C
+#define KEY_MINUS     0x4E
+#define KEY_APOS      0x52
+#define KEY_EQUAL     0x55
+#define KEY_BACKSPACE 0x66
+
 #endif // ESPECTRUM_PS2KBD_H

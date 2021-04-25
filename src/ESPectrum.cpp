@@ -485,6 +485,104 @@ void ESPectrum::processKeyboard() {
     bitWrite(Ports::base[0x1f], 2, !PS2Keyboard::keymap[KEY_CURSOR_DOWN]);
     bitWrite(Ports::base[0x1f], 3, !PS2Keyboard::keymap[KEY_CURSOR_UP]);
     bitWrite(Ports::base[0x1f], 4, !PS2Keyboard::keymap[KEY_ALT_GR]);
+
+    // "Convenience" keys
+
+    // BACKSPACE (Shift + 0)
+    uint8_t specialKeyState = PS2Keyboard::keymap[KEY_BACKSPACE];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_BACKSPACE])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[4], 0, specialKeyState);
+    }
+
+    // LEFT ARROW (Shift + 5)
+    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_LEFT];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_LEFT])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[3], 4, specialKeyState);
+    }
+
+    // DOWN ARROW (Shift + 6)
+    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_DOWN];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_DOWN])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[4], 4, specialKeyState);
+    }
+
+    // UP ARROW (Shift + 7)
+    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_UP];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_UP])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[4], 3, specialKeyState);
+    }
+
+    // RIGHT ARROW (Shift + 8)
+    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_RIGHT];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_RIGHT])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[4], 2, specialKeyState);
+    }
+
+    // = (Ctrl + L)
+    specialKeyState = PS2Keyboard::keymap[KEY_EQUAL];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_EQUAL])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[6], 1, specialKeyState);
+    }
+
+    // - (Ctrl + J)
+    specialKeyState = PS2Keyboard::keymap[KEY_MINUS];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_MINUS])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[6], 3, specialKeyState);
+    }
+
+    // ; (Ctrl + O)
+    specialKeyState = PS2Keyboard::keymap[KEY_SEMI];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_SEMI])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[5], 1, specialKeyState);
+    }
+
+    // ' (Ctrl + 7)
+    specialKeyState = PS2Keyboard::keymap[KEY_APOS];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_APOS])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[4], 3, specialKeyState);
+    }
+
+    // , (Ctrl + N)
+    specialKeyState = PS2Keyboard::keymap[KEY_COMMA];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_COMMA])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[7], 3, specialKeyState);
+    }
+
+    // . (Ctrl + M)
+    specialKeyState = PS2Keyboard::keymap[KEY_DOT];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_DOT])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[7], 2, specialKeyState);
+    }
+
+    // / (Ctrl + V)
+    specialKeyState = PS2Keyboard::keymap[KEY_DIV];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_DIV])
+    {
+        bitWrite(Ports::base[7], 1, specialKeyState);
+        bitWrite(Ports::base[0], 4, specialKeyState);
+    }
 }
 
 /* +-------------+
