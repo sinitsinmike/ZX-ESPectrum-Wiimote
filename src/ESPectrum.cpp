@@ -479,23 +479,18 @@ void ESPectrum::processKeyboard() {
     bitWrite(Ports::base[7], 4, PS2Keyboard::keymap[0x32]);
 
     // Kempston joystick
+#ifdef PS2_ARROWKEYS_AS_KEMPSTON
     Ports::base[0x1f] = 0;
     bitWrite(Ports::base[0x1f], 0, !PS2Keyboard::keymap[KEY_CURSOR_RIGHT]);
     bitWrite(Ports::base[0x1f], 1, !PS2Keyboard::keymap[KEY_CURSOR_LEFT]);
     bitWrite(Ports::base[0x1f], 2, !PS2Keyboard::keymap[KEY_CURSOR_DOWN]);
     bitWrite(Ports::base[0x1f], 3, !PS2Keyboard::keymap[KEY_CURSOR_UP]);
     bitWrite(Ports::base[0x1f], 4, !PS2Keyboard::keymap[KEY_ALT_GR]);
+#endif // PS2_ARROWKEYS_AS_KEMPSTON    
 
-    // "Convenience" keys
-
-    // BACKSPACE (Shift + 0)
-    uint8_t specialKeyState = PS2Keyboard::keymap[KEY_BACKSPACE];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_BACKSPACE])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[4], 0, specialKeyState);
-    }
-
+    // Cursor keys
+    uint8_t specialKeyState;
+#ifdef PS2_ARROWKEYS_AS_CURSOR
     // LEFT ARROW (Shift + 5)
     specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_LEFT];
     if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_LEFT])
@@ -526,6 +521,17 @@ void ESPectrum::processKeyboard() {
     {
         bitWrite(Ports::base[0], 0, specialKeyState);
         bitWrite(Ports::base[4], 2, specialKeyState);
+    }
+#endif // PS2_ARROWKEYS_AS_CURSOR
+
+    // "Convenience" keys
+#ifdef PS2_CONVENIENCE_KEYS_EN
+    // BACKSPACE (Shift + 0)
+    specialKeyState = PS2Keyboard::keymap[KEY_BACKSPACE];
+    if (specialKeyState != PS2Keyboard::oldmap[KEY_BACKSPACE])
+    {
+        bitWrite(Ports::base[0], 0, specialKeyState);
+        bitWrite(Ports::base[4], 0, specialKeyState);
     }
 
     // = (Ctrl + L)
@@ -583,6 +589,7 @@ void ESPectrum::processKeyboard() {
         bitWrite(Ports::base[7], 1, specialKeyState);
         bitWrite(Ports::base[0], 4, specialKeyState);
     }
+#endif    
 }
 
 /* +-------------+
