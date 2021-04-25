@@ -426,9 +426,20 @@ void ESPectrum::waitForVideoTask() {
     delay(45);
 }
 
+// for abbreviating evaluation of convenience keys
+static inline void evalConvKey(uint8_t key, uint8_t p1, uint8_t b1, uint8_t p2, uint8_t b2)
+{
+    uint8_t specialKeyState = PS2Keyboard::keymap[key];
+    if (specialKeyState != PS2Keyboard::oldmap[key])
+    {
+        bitWrite(Ports::base[p1], b1, specialKeyState);
+        bitWrite(Ports::base[p2], b2, specialKeyState);
+    }
+}
+
 /* Load zx keyboard lines from PS/2 */
 void ESPectrum::processKeyboard() {
-    byte kempston = 0;
+    uint8_t kempston = 0;
 
     bitWrite(Ports::base[0], 0, PS2Keyboard::keymap[0x12]);
     bitWrite(Ports::base[0], 1, PS2Keyboard::keymap[0x1a]);
@@ -491,104 +502,22 @@ void ESPectrum::processKeyboard() {
     // Cursor keys
     uint8_t specialKeyState;
 #ifdef PS2_ARROWKEYS_AS_CURSOR
-    // LEFT ARROW (Shift + 5)
-    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_LEFT];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_LEFT])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[3], 4, specialKeyState);
-    }
-
-    // DOWN ARROW (Shift + 6)
-    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_DOWN];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_DOWN])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[4], 4, specialKeyState);
-    }
-
-    // UP ARROW (Shift + 7)
-    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_UP];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_UP])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[4], 3, specialKeyState);
-    }
-
-    // RIGHT ARROW (Shift + 8)
-    specialKeyState = PS2Keyboard::keymap[KEY_CURSOR_RIGHT];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_CURSOR_RIGHT])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[4], 2, specialKeyState);
-    }
+    evalConvKey(KEY_CURSOR_LEFT,  0, 0, 3, 4);    // LEFT ARROW  (Shift + 5)
+    evalConvKey(KEY_CURSOR_DOWN,  0, 0, 4, 4);    // DOWN ARROW  (Shift + 6)
+    evalConvKey(KEY_CURSOR_UP,    0, 0, 4, 3);    // UP ARROW    (Shift + 7)
+    evalConvKey(KEY_CURSOR_RIGHT, 0, 0, 4, 2);    // RIGHT ARROW (Shift + 8)
 #endif // PS2_ARROWKEYS_AS_CURSOR
 
-    // "Convenience" keys
+    // Convenience keys for english keyboard
 #ifdef PS2_CONVENIENCE_KEYS_EN
-    // BACKSPACE (Shift + 0)
-    specialKeyState = PS2Keyboard::keymap[KEY_BACKSPACE];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_BACKSPACE])
-    {
-        bitWrite(Ports::base[0], 0, specialKeyState);
-        bitWrite(Ports::base[4], 0, specialKeyState);
-    }
-
-    // = (Ctrl + L)
-    specialKeyState = PS2Keyboard::keymap[KEY_EQUAL];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_EQUAL])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[6], 1, specialKeyState);
-    }
-
-    // - (Ctrl + J)
-    specialKeyState = PS2Keyboard::keymap[KEY_MINUS];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_MINUS])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[6], 3, specialKeyState);
-    }
-
-    // ; (Ctrl + O)
-    specialKeyState = PS2Keyboard::keymap[KEY_SEMI];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_SEMI])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[5], 1, specialKeyState);
-    }
-
-    // ' (Ctrl + 7)
-    specialKeyState = PS2Keyboard::keymap[KEY_APOS];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_APOS])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[4], 3, specialKeyState);
-    }
-
-    // , (Ctrl + N)
-    specialKeyState = PS2Keyboard::keymap[KEY_COMMA];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_COMMA])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[7], 3, specialKeyState);
-    }
-
-    // . (Ctrl + M)
-    specialKeyState = PS2Keyboard::keymap[KEY_DOT];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_DOT])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[7], 2, specialKeyState);
-    }
-
-    // / (Ctrl + V)
-    specialKeyState = PS2Keyboard::keymap[KEY_DIV];
-    if (specialKeyState != PS2Keyboard::oldmap[KEY_DIV])
-    {
-        bitWrite(Ports::base[7], 1, specialKeyState);
-        bitWrite(Ports::base[0], 4, specialKeyState);
-    }
+    evalConvKey(KEY_BACKSPACE, 0, 0, 4, 0);    // BKSP (Shift + 0)
+    evalConvKey(KEY_EQUAL,     7, 1, 6, 1);    // =    (Ctrl + L)
+    evalConvKey(KEY_MINUS,     7, 1, 6, 3);    // -    (Ctrl + J)
+    evalConvKey(KEY_SEMI,      7, 1, 5, 1);    // ;    (Ctrl + O)
+    evalConvKey(KEY_APOS,      7, 1, 4, 3);    // '    (Ctrl + 7)
+    evalConvKey(KEY_COMMA,     7, 1, 7, 3);    // ,    (Ctrl + N)
+    evalConvKey(KEY_DOT,       7, 1, 7, 2);    // .    (Ctrl + M)
+    evalConvKey(KEY_DIV,       7, 1, 0, 4);    // /    (Ctrl + V)
 #endif    
 }
 
