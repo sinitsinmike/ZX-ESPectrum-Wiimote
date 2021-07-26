@@ -30,7 +30,7 @@
 #include "PS2Kbd.h"
 #include "Z80_LKF/z80emu.h"
 #include "CPU.h"
-#include "z80_LKF/z80user.h"
+#include "Z80_LKF/z80user.h"
 #include <Arduino.h>
 
 #include "hardpins.h"
