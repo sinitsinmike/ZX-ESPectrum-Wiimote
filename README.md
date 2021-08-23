@@ -17,6 +17,8 @@ Quick start from PlatformIO:
 
 If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
 
+This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
+
 ## Features
 
 - Spectrum 16/48 architecture emulation without PSRAM.
@@ -160,6 +162,7 @@ I have write a detailed story, with photos, of the development process of this e
 
 ## Thanks to
 
+- Developers of the [original project](https://github.com/rampa069/ZX-ESPectrum), [Rampa](https://github.com/rampa069) and [Queru](https://github.com/jorgefuertes).
 - Idea from the work of Charles Peter Debenham Todd: [PaseVGA](https://github.com/retrogubbins/paseVGA).
 - VGA Driver from [ESP32Lib by BitLuni](https://github.com/bitluni/ESP32Lib).
 - PS/2 keyboard support based on [ps2kbdlib](https://github.com/michalhol/ps2kbdlib).
