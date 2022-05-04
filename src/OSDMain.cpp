@@ -292,14 +292,14 @@ void OSD::do_OSD() {
         else if (opt == 5) {
             // Persist Save
             byte opt2 = menuRun(MENU_PERSIST_SAVE);
-            if (opt2 > 0 && opt<6) {
+            if (opt2 > 0 && opt2<6) {
                 persistSave(opt2);
             }
         }
         else if (opt == 6) {
             // Persist Load
             byte opt2 = menuRun(MENU_PERSIST_LOAD);
-            if (opt2 > 0 && opt<6) {
+            if (opt2 > 0 && opt2<6) {
                 persistLoad(opt2);
             }
         }
