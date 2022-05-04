@@ -63,7 +63,7 @@ private:
 #define DISK_BOOT_FILENAME "/boot.cfg"
 #define DISK_ROM_DIR "/rom"
 #define DISK_SNA_DIR "/sna"
-#define DISK_PSNA_FILE "/persist/persist.sna"
+#define DISK_PSNA_FILE "/persist/persist"
 #define NO_RAM_FILE "none"
 #define SNA_48K_SIZE 49179
 #define SNA_128K_SIZE1 131103
