@@ -137,27 +137,9 @@ static void quickLoad()
 
 static void persistSave(byte slotnumber)
 {
+    char persistfname[strlen(DISK_PSNA_FILE) + 6];
+    sprintf(persistfname,DISK_PSNA_FILE "%u.sna",slotnumber);
     OSD::osdCenteredMsg(OSD_PSNA_SAVING, LEVEL_INFO);
-    String persistfname = DISK_PSNA_FILE;
-    switch (slotnumber)
-    {
-    case 1:
-        persistfname += "1.sna";
-        break;
-    case 2:
-        persistfname += "2.sna";
-        break;
-    case 3:
-        persistfname += "3.sna";
-        break;
-    case 4:
-        persistfname += "4.sna";
-        break;
-    case 5:
-        persistfname += "5.sna";
-        break;
-    }
-
     if (!FileSNA::save(persistfname)) {
         OSD::osdCenteredMsg(OSD_PSNA_SAVE_ERR, LEVEL_WARN);
         delay(1000);
@@ -169,45 +151,21 @@ static void persistSave(byte slotnumber)
 
 static void persistLoad(byte slotnumber)
 {
-
-    String persistfname = DISK_PSNA_FILE;
-    switch (slotnumber)
-    {
-    case 1:
-        persistfname += "1.sna";
-        break;
-    case 2:
-        persistfname += "2.sna";
-        break;
-    case 3:
-        persistfname += "3.sna";
-        break;
-    case 4:
-        persistfname += "4.sna";
-        break;
-    case 5:
-        persistfname += "5.sna";
-        break;
-    }
-
+    char persistfname[strlen(DISK_PSNA_FILE) + 6];
+    sprintf(persistfname,DISK_PSNA_FILE "%u.sna",slotnumber);
     if (!FileSNA::isPersistAvailable(persistfname)) {
         OSD::osdCenteredMsg(OSD_PSNA_NOT_AVAIL, LEVEL_INFO);
         delay(1000);
         return;
     }
-
     OSD::osdCenteredMsg(OSD_PSNA_LOADING, LEVEL_INFO);
-
     FileSNA::load(persistfname);
     // if (!FileSNA::load(DISK_PSNA_FILE)) {
     //     osdCenteredMsg(OSD_PSNA_LOAD_ERR, LEVEL_WARN);
     //     delay(1000);
     // }
-
     if (Config::getArch() == "48K") AySound::reset();
-
     OSD::osdCenteredMsg(OSD_PSNA_LOADED, LEVEL_INFO);
-
     delay(400);
 }
 
