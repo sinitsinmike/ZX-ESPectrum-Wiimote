@@ -296,9 +296,9 @@ bool FileSNA::load(String sna_fn)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool FileSNA::isPersistAvailable()
+bool FileSNA::isPersistAvailable(String filename)
 {
-    String filename = DISK_PSNA_FILE;
+    // String filename = DISK_PSNA_FILE;
     return THE_FS.exists(filename.c_str());
 }
 

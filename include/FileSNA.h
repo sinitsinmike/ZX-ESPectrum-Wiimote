@@ -53,7 +53,7 @@ public:
     static bool IRAM_ATTR saveQuick48();
 
     static bool IRAM_ATTR isQuickAvailable();
-    static bool IRAM_ATTR isPersistAvailable();
+    static bool IRAM_ATTR isPersistAvailable(String filename);
 };
 
 #endif
