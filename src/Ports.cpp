@@ -33,6 +33,7 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
+#include "Config.h"
 
 #include <Arduino.h>
 
@@ -189,7 +190,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         #endif
         base[0x20] = data; // ? 
     }
-
+    
     if ((portLow & 0x02) == 0x00)
     {
         // 128K AY
@@ -208,12 +209,14 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         // +2A / +3 Memory Control
         if ((portHigh & 0xC0) == 0x40)
         {
-            Mem::pagingLock = bitRead(data, 5);
-            Mem::romLatch = bitRead(data, 4);
-            Mem::videoLatch = bitRead(data, 3);
-            Mem::bankLatch = data & 0x7;
-            bitWrite(Mem::romInUse, 1, Mem::romSP3);
-            bitWrite(Mem::romInUse, 0, Mem::romLatch);
+            if (!Mem::pagingLock) {
+                Mem::pagingLock = bitRead(data, 5);
+                Mem::romLatch = bitRead(data, 4);
+                Mem::videoLatch = bitRead(data, 3);
+                Mem::bankLatch = data & 0x7;
+                bitWrite(Mem::romInUse, 1, Mem::romSP3);
+                bitWrite(Mem::romInUse, 0, Mem::romLatch);
+            }
         }
         
         // +2A / +3 Secondary Memory Control
@@ -224,6 +227,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
             bitWrite(Mem::romInUse, 1, Mem::romSP3);
             bitWrite(Mem::romInUse, 0, Mem::romLatch);
         }
-    }
 
+    }
+    
 }
