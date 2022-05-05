@@ -33,7 +33,6 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
-#include "Config.h"
 
 #include <Arduino.h>
 
