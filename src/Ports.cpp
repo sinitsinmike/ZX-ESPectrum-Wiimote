@@ -148,7 +148,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         result &= zxkbres;
         #endif // ZX_KEYB_PRESENT
 
-        result |= 0xa0; // Bits 5 and 7 always set to 1
+        if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
         return result;
     }
 
