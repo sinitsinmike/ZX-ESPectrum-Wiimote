@@ -32,7 +32,7 @@
 #include "ESP32Wiimote.h"
 #include "TinyWiimote.h"
 
-#define WIIMOTE_VERBOSE 1
+#define WIIMOTE_VERBOSE 0
 
 #if WIIMOTE_VERBOSE
 #define VERBOSE_PRINT(...) Serial.printf(__VA_ARGS__)

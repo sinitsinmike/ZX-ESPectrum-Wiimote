@@ -24,7 +24,7 @@
 
 #include "TinyWiimote.h"
 
-#define WIIMOTE_VERBOSE 1
+#define WIIMOTE_VERBOSE 0
 
 #if WIIMOTE_VERBOSE
 #include <HardwareSerial.h> // for Arduino
