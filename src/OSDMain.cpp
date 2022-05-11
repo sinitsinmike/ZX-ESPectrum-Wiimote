@@ -135,10 +135,12 @@ static void quickLoad()
     delay(200);
 }
 
-static void persistSave()
+static void persistSave(byte slotnumber)
 {
+    char persistfname[strlen(DISK_PSNA_FILE) + 6];
+    sprintf(persistfname,DISK_PSNA_FILE "%u.sna",slotnumber);
     OSD::osdCenteredMsg(OSD_PSNA_SAVING, LEVEL_INFO);
-    if (!FileSNA::save(DISK_PSNA_FILE)) {
+    if (!FileSNA::save(persistfname)) {
         OSD::osdCenteredMsg(OSD_PSNA_SAVE_ERR, LEVEL_WARN);
         delay(1000);
         return;
@@ -147,15 +149,17 @@ static void persistSave()
     delay(400);
 }
 
-static void persistLoad()
+static void persistLoad(byte slotnumber)
 {
-    if (!FileSNA::isPersistAvailable()) {
+    char persistfname[strlen(DISK_PSNA_FILE) + 6];
+    sprintf(persistfname,DISK_PSNA_FILE "%u.sna",slotnumber);
+    if (!FileSNA::isPersistAvailable(persistfname)) {
         OSD::osdCenteredMsg(OSD_PSNA_NOT_AVAIL, LEVEL_INFO);
         delay(1000);
         return;
     }
     OSD::osdCenteredMsg(OSD_PSNA_LOADING, LEVEL_INFO);
-    FileSNA::load(DISK_PSNA_FILE);
+    FileSNA::load(persistfname);
     // if (!FileSNA::load(DISK_PSNA_FILE)) {
     //     osdCenteredMsg(OSD_PSNA_LOAD_ERR, LEVEL_WARN);
     //     delay(1000);
@@ -190,12 +194,20 @@ void OSD::do_OSD() {
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
         AySound::disable();
-        persistSave();
+        // Persist Save
+        byte opt2 = menuRun(MENU_PERSIST_SAVE);
+        if (opt2 > 0 && opt2<6) {
+            persistSave(opt2);
+        }
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F5)) {
         AySound::disable();
-        persistLoad();
+        // Persist Load
+        byte opt2 = menuRun(MENU_PERSIST_LOAD);
+        if (opt2 > 0 && opt2<6) {
+            persistLoad(opt2);
+        }
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
@@ -236,10 +248,18 @@ void OSD::do_OSD() {
             quickLoad();
         }
         else if (opt == 5) {
-            persistSave();
+            // Persist Save
+            byte opt2 = menuRun(MENU_PERSIST_SAVE);
+            if (opt2 > 0 && opt2<6) {
+                persistSave(opt2);
+            }
         }
         else if (opt == 6) {
-            persistLoad();
+            // Persist Load
+            byte opt2 = menuRun(MENU_PERSIST_LOAD);
+            if (opt2 > 0 && opt2<6) {
+                persistLoad(opt2);
+            }
         }
         else if (opt == 7) {
             // Reset

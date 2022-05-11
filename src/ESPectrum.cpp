@@ -535,6 +535,7 @@ void ESPectrum::processKeyboard() {
    | LOOP core 1 |
    +-------------+
  */
+
 void ESPectrum::loop() {
     if (halfsec) {
         flashing = ~flashing;

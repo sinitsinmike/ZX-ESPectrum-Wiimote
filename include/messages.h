@@ -36,7 +36,7 @@
 #define MSG_LOADING_Z80 "Loading Z80 file"
 #define MSG_SAVE_CONFIG "Saving config file"
 #define MSG_CHIP_SETUP "Chip setup"
-#define MSG_VGA_INIT "Initalizing VGA"
+#define MSG_VGA_INIT "Initializing VGA"
 #define MSG_FREE_HEAP_BEFORE "Free heap before "
 #define MSG_FREE_HEAP_AFTER "Free heap after "
 #define MSG_Z80_RESET "Reseting Z80 CPU"
@@ -100,6 +100,17 @@
     "Hard reset\n"\
     "ESP host reset\n"\
     "Cancel\n"
+#define MENU_PERSIST \
+    "Slot 1\n"\
+    "Slot 2\n"\
+    "Slot 3\n"\
+    "Slot 4\n"\
+    "Slot 5\n"\    
+    "Cancel\n"
+#define MENU_PERSIST_SAVE \
+    "Persist Save\n" MENU_PERSIST
+#define MENU_PERSIST_LOAD \
+    "Persist Load\n" MENU_PERSIST    
 #define MENU_DEMO "Demo mode\nOFF\n 1 minute\n 3 minutes\n 5 minutes\n15 minutes\n30 minutes\n 1 hour\n"
 #define MENU_ARCH "Select Arch\n"
 #define MENU_ROMSET "Select Rom Set\n"
