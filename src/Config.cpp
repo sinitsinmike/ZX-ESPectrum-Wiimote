@@ -54,6 +54,7 @@ String   Config::romSet = "SINCLAIR";
 String   Config::sna_file_list; // list of file names
 String   Config::sna_name_list; // list of names (without ext, '_' -> ' ')
 bool     Config::slog_on = true;
+bool     Config::aspect_16_9 = false;
 
 // Read config from FS
 void Config::load() {
@@ -84,6 +85,9 @@ void Config::load() {
             } else if (line.startsWith("slog:")) {
                 slog_on = (line.substring(line.lastIndexOf(':') + 1) == "true");
                 Serial.printf("  + slog_on: '%s'\n", (slog_on ? "true" : "false"));
+            } else if (line.startsWith("asp169:")) {
+                aspect_16_9 = (line.substring(line.lastIndexOf(':') + 1) == "true");
+                Serial.printf("  + asp169: '%s'\n", (aspect_16_9 ? "true" : "false"));
             }
             line = "";
         } else {
@@ -126,6 +130,10 @@ void Config::save() {
     // Serial logging
     Serial.printf("  + slog:%s\n", (slog_on ? "true" : "false"));
     f.printf("slog:%s\n", (slog_on ? "true" : "false"));
+    // Serial logging
+    Serial.printf("  + asp169:%s\n", (aspect_16_9 ? "true" : "false"));
+    f.printf("asp169:%s\n", (aspect_16_9 ? "true" : "false"));
+
     f.close();
     vTaskDelay(5);
     Serial.println("Config saved OK");

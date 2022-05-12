@@ -45,6 +45,10 @@ public:
     // ZX Color
     static uint16_t zxColor(uint8_t color, uint8_t bright);
 
+    // Screen size to be set at initialization
+    static unsigned short scrW;
+    static unsigned short scrH;
+
     // Calc
     static unsigned short scrAlignCenterX(unsigned short pixel_width);
     static unsigned short scrAlignCenterY(unsigned short pixel_height);

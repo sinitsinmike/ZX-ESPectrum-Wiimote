@@ -104,18 +104,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Screen aspect ratio (16/9 or 4/3)
 //
-// define ONLY one of these
-// AR_16_9
-// AR_4_3
+// NOT USED ANYMORE; aspect ratio may be changed via menu
+// and is saved to config file. Only reset is required to change.
 ///////////////////////////////////////////////////////////////////////////////
 
-#define AR_16_9
+// #define AR_16_9
 // #define AR_4_3
 
-// check: only one must be defined
-#if (defined(AR_16_9) && defined(AR_4_3))
-#error "Only one of (AR_16_9, AR_4_3) must be defined"
-#endif
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,24 +122,22 @@
 // BOR_W and BOR_H are the actual border pixels drawn outside of image.
 // OFF_X and OFF_Y are used for centering, use with caution;
 // you could write off the buffer and crash the emulator.
+// 
+// Update: these are specified separately for the two supported aspect ratios.
 ///////////////////////////////////////////////////////////////////////////////
-#ifdef AR_16_9
-#define BOR_W 52
-#define BOR_H 4
-#define OFF_X 0
-#define OFF_Y 0
+#define BOR_W_16_9 52
+#define BOR_H_16_9 4
+#define OFF_X_16_9 0
+#define OFF_Y_16_9 0
 // if you can't center the image in your screen,
 // set some offset, (ex: OFF_X = _20_)
 // use a smaller border (ex: BOR_W = 32 == 52 - _20_)
 // then change OFF_X for software centering (0 < OFF_X < 40) (40 == 2 * _20_)
-#endif
 
-#ifdef AR_4_3
-#define BOR_W 32
-#define BOR_H 24
-#define OFF_X 0
-#define OFF_Y 0
-#endif
+#define BOR_W_4_3 32
+#define BOR_H_4_3 24
+#define OFF_X_4_3 0
+#define OFF_Y_4_3 0
 
 ///////////////////////////////////////////////////////////////////////////////
 // Storage mode
