@@ -43,6 +43,7 @@ public:
     static const String& getRomSet() { return romSet; }
     static String   ram_file;
     static bool     slog_on;
+    static bool     aspect_16_9;
 
     // config persistence
     static void           load();

@@ -43,16 +43,6 @@
 #define OSD_ERROR true
 #define OSD_NORMAL false
 
-#ifdef AR_16_9
-#define SCR_W 360
-#define SCR_H 200
-#endif
-
-#ifdef AR_4_3
-#define SCR_W 320
-#define SCR_H 240
-#endif
-
 #define OSD_W 248
 #define OSD_H 152
 #define OSD_MARGIN 4
@@ -64,11 +54,14 @@
 
 extern Font Font6x8;
 
+unsigned short OSD::scrW = 320;
+unsigned short OSD::scrH = 240;
+
 // X origin to center an element with pixel_width
-unsigned short OSD::scrAlignCenterX(unsigned short pixel_width) { return (SCR_W / 2) - (pixel_width / 2); }
+unsigned short OSD::scrAlignCenterX(unsigned short pixel_width) { return (scrW / 2) - (pixel_width / 2); }
 
 // Y origin to center an element with pixel_height
-unsigned short OSD::scrAlignCenterY(unsigned short pixel_height) { return (SCR_H / 2) - (pixel_height / 2); }
+unsigned short OSD::scrAlignCenterY(unsigned short pixel_height) { return (scrH / 2) - (pixel_height / 2); }
 
 byte OSD::osdMaxRows() { return (OSD_H - (OSD_MARGIN * 2)) / OSD_FONT_H; }
 byte OSD::osdMaxCols() { return (OSD_W - (OSD_MARGIN * 2)) / OSD_FONT_W; }
@@ -262,6 +255,20 @@ void OSD::do_OSD() {
             }
         }
         else if (opt == 7) {
+            // aspect ratio
+            byte opt2;
+            if (Config::aspect_16_9)
+                opt2 = menuRun(MENU_ASPECT_169);
+            else
+                opt2 = menuRun(MENU_ASPECT_43);
+            if (opt2 == 2)
+            {
+                Config::aspect_16_9 = !Config::aspect_16_9;
+                Config::save();
+                ESP.restart();
+            }
+        }
+        else if (opt == 8) {
             // Reset
             byte opt2 = menuRun(MENU_RESET);
             if (opt2 == 1) {
@@ -282,7 +289,7 @@ void OSD::do_OSD() {
                 ESP.restart();
             }
         }
-        else if (opt == 8) {
+        else if (opt == 9) {
             // Help
             drawOSD();
             osdAt(2, 0);

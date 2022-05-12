@@ -91,9 +91,18 @@
     "Quick Load (F3)\n"\
     "Persist Save (F4)\n"\
     "Persist Load (F5)\n"\
+    "Aspect Ratio...\n"\
     "Reset\n"\
     "About...\n"\
     "Return\n"
+#define MENU_ASPECT_169 \
+    "Aspect Ratio\n"\
+    "16:9 (current)\n"\
+    "4:3  (will reset)\n"
+#define MENU_ASPECT_43 \
+    "Aspect Ratio\n"\
+    "4:3  (current)\n"\
+    "16:9 (will reset)\n"
 #define MENU_RESET \
     "Reset Menu\n"\
     "Soft reset\n"\

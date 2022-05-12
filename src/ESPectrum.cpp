@@ -93,8 +93,8 @@ static uint8_t staticMemPage[0x4000];
 
 static void tryAllocateSRamThenPSRam(uint8_t*& page, const char* pagename)
 {
-    // only try allocating in SRAM when there are 64K free at least
-    if (ESP.getFreeHeap() >= 65536)
+    // only try allocating in SRAM when there are 96K free at least
+    if (ESP.getFreeHeap() >= 96*1024)
     {
         page = (uint8_t*)calloc(1, 0x4000);
         if (page != NULL) {
@@ -142,22 +142,27 @@ void ESPectrum::setup()
 
     Serial.printf("Free heap after filesystem: %d\n", ESP.getFreeHeap());
 
+    const Mode& vgaMode = Config::aspect_16_9 ? vga.MODE360x200 : vga.MODE320x240;
+    OSD::scrW = vgaMode.hRes;
+    OSD::scrH = vgaMode.vRes / vgaMode.vDiv;
+    Serial.printf("Setting resolution to %d x %d\n", OSD::scrW, OSD::scrH);
+
 #ifdef COLOR_3B
-    vga.init(vga.VGA_AR_MODE, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vgaMode, RED_PIN_3B, GRE_PIN_3B, BLU_PIN_3B, HSYNC_PIN, VSYNC_PIN);
 #endif
 
 #ifdef COLOR_6B
     const int redPins[] = {RED_PINS_6B};
     const int grePins[] = {GRE_PINS_6B};
     const int bluPins[] = {BLU_PINS_6B};
-    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vgaMode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
 #ifdef COLOR_14B
     const int redPins[] = {RED_PINS_14B};
     const int grePins[] = {GRE_PINS_14B};
     const int bluPins[] = {BLU_PINS_14B};
-    vga.init(vga.VGA_AR_MODE, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+    vga.init(vgaMode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
     // precalculate colors for current VGA mode
@@ -312,6 +317,11 @@ void ESPectrum::videoTask(void *unused) {
     videoTaskIsRunning = true;
     uint16_t *param;
 
+    int offX = Config::aspect_16_9 ? OFF_X_16_9 : OFF_X_4_3;
+    int offY = Config::aspect_16_9 ? OFF_Y_16_9 : OFF_Y_4_3;
+    int borW = Config::aspect_16_9 ? BOR_W_16_9 : BOR_W_4_3;
+    int borH = Config::aspect_16_9 ? BOR_H_16_9 : BOR_H_4_3;
+
     while (1) {
         xQueueReceive(vidQueue, &param, portMAX_DELAY);
     
@@ -336,23 +346,23 @@ void ESPectrum::videoTask(void *unused) {
 
         uint32_t ts_start = micros();
 
-        for (int vgaY = 0; vgaY < BOR_H+SPEC_H+BOR_H; vgaY++) {
+        for (int vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++) {
             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-            uint8_t* lineptr = vga.backBuffer[vgaY+OFF_Y];
-            vgaX = OFF_X;
-            if (vgaY < BOR_H || vgaY >= BOR_H + SPEC_H) {
-                for (int i = 0; i < BOR_W+SPEC_W+BOR_W; i++, vgaX++) {
+            uint8_t* lineptr = vga.backBuffer[vgaY+offY];
+            vgaX = offX;
+            if (vgaY < borH || vgaY >= borH + SPEC_H) {
+                for (int i = 0; i < borW+SPEC_W+borW; i++, vgaX++) {
                     lineptr[vgaX^2] = zxColor(borderColor, 0);
                 }
             }
             else
             {
-                speY = vgaY - BOR_H;
+                speY = vgaY - borH;
                 ulaY = ULA_SWAP(speY);
-                lineptr = vga.backBuffer[speY+OFF_Y+BOR_H];
+                lineptr = vga.backBuffer[speY+offY+borH];
 
-                vgaX = OFF_X;
-                for (int i = 0; i < BOR_W; i++, vgaX++) {
+                vgaX = offX;
+                for (int i = 0; i < borW; i++, vgaX++) {
                     lineptr[vgaX^2] = zxColor(borderColor, 0);
                 }
 
@@ -385,7 +395,7 @@ void ESPectrum::videoTask(void *unused) {
                     }
                 }
 
-                for (int i = 0; i < BOR_W; i++, vgaX++) {
+                for (int i = 0; i < borW; i++, vgaX++) {
                     lineptr[vgaX^2] = zxColor(borderColor, 0);
                 }
 
