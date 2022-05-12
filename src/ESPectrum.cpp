@@ -58,6 +58,9 @@
 // EXTERN METHODS
 void setup_cpuspeed();
 
+// Tape
+byte ESPectrum::tapeSaving = 0;
+
 // ESPectrum graphics variables
 byte ESPectrum::borderColor = 7;
 VGA ESPectrum::vga;
@@ -272,6 +275,7 @@ void ESPectrum::reset()
         Ports::wii[i] == 0x1F;
     }
     ESPectrum::borderColor = 7;
+    ESPectrum::tapeSaving = 0;    
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
@@ -555,6 +559,7 @@ void ESPectrum::loop() {
 
     processKeyboard();
     updateWiimote2Keys();
+    
     OSD::do_OSD();
 
     xQueueSend(vidQueue, &param, portMAX_DELAY);
