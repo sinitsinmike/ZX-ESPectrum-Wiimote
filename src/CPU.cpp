@@ -167,7 +167,18 @@ void CPU::loop()
 
 	while (tstates < statesInFrame)
 	{
-		DO_Z80_INSTRUCTION;
+		
+        // Trap tape routines
+        switch (Z80::getRegPC()) {
+        case 0x04d0: 
+            ESPectrum::tapeSaving=1; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
+            break;
+        case 0x053e:
+            ESPectrum::tapeSaving=0; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
+            break;
+        }
+       
+        DO_Z80_INSTRUCTION;
 
         #ifdef CPU_PER_INSTRUCTION_TIMING
             if (partTstates > PIT_PERIOD) {
@@ -180,6 +191,7 @@ void CPU::loop()
             prevTstates = tstates;
         #endif
 	}
+    
     #ifdef CPU_PER_INSTRUCTION_TIMING
         delay_instruction(tstates);
     #endif

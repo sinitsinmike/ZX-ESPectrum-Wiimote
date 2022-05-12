@@ -182,7 +182,10 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
 
         #ifdef SPEAKER_PRESENT
-        digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
+        if (ESPectrum::tapeSaving) 
+            digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker
+        else
+            digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
         #endif
 
         #ifdef MIC_PRESENT

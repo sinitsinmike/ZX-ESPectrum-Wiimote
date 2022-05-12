@@ -61,6 +61,9 @@ public:
     // reset machine
     static void reset();
 
+    // Tape
+    static uint8_t tapeSaving;
+
     // graphics
     static VGA vga;
     static uint8_t borderColor;
