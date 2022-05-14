@@ -170,11 +170,15 @@ void CPU::loop()
 		
         // Trap tape routines
         switch (Z80::getRegPC()) {
+        /*case 0x0556:
+            break;
+        case 0x053f:
+            break; */
         case 0x04d0: 
-            ESPectrum::tapeSaving=1; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
+            ESPectrum::tapeStatus=TAPE_SAVING; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
             break;
         case 0x053e:
-            ESPectrum::tapeSaving=0; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
+            ESPectrum::tapeStatus=TAPE_IDLE; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
             break;
         }
        

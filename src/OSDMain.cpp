@@ -176,14 +176,42 @@ void OSD::do_OSD() {
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
+        
+        ESPectrum::tapefile = FileUtils::safeOpenFileRead("/tap/teclado.tap");
+        ESPectrum::tapeFileSize = ESPectrum::tapefile.size();
+                
+        ESPectrum::tapeStatus=TAPE_LOADING; // START LOAD
+        ESPectrum::tapePhase=1;
+        ESPectrum::tapeStart=micros();
+        ESPectrum::tapeEarBit=1;
+        ESPectrum::tapePulseCount=0;
+        ESPectrum::tapeBitPulseLen=244;
+        ESPectrum::tapeBitPulseCount=0;
+        ESPectrum::tapebufBitCount=0;         
+        ESPectrum::tapebufByteCount=3;
+        ESPectrum::tapeHdrPulses=8063;
+        ESPectrum::tapeSyncLen=619;
+        ESPectrum::tapeBlockLen=(readByteFile(ESPectrum::tapefile) | (readByteFile(ESPectrum::tapefile) <<8))+ 2;
+        ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile); 
+
+        /*
         AySound::disable();
         quickSave();
         AySound::enable();
+        */
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
+
+        if (ESPectrum::tapeStatus==TAPE_LOADING) {
+            ESPectrum::tapeStatus=TAPE_IDLE; // STOP LOAD
+            ESPectrum::tapefile.close();            
+        }
+
+        /*
         AySound::disable();
         quickLoad();
         AySound::enable();
+        */
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
         AySound::disable();

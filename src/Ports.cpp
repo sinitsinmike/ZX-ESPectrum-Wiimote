@@ -33,6 +33,7 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
+#include "FileUtils.h"
 
 #include <Arduino.h>
 
@@ -148,6 +149,117 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         result &= zxkbres;
         #endif // ZX_KEYB_PRESENT
 
+        if (ESPectrum::tapeStatus==TAPE_LOADING) {
+            
+            unsigned long tapeCurrent = micros() - ESPectrum::tapeStart;
+
+            switch (ESPectrum::tapePhase) {
+            case 1:
+                // 619 -> microseconds for 2168 tStates (48K)
+                if (tapeCurrent > ESPectrum::tapeSyncLen) {
+                    ESPectrum::tapeStart=micros();
+                    if (ESPectrum::tapeEarBit) ESPectrum::tapeEarBit=0; else ESPectrum::tapeEarBit=1;
+                    ESPectrum::tapePulseCount++;
+                    if (ESPectrum::tapePulseCount>ESPectrum::tapeHdrPulses) {
+                        ESPectrum::tapePulseCount=0;
+                        ESPectrum::tapePhase++;
+                    }
+                }
+                break;
+            case 2: // SYNC 1
+                // 190 -> microseconds for 667 tStates (48K)
+                if (tapeCurrent > 190) {
+                    ESPectrum::tapeStart=micros();
+                    if (ESPectrum::tapeEarBit) ESPectrum::tapeEarBit=0; else ESPectrum::tapeEarBit=1;
+                    ESPectrum::tapePulseCount++;
+                    if (ESPectrum::tapePulseCount==1) {
+                        ESPectrum::tapePulseCount=0;
+                        ESPectrum::tapePhase++;
+                    }
+                }
+                break;
+            case 3: // SYNC 2
+                // 210 -> microseconds for 735 tStates (48K)
+                if (tapeCurrent > 210) {
+                    ESPectrum::tapeStart=micros();
+                    if (ESPectrum::tapeEarBit) ESPectrum::tapeEarBit=0; else ESPectrum::tapeEarBit=1;
+                    ESPectrum::tapePulseCount++;
+                    if (ESPectrum::tapePulseCount==1) {
+                        ESPectrum::tapePulseCount=0;
+                        ESPectrum::tapePhase++;
+                        // Leer primer bit de datos de cabecera para indicar a la fase 4 longitud de pulso
+                        if (ESPectrum::tapeCurrentByte >> 7) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;                        
+                    }
+                }
+                break;
+            case 4:
+
+                if (tapeCurrent > ESPectrum::tapeBitPulseLen) {
+
+                    ESPectrum::tapeStart=micros();
+                    if (ESPectrum::tapeEarBit) ESPectrum::tapeEarBit=0; else ESPectrum::tapeEarBit=1;
+
+                    ESPectrum::tapeBitPulseCount++;
+                    if (ESPectrum::tapeBitPulseCount==2) {
+                        ESPectrum::tapebufBitCount++;
+                        if (ESPectrum::tapebufBitCount==8) {
+                            ESPectrum::tapebufBitCount=0;
+                            ESPectrum::tapebufByteCount++;
+                            ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile);
+                        }
+                        
+                        if ((ESPectrum::tapeCurrentByte >> (7 - ESPectrum::tapebufBitCount)) & 0x01) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;                        
+                        
+                        ESPectrum::tapeBitPulseCount=0;
+                    }
+                    
+                    if (ESPectrum::tapebufByteCount > ESPectrum::tapeBlockLen) { // FIN DE BLOQUE, SALIMOS A PAUSA ENTRE BLOQUES
+                        ESPectrum::tapePhase++;
+                        ESPectrum::tapeStart=micros();
+                        //Serial.printf("%02X\n",ESPectrum::tapeCurrentByte);
+                    }
+
+                }
+                break;
+            case 5:
+                if (ESPectrum::tapebufByteCount < ESPectrum::tapeFileSize) {
+                    if (tapeCurrent > 500000UL) {                        
+                        ESPectrum::tapeStart=micros();
+                        ESPectrum::tapeEarBit=1;
+                        ESPectrum::tapeBitPulseCount=0;
+                        ESPectrum::tapePulseCount=0;
+                        ESPectrum::tapePhase=1;
+                        ESPectrum::tapeBlockLen+=(ESPectrum::tapeCurrentByte | (readByteFile(ESPectrum::tapefile) <<8))+ 2;
+                        ESPectrum::tapebufByteCount+=2;
+                        ESPectrum::tapebufBitCount=0;
+                        //Serial.printf("%02X\n",ESPectrum::tapeCurrentByte);
+                        ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile);
+                        if (ESPectrum::tapeCurrentByte) {
+                            ESPectrum::tapeHdrPulses=3223; 
+                        } else {
+                            ESPectrum::tapeHdrPulses=8063;
+                        }
+                    } else {
+                        result &= 0xbf; result |= 0xa0;
+                        return result;
+                    }
+                } else {
+                    // Serial.printf("%u %u %u\n",ESPectrum::tapebufByteCount,ESPectrum::tapeBlockLen,ESPectrum::tapeFileSize);
+                    ESPectrum::tapeStatus=TAPE_IDLE;
+                    ESPectrum::tapefile.close();
+                    result &= 0xbf;        
+                    if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
+                    return result;
+                }
+                break;
+            } 
+            result |= 0xa0;
+            bitWrite(result,6,(ESPectrum::tapeEarBit << 6));
+            digitalWrite(SPEAKER_PIN, bitRead(result,6)); // Send tape load sound to speaker
+            return result;
+        }
+        
+        result &= 0xbf;        
         if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
         return result;
     }
@@ -182,7 +294,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
 
         #ifdef SPEAKER_PRESENT
-        if (ESPectrum::tapeSaving) 
+        if (ESPectrum::tapeStatus==TAPE_SAVING)
             digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker
         else
             digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
@@ -192,6 +304,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
         #endif
         base[0x20] = data; // ? 
+        //if(ESPectrum::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data; // ? 
     }
     
     if ((portLow & 0x02) == 0x00)
