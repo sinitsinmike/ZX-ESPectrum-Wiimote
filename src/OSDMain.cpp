@@ -37,6 +37,7 @@
 #include "Config.h"
 #include "FileSNA.h"
 #include "AySound.h"
+#include "Mem.h"
 
 #define MENU_REDRAW true
 #define MENU_UPDATE false
@@ -177,6 +178,8 @@ void OSD::do_OSD() {
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
         
+//        FileSNA::loadtap("/sna/jetpac.tap");
+
         ESPectrum::tapefile = FileUtils::safeOpenFileRead("/tap/teclado.tap");
         ESPectrum::tapeFileSize = ESPectrum::tapefile.size();
                 
@@ -193,6 +196,9 @@ void OSD::do_OSD() {
         ESPectrum::tapeSyncLen=619;
         ESPectrum::tapeBlockLen=(readByteFile(ESPectrum::tapefile) | (readByteFile(ESPectrum::tapefile) <<8))+ 2;
         ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile); 
+        //ESPectrum::tapebufByteCount; // Not sure                                       
+        
+        //ESPectrum::tapeBlockLen=(Mem::tapeBuffer[0] | (Mem::tapeBuffer[1] <<8))+ 2;
 
         /*
         AySound::disable();
@@ -214,22 +220,47 @@ void OSD::do_OSD() {
         */
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
-        AySound::disable();
+        
+        //AySound::disable();
+        
+        ESPectrum::tapeSyncLen-=1;
+        
+        char slenmsg[30];
+        sprintf(slenmsg,"SYNCLEN: %4.2f",ESPectrum::tapeSyncLen);        
+        OSD::osdCenteredMsg(slenmsg, LEVEL_INFO);
+        delay(10);
+        
+        /*
         // Persist Save
         byte opt2 = menuRun(MENU_PERSIST_SAVE);
         if (opt2 > 0 && opt2<6) {
             persistSave(opt2);
         }
-        AySound::enable();
+        */
+        
+        //AySound::enable();
+
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F5)) {
-        AySound::disable();
+        
+        //AySound::disable();
+
+        ESPectrum::tapeSyncLen+=1;
+        
+        char slenmsg[30];
+        sprintf(slenmsg,"SYNCLEN: %lu",ESPectrum::tapeSyncLen);        
+        OSD::osdCenteredMsg(slenmsg, LEVEL_INFO);
+        delay(10);
+
+        /*
         // Persist Load
         byte opt2 = menuRun(MENU_PERSIST_LOAD);
         if (opt2 > 0 && opt2<6) {
             persistLoad(opt2);
         }
-        AySound::enable();
+        */
+
+        //AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();

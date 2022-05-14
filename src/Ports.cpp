@@ -33,6 +33,7 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
+#include "CPU.h"
 #include "FileUtils.h"
 
 #include <Arduino.h>
@@ -187,8 +188,20 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
                     if (ESPectrum::tapePulseCount==1) {
                         ESPectrum::tapePulseCount=0;
                         ESPectrum::tapePhase++;
+
+                        /*
+                        int i=0;
+                        for (i=0; i<32; i++) {
+                         Serial.printf("%02X ",Mem::tapeBuffer[ESPectrum::tapebufByteCount+i]);
+                        }
+                        Serial.printf("\n");
+                        */
+
                         // Leer primer bit de datos de cabecera para indicar a la fase 4 longitud de pulso
                         if (ESPectrum::tapeCurrentByte >> 7) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;                        
+                        
+                        //if (Mem::tapeBuffer[ESPectrum::tapebufByteCount] >> 7) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;
+
                     }
                 }
                 break;
@@ -210,13 +223,17 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
                         
                         if ((ESPectrum::tapeCurrentByte >> (7 - ESPectrum::tapebufBitCount)) & 0x01) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;                        
                         
+                        //if ((Mem::tapeBuffer[ESPectrum::tapebufByteCount] >> (7 - ESPectrum::tapebufBitCount)) & 0x01) ESPectrum::tapeBitPulseLen=488; else ESPectrum::tapeBitPulseLen=244;                        
+                        
                         ESPectrum::tapeBitPulseCount=0;
                     }
                     
                     if (ESPectrum::tapebufByteCount > ESPectrum::tapeBlockLen) { // FIN DE BLOQUE, SALIMOS A PAUSA ENTRE BLOQUES
                         ESPectrum::tapePhase++;
                         ESPectrum::tapeStart=micros();
-                        //Serial.printf("%02X\n",ESPectrum::tapeCurrentByte);
+
+                        Serial.printf("%02X\n",ESPectrum::tapeCurrentByte);
+
                     }
 
                 }
@@ -229,22 +246,43 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
                         ESPectrum::tapeBitPulseCount=0;
                         ESPectrum::tapePulseCount=0;
                         ESPectrum::tapePhase=1;
+                        
                         ESPectrum::tapeBlockLen+=(ESPectrum::tapeCurrentByte | (readByteFile(ESPectrum::tapefile) <<8))+ 2;
+                        //ESPectrum::tapeBlockLen+=(Mem::tapeBuffer[ESPectrum::tapebufByteCount] | (Mem::tapeBuffer[(ESPectrum::tapebufByteCount)+1] <<8)) + 2;
+
+//                        int i=0;
+//                        for (i=0; i<32; i++) {
+                            Serial.printf("%02X ",ESPectrum::tapeCurrentByte);
+//                        }
+                        Serial.printf("\n");
+
                         ESPectrum::tapebufByteCount+=2;
                         ESPectrum::tapebufBitCount=0;
-                        //Serial.printf("%02X\n",ESPectrum::tapeCurrentByte);
+
                         ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile);
+                        //ESPectrum::tapebufByteCount++; // Not sure                        
                         if (ESPectrum::tapeCurrentByte) {
                             ESPectrum::tapeHdrPulses=3223; 
                         } else {
                             ESPectrum::tapeHdrPulses=8063;
                         }
+/*                        
+                        if (Mem::tapeBuffer[ESPectrum::tapebufByteCount]) {
+                            ESPectrum::tapeHdrPulses=3223; 
+                        } else {
+                            ESPectrum::tapeHdrPulses=8063;
+                        }
+  */                  
                     } else {
-                        result &= 0xbf; result |= 0xa0;
+                        result &= 0xbf; result |= 0xe0;
                         return result;
                     }
                 } else {
-                    // Serial.printf("%u %u %u\n",ESPectrum::tapebufByteCount,ESPectrum::tapeBlockLen,ESPectrum::tapeFileSize);
+                    
+                    Serial.printf("%u\n",ESPectrum::tapebufByteCount);
+                    Serial.printf("%u\n",ESPectrum::tapeBlockLen);                    
+                    Serial.printf("%u\n",ESPectrum::tapeFileSize);
+                    
                     ESPectrum::tapeStatus=TAPE_IDLE;
                     ESPectrum::tapefile.close();
                     result &= 0xbf;        
@@ -294,17 +332,17 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
 
         #ifdef SPEAKER_PRESENT
-        if (ESPectrum::tapeStatus==TAPE_SAVING)
+        if (ESPectrum::tapeStatus==TAPE_SAVING) {
             digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker
-        else
+        } else {
             digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
+        }
         #endif
 
         #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
         #endif
-        base[0x20] = data; // ? 
-        //if(ESPectrum::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data; // ? 
+        if(ESPectrum::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data; // ? 
     }
     
     if ((portLow & 0x02) == 0x00)
