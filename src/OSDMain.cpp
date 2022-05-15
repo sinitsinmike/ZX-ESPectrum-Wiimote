@@ -38,6 +38,7 @@
 #include "FileSNA.h"
 #include "AySound.h"
 #include "Mem.h"
+#include "Tape.h"
 
 #define MENU_REDRAW true
 #define MENU_UPDATE false
@@ -47,11 +48,6 @@
 #define OSD_W 248
 #define OSD_H 152
 #define OSD_MARGIN 4
-
-#define LEVEL_INFO 0
-#define LEVEL_OK 1
-#define LEVEL_WARN 2
-#define LEVEL_ERROR 3
 
 extern Font Font6x8;
 
@@ -177,90 +173,44 @@ void OSD::do_OSD() {
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
-        
-//        FileSNA::loadtap("/sna/jetpac.tap");
-
-        ESPectrum::tapefile = FileUtils::safeOpenFileRead("/tap/teclado.tap");
-        ESPectrum::tapeFileSize = ESPectrum::tapefile.size();
-                
-        ESPectrum::tapeStatus=TAPE_LOADING; // START LOAD
-        ESPectrum::tapePhase=1;
-        ESPectrum::tapeStart=micros();
-        ESPectrum::tapeEarBit=1;
-        ESPectrum::tapePulseCount=0;
-        ESPectrum::tapeBitPulseLen=244;
-        ESPectrum::tapeBitPulseCount=0;
-        ESPectrum::tapebufBitCount=0;         
-        ESPectrum::tapebufByteCount=3;
-        ESPectrum::tapeHdrPulses=8063;
-        ESPectrum::tapeSyncLen=619;
-        ESPectrum::tapeBlockLen=(readByteFile(ESPectrum::tapefile) | (readByteFile(ESPectrum::tapefile) <<8))+ 2;
-        ESPectrum::tapeCurrentByte=readByteFile(ESPectrum::tapefile); 
-        //ESPectrum::tapebufByteCount; // Not sure                                       
-        
-        //ESPectrum::tapeBlockLen=(Mem::tapeBuffer[0] | (Mem::tapeBuffer[1] <<8))+ 2;
-
-        /*
         AySound::disable();
         quickSave();
         AySound::enable();
-        */
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
-
-        if (ESPectrum::tapeStatus==TAPE_LOADING) {
-            ESPectrum::tapeStatus=TAPE_IDLE; // STOP LOAD
-            ESPectrum::tapefile.close();            
-        }
-
-        /*
         AySound::disable();
         quickLoad();
         AySound::enable();
-        */
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
-        
-        //AySound::disable();
-        
-        ESPectrum::tapeSyncLen-=1;
-        
-        char slenmsg[30];
-        sprintf(slenmsg,"SYNCLEN: %4.2f",ESPectrum::tapeSyncLen);        
-        OSD::osdCenteredMsg(slenmsg, LEVEL_INFO);
-        delay(10);
-        
-        /*
+        AySound::disable();
         // Persist Save
         byte opt2 = menuRun(MENU_PERSIST_SAVE);
         if (opt2 > 0 && opt2<6) {
             persistSave(opt2);
         }
-        */
-        
-        //AySound::enable();
-
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F5)) {
-        
-        //AySound::disable();
-
-        ESPectrum::tapeSyncLen+=1;
-        
-        char slenmsg[30];
-        sprintf(slenmsg,"SYNCLEN: %lu",ESPectrum::tapeSyncLen);        
-        OSD::osdCenteredMsg(slenmsg, LEVEL_INFO);
-        delay(10);
-
-        /*
+        AySound::disable();
         // Persist Load
         byte opt2 = menuRun(MENU_PERSIST_LOAD);
         if (opt2 > 0 && opt2<6) {
             persistLoad(opt2);
         }
-        */
-
-        //AySound::enable();
+        AySound::enable();
+    }
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F6)) {
+        if (Tape::TAP_Play()==false) {
+            OSD::osdCenteredMsg("Please select TAP file first", LEVEL_WARN);
+            delay(1000);
+        }
+    }
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F7)) {
+        if (Tape::tapeStatus==TAPE_LOADING) {
+            Tape::tapeStatus=TAPE_IDLE; // STOP LOAD
+            Tape::tapefile.close();            
+        }
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
@@ -273,8 +223,14 @@ void OSD::do_OSD() {
             if (snanum > 0) {
                 changeSnapshot(rowGet(Config::sna_file_list, snanum));
             }
+        } else if (opt == 2) {
+            // Change TAP
+            unsigned short tapnum = menuRun(Config::tap_name_list);
+            if (tapnum > 0) {
+                Tape::tapeFileName="/tap/" + rowGet(Config::tap_file_list, tapnum);
+            }
         }
-        else if (opt == 2) {
+        else if (opt == 3) {
             // Change ROM
             String arch_menu = getArchMenu();
             byte arch_num = menuRun(arch_menu);
@@ -293,27 +249,27 @@ void OSD::do_OSD() {
                 }
             }
         }
-        else if (opt == 3) {
+        else if (opt == 4) {
             quickSave();
         }
-        else if (opt == 4) {
+        else if (opt == 5) {
             quickLoad();
         }
-        else if (opt == 5) {
+        else if (opt == 6) {
             // Persist Save
             byte opt2 = menuRun(MENU_PERSIST_SAVE);
             if (opt2 > 0 && opt2<6) {
                 persistSave(opt2);
             }
         }
-        else if (opt == 6) {
+        else if (opt == 7) {
             // Persist Load
             byte opt2 = menuRun(MENU_PERSIST_LOAD);
             if (opt2 > 0 && opt2<6) {
                 persistLoad(opt2);
             }
         }
-        else if (opt == 7) {
+        else if (opt == 8) {
             // aspect ratio
             byte opt2;
             if (Config::aspect_16_9)
@@ -327,7 +283,7 @@ void OSD::do_OSD() {
                 ESP.restart();
             }
         }
-        else if (opt == 8) {
+        else if (opt == 9) {
             // Reset
             byte opt2 = menuRun(MENU_RESET);
             if (opt2 == 1) {
@@ -348,7 +304,7 @@ void OSD::do_OSD() {
                 ESP.restart();
             }
         }
-        else if (opt == 9) {
+        else if (opt == 10) {
             // Help
             drawOSD();
             osdAt(2, 0);
@@ -494,4 +450,3 @@ void OSD::changeSnapshot(String filename)
 
     if (Config::getArch() == "48K") AySound::reset();
 }
-

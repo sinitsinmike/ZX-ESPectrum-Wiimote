@@ -57,6 +57,14 @@ public:
     // load lists of snapshots
     static void loadSnapshotLists();
 
+    // list of TAP file names
+    static String   tap_file_list;
+    // list of TAP display names
+    static String   tap_name_list;
+
+    // load lists of TAP files
+    static void loadTapLists();
+
 private:
     static String   arch;
     static String   romSet;

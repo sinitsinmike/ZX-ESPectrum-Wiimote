@@ -38,6 +38,7 @@
 #include "PS2Kbd.h"
 #include "CPU.h"
 #include "Config.h"
+#include "Tape.h"
 
 #pragma GCC optimize ("O3")
 
@@ -175,10 +176,10 @@ void CPU::loop()
         case 0x053f:
             break; */
         case 0x04d0: 
-            ESPectrum::tapeStatus=TAPE_SAVING; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
+            Tape::tapeStatus=TAPE_SAVING; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
             break;
         case 0x053e:
-            ESPectrum::tapeStatus=TAPE_IDLE; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
+            Tape::tapeStatus=TAPE_IDLE; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
             break;
         }
        

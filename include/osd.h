@@ -38,6 +38,11 @@
 #define OSD_FONT_W 6
 #define OSD_FONT_H 8
 
+#define LEVEL_INFO 0
+#define LEVEL_OK 1
+#define LEVEL_WARN 2
+#define LEVEL_ERROR 3
+
 // OSD Interface
 class OSD
 {

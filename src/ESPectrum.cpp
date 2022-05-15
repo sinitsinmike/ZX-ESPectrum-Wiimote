@@ -51,30 +51,13 @@
 #include "Ports.h"
 #include "Mem.h"
 #include "AySound.h"
+#include "Tape.h"
 
 // works, but not needed for now
 #pragma GCC optimize ("O3")
 
 // EXTERN METHODS
 void setup_cpuspeed();
-
-// Tape
-bool ESPectrum::tapeAlive=true;
-byte ESPectrum::tapeStatus = 0;
-byte ESPectrum::tapePhase = 1;
-unsigned long ESPectrum::tapeSyncLen = 620;
-unsigned long ESPectrum::tapeStart = 0;
-byte ESPectrum::tapeEarBit = 0;
-uint32_t ESPectrum::tapePulseCount = 0;
-uint16_t ESPectrum::tapeBitPulseLen = 244;
-uint8_t ESPectrum::tapeBitPulseCount=0;     
-uint8_t ESPectrum::tapebufBitCount=0;         
-uint32_t ESPectrum::tapebufByteCount=0;
-uint16_t ESPectrum::tapeHdrPulses=8063; // 8063 for header, 3223 for data
-uint16_t ESPectrum::tapeBlockLen=0;
-size_t ESPectrum::tapeFileSize=0;
-File ESPectrum::tapefile;
-uint8_t ESPectrum::tapeCurrentByte=0; 
 
 // ESPectrum graphics variables
 byte ESPectrum::borderColor = 7;
@@ -157,6 +140,7 @@ void ESPectrum::setup()
     FileUtils::initFileSystem();
     Config::load();
     Config::loadSnapshotLists();
+    Config::loadTapLists();
 
     Serial.printf("Free heap after filesystem: %d\n", ESP.getFreeHeap());
 
@@ -290,7 +274,7 @@ void ESPectrum::reset()
         Ports::wii[i] == 0x1F;
     }
     ESPectrum::borderColor = 7;
-    ESPectrum::tapeStatus = 0;    
+    Tape::tapeStatus = TAPE_IDLE;    
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;

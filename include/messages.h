@@ -83,9 +83,11 @@
 #define OSD_PSNA_SAVED "Persist Snapshot Saved"
 
 #define MENU_SNA_TITLE "Select Snapshot"
+#define MENU_TAP_TITLE "Select TAP file"
 #define MENU_MAIN \
     "Main Menu\n"\
     "Load Snapshot to RAM\n"\
+    "Select TAP file\n"\
     "Select ROM\n"\
     "Quick Save (F2)\n"\
     "Quick Load (F3)\n"\

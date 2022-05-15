@@ -26,46 +26,19 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-
-#ifndef ESPectrum_h
-#define ESPectrum_h
-
-#include "hardpins.h"
 #include <FS.h>
 
-// Declared vars
-#ifdef COLOR_3B
-#include "ESP32Lib/VGA/VGA3Bit.h"
-#include "ESP32Lib/VGA/VGA3BitI.h"
-#define VGA VGA3Bit
-#endif
-
-#ifdef COLOR_6B
-#include "ESP32Lib/VGA/VGA6Bit.h"
-#include "ESP32Lib/VGA/VGA6BitI.h"
-#define VGA VGA6Bit
-#endif
-
-#ifdef COLOR_14B
-#include "ESP32Lib/VGA/VGA14Bit.h"
-#include "ESP32Lib/VGA/VGA14BitI.h"
-#define VGA VGA14Bit
-#endif
+#ifndef Tape_h
+#define Tape_h
 
 // Tape status definitions
 #define TAPE_IDLE 0
 #define TAPE_LOADING 1
 #define TAPE_SAVING 2
 
-class ESPectrum
+class Tape
 {
 public:
-    // arduino setup/loop
-    static void setup();
-    static void loop();
-
-    // reset machine
-    static void reset();
 
     // Tape
     static String tapeFileName;
@@ -86,17 +59,7 @@ public:
     static File tapefile;
     static uint8_t tapeCurrentByte; 
 
-    // graphics
-    static VGA vga;
-    static uint8_t borderColor;
-    static uint16_t zxColor(uint8_t color, uint8_t bright);
-    static void waitForVideoTask();
-
-    static void processKeyboard();
-
-private:
-    static void precalcColors();
-    static void videoTask(void* unused);
+    static uint8_t TAP_Play();
     
 };
 
