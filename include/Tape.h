@@ -32,6 +32,7 @@ public:
     static uint8_t tapeCurrentByte; 
 
     static uint8_t TAP_Play();
+    static uint8_t TAP_Read();
     
 };
 

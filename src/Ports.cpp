@@ -33,8 +33,6 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
-#include "CPU.h"
-#include "FileUtils.h"
 #include "Tape.h"
 
 #include <Arduino.h>
@@ -112,7 +110,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
     if ((portLow & 0x01) == 0x00) // (portLow == 0xFE) 
     {
         // all result bits initially set to 1, may be set to 0 eventually
-        uint8_t result = 0xFF;
+        uint8_t result = 0xbF;
 
         #ifdef EAR_PRESENT
         // EAR_PIN
@@ -152,155 +150,13 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         #endif // ZX_KEYB_PRESENT
 
         if (Tape::tapeStatus==TAPE_LOADING) {
-            
-            unsigned long tapeCurrent = micros() - Tape::tapeStart;
-
-            switch (Tape::tapePhase) {
-            case 1:
-                // 619 -> microseconds for 2168 tStates (48K)
-                if (tapeCurrent > Tape::tapeSyncLen) {
-                    Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-                    Tape::tapePulseCount++;
-                    if (Tape::tapePulseCount>Tape::tapeHdrPulses) {
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase++;
-                    }
-                }
-                break;
-            case 2: // SYNC 1
-                // 190 -> microseconds for 667 tStates (48K)
-                if (tapeCurrent > 190) {
-                    Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-                    Tape::tapePulseCount++;
-                    if (Tape::tapePulseCount==1) {
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase++;
-                    }
-                }
-                break;
-            case 3: // SYNC 2
-                // 210 -> microseconds for 735 tStates (48K)
-                if (tapeCurrent > 210) {
-                    Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-                    Tape::tapePulseCount++;
-                    if (Tape::tapePulseCount==1) {
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase++;
-
-                        /*
-                        int i=0;
-                        for (i=0; i<32; i++) {
-                         Serial.printf("%02X ",Mem::tapeBuffer[Tape::tapebufByteCount+i]);
-                        }
-                        Serial.printf("\n");
-                        */
-
-                        // Leer primer bit de datos de cabecera para indicar a la fase 4 longitud de pulso
-                        if (Tape::tapeCurrentByte >> 7) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;                        
-                        
-                        //if (Mem::tapeBuffer[Tape::tapebufByteCount] >> 7) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;
-
-                    }
-                }
-                break;
-            case 4:
-
-                if (tapeCurrent > Tape::tapeBitPulseLen) {
-
-                    Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-
-                    Tape::tapeBitPulseCount++;
-                    if (Tape::tapeBitPulseCount==2) {
-                        Tape::tapebufBitCount++;
-                        if (Tape::tapebufBitCount==8) {
-                            Tape::tapebufBitCount=0;
-                            Tape::tapebufByteCount++;
-                            Tape::tapeCurrentByte=readByteFile(Tape::tapefile);
-                        }
-                        
-                        if ((Tape::tapeCurrentByte >> (7 - Tape::tapebufBitCount)) & 0x01) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;                        
-                        
-                        //if ((Mem::tapeBuffer[Tape::tapebufByteCount] >> (7 - Tape::tapebufBitCount)) & 0x01) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;                        
-                        
-                        Tape::tapeBitPulseCount=0;
-                    }
-                    
-                    if (Tape::tapebufByteCount > Tape::tapeBlockLen) { // FIN DE BLOQUE, SALIMOS A PAUSA ENTRE BLOQUES
-                        Tape::tapePhase++;
-                        Tape::tapeStart=micros();
-
-                        Serial.printf("%02X\n",Tape::tapeCurrentByte);
-
-                    }
-
-                }
-                break;
-            case 5:
-                if (Tape::tapebufByteCount < Tape::tapeFileSize) {
-                    if (tapeCurrent > 500000UL) {                        
-                        Tape::tapeStart=micros();
-                        Tape::tapeEarBit=1;
-                        Tape::tapeBitPulseCount=0;
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase=1;
-                        
-                        Tape::tapeBlockLen+=(Tape::tapeCurrentByte | (readByteFile(Tape::tapefile) <<8))+ 2;
-                        //Tape::tapeBlockLen+=(Mem::tapeBuffer[Tape::tapebufByteCount] | (Mem::tapeBuffer[(Tape::tapebufByteCount)+1] <<8)) + 2;
-
-//                        int i=0;
-//                        for (i=0; i<32; i++) {
-                            Serial.printf("%02X ",Tape::tapeCurrentByte);
-//                        }
-                        Serial.printf("\n");
-
-                        Tape::tapebufByteCount+=2;
-                        Tape::tapebufBitCount=0;
-
-                        Tape::tapeCurrentByte=readByteFile(Tape::tapefile);
-                        //Tape::tapebufByteCount++; // Not sure                        
-                        if (Tape::tapeCurrentByte) {
-                            Tape::tapeHdrPulses=3223; 
-                        } else {
-                            Tape::tapeHdrPulses=8063;
-                        }
-/*                        
-                        if (Mem::tapeBuffer[Tape::tapebufByteCount]) {
-                            Tape::tapeHdrPulses=3223; 
-                        } else {
-                            Tape::tapeHdrPulses=8063;
-                        }
-  */                  
-                    } else {
-                        result &= 0xbf; result |= 0xe0;
-                        return result;
-                    }
-                } else {
-                    
-                    Serial.printf("%u\n",Tape::tapebufByteCount);
-                    Serial.printf("%u\n",Tape::tapeBlockLen);                    
-                    Serial.printf("%u\n",Tape::tapeFileSize);
-                    
-                    Tape::tapeStatus=TAPE_IDLE;
-                    Tape::tapefile.close();
-                    result &= 0xbf;        
-                    if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
-                    return result;
-                }
-                break;
-            } 
-            result |= 0xa0;
-            bitWrite(result,6,(Tape::tapeEarBit << 6));
-            digitalWrite(SPEAKER_PIN, bitRead(result,6)); // Send tape load sound to speaker
-            return result;
+            result|=Tape::TAP_Read();
+        } else {
+            if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
         }
-        
-        result &= 0xbf;        
-        if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
+
         return result;
+
     }
 
     // Kempston
