@@ -274,7 +274,6 @@ void ESPectrum::reset()
         Ports::wii[i] == 0x1F;
     }
     ESPectrum::borderColor = 7;
-    Tape::tapeStatus = TAPE_IDLE;    
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
@@ -282,6 +281,8 @@ void ESPectrum::reset()
     Mem::modeSP3 = 0;
     Mem::romSP3 = 0;
     Mem::romInUse = 0;
+
+    Tape::tapeStatus = TAPE_IDLE;
 
     CPU::reset();
 }
