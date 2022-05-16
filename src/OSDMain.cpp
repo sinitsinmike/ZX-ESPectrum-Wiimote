@@ -229,6 +229,7 @@ void OSD::do_OSD() {
             if (tapnum > 0) {
                 Tape::tapeFileName="/tap/" + rowGet(Config::tap_file_list, tapnum);
             }
+            menuRun(MENU_TAP_SELECTED);
         }
         else if (opt == 3) {
             // Change ROM

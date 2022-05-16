@@ -84,6 +84,11 @@
 
 #define MENU_SNA_TITLE "Select Snapshot"
 #define MENU_TAP_TITLE "Select TAP file"
+#define MENU_TAP_SELECTED\
+    "[ENTER to close this]\n"\
+    "From BASIC, type LOAD \"\"\n"\
+    "then press F6 to start tape\n"\
+    "or F7 to stop.\n"
 #define MENU_MAIN \
     "Main Menu\n"\
     "Load Snapshot to RAM\n"\

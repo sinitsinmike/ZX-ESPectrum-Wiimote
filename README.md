@@ -1,8 +1,6 @@
 # ZX-ESPectrum-Wiimote
 
-**LATEST UPDATE: Realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
-
-**LATEST UPDATES: 128K sound, .Z80 format (48/128), micro SD card, 4:3 aspect ratio selectable from menu.**
+**LATEST UPDATE: Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
 
 An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
@@ -181,7 +179,7 @@ I have write a detailed story, with photos, of the development process of this e
 - [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
 - Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (but it's a great library).
 - [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip, and for discussing details about this development.
-- [EremusOne](https://github.com/EremusOne) for adding multiple snapshot slots and other fixes.
+- [EremusOne](https://github.com/EremusOne) for adding multiple snapshot slots, .TAP support, and other fixes.
 
 ## And all the involved people from the golden age
 
