@@ -29,7 +29,6 @@ uint8_t Tape::TAP_Play()
 
         if (Tape::tapeFileName== "none") return false;
 
-        //Tape::tapefile = FileUtils::safeOpenFileRead("/tap/teclado.tap"); 
         Tape::tapefile = FileUtils::safeOpenFileRead(Tape::tapeFileName);
         Tape::tapeFileSize = Tape::tapefile.size();
         Tape::tapePhase=1;
@@ -130,7 +129,8 @@ uint8_t Tape::TAP_Read()
                 break;
             case 5:
                 if (Tape::tapebufByteCount < Tape::tapeFileSize) {
-                    if (tapeCurrent > 500000UL) {                        
+                    
+                    if (tapeCurrent > 500000UL) { // 1/2 sec. of pause between blocks                       
                         Tape::tapeStart=micros();
                         Tape::tapeEarBit=1;
                         Tape::tapeBitPulseCount=0;
@@ -153,12 +153,8 @@ uint8_t Tape::TAP_Read()
                             Tape::tapeHdrPulses=8063;
                         }
 
-                    } else {
+                    } else return tape_result;
 
-                        //tape_result = 0x40; ? NO SE PORQUE LO PONGO A 1
-                        return tape_result;
-
-                    }
                 } else {
                     
                     //Serial.printf("%u\n",Tape::tapebufByteCount);
