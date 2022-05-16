@@ -19,3 +19,5 @@ data/sna/**
 !data/sna/Snake.txt
 !data/sna/Tetris.sna
 !data/sna/Tetris.txt
+data/tap/**
+!data/tap/teclado.tap
