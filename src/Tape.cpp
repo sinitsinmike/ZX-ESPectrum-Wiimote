@@ -7,18 +7,16 @@
 
 // Tape
 String Tape::tapeFileName = "none";
-bool Tape::tapeAlive=true;
 byte Tape::tapeStatus = 0;
 byte Tape::tapePhase = 1;
-unsigned long Tape::tapeSyncLen = 620;
 unsigned long Tape::tapeStart = 0;
 byte Tape::tapeEarBit = 0;
 uint32_t Tape::tapePulseCount = 0;
-uint16_t Tape::tapeBitPulseLen = 244;
+uint16_t Tape::tapeBitPulseLen = TAPE_BIT0_PULSELEN;
 uint8_t Tape::tapeBitPulseCount=0;     
 uint8_t Tape::tapebufBitCount=0;         
 uint32_t Tape::tapebufByteCount=0;
-uint16_t Tape::tapeHdrPulses=8063; // 8063 for header, 3223 for data
+uint16_t Tape::tapeHdrPulses=TAPE_HDR_LONG; 
 uint16_t Tape::tapeBlockLen=0;
 size_t Tape::tapeFileSize=0;
 File Tape::tapefile;
@@ -34,14 +32,14 @@ uint8_t Tape::TAP_Play()
         Tape::tapePhase=1;
         Tape::tapeEarBit=1;
         Tape::tapePulseCount=0;
-        Tape::tapeBitPulseLen=244;
+        Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;
         Tape::tapeBitPulseCount=0;
-        Tape::tapebufBitCount=0;         
-        Tape::tapebufByteCount=3;
-        Tape::tapeHdrPulses=8063;
-        Tape::tapeSyncLen=619;
+        Tape::tapeHdrPulses=TAPE_HDR_LONG;
         Tape::tapeBlockLen=(readByteFile(Tape::tapefile) | (readByteFile(Tape::tapefile) <<8))+ 2;
         Tape::tapeCurrentByte=readByteFile(Tape::tapefile); 
+        Tape::tapebufByteCount=3;        
+        Tape::tapebufBitCount=0;         
+
         Tape::tapeStart=micros();
         Tape::tapeStatus=TAPE_LOADING; // START LOAD
  
@@ -50,17 +48,14 @@ uint8_t Tape::TAP_Play()
 
 uint8_t Tape::TAP_Read()
 {
-
-            unsigned long tapeCurrent = micros() - Tape::tapeStart;
-
             uint8_t tape_result=0x00;
-
+            unsigned long tapeCurrent = micros() - Tape::tapeStart;
+            
             switch (Tape::tapePhase) {
-            case 1:
-                // 619 -> microseconds for 2168 tStates (48K)
-                if (tapeCurrent > Tape::tapeSyncLen) {
+            case 1: // SYNC
+                if (tapeCurrent > TAPE_SYNC_LEN) {
                     Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
+                    Tape:: tapeEarBit ^= 1UL;
                     Tape::tapePulseCount++;
                     if (Tape::tapePulseCount>Tape::tapeHdrPulses) {
                         Tape::tapePulseCount=0;
@@ -69,40 +64,25 @@ uint8_t Tape::TAP_Read()
                 }
                 break;
             case 2: // SYNC 1
-                // 190 -> microseconds for 667 tStates (48K)
-                if (tapeCurrent > 190) {
+                if (tapeCurrent > TAPE_SYNC1_LEN) {
                     Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-                    Tape::tapePulseCount++;
-                    if (Tape::tapePulseCount==1) {
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase++;
-                    }
+                    Tape:: tapeEarBit ^= 1UL;
+                    Tape::tapePhase++;
                 }
                 break;
             case 3: // SYNC 2
-                // 210 -> microseconds for 735 tStates (48K)
-                if (tapeCurrent > 210) {
+                if (tapeCurrent > TAPE_SYNC2_LEN) {
                     Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-                    Tape::tapePulseCount++;
-                    if (Tape::tapePulseCount==1) {
-                        Tape::tapePulseCount=0;
-                        Tape::tapePhase++;
-
-                        // Leer primer bit de datos de cabecera para indicar a la fase 4 longitud de pulso
-                        if (Tape::tapeCurrentByte >> 7) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;                        
-
-                    }
+                    Tape:: tapeEarBit ^= 1UL;
+                    // Read 1st data bit of header for selecting pulse len
+                    if (Tape::tapeCurrentByte >> 7) Tape::tapeBitPulseLen=TAPE_BIT1_PULSELEN; else Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;                        
+                    Tape::tapePhase++;
                 }
                 break;
-            case 4:
-
+            case 4: // DATA
                 if (tapeCurrent > Tape::tapeBitPulseLen) {
-
                     Tape::tapeStart=micros();
-                    if (Tape::tapeEarBit) Tape::tapeEarBit=0; else Tape::tapeEarBit=1;
-
+                    Tape:: tapeEarBit ^= 1UL;
                     Tape::tapeBitPulseCount++;
                     if (Tape::tapeBitPulseCount==2) {
                         Tape::tapebufBitCount++;
@@ -111,68 +91,41 @@ uint8_t Tape::TAP_Read()
                             Tape::tapebufByteCount++;
                             Tape::tapeCurrentByte=readByteFile(Tape::tapefile);
                         }
-                        
-                        if ((Tape::tapeCurrentByte >> (7 - Tape::tapebufBitCount)) & 0x01) Tape::tapeBitPulseLen=488; else Tape::tapeBitPulseLen=244;                        
-                        
+                        if ((Tape::tapeCurrentByte >> (7 - Tape::tapebufBitCount)) & 0x01) Tape::tapeBitPulseLen=TAPE_BIT1_PULSELEN; else Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;                        
                         Tape::tapeBitPulseCount=0;
                     }
-                    
-                    if (Tape::tapebufByteCount > Tape::tapeBlockLen) { // FIN DE BLOQUE, SALIMOS A PAUSA ENTRE BLOQUES
+                    if (Tape::tapebufByteCount > Tape::tapeBlockLen) {
                         Tape::tapePhase++;
                         Tape::tapeStart=micros();
-
-                        //Serial.printf("%02X\n",Tape::tapeCurrentByte);
-
                     }
-
                 }
                 break;
-            case 5:
+            case 5: // PAUSE
                 if (Tape::tapebufByteCount < Tape::tapeFileSize) {
-                    
-                    if (tapeCurrent > 500000UL) { // 1/2 sec. of pause between blocks                       
+                    if (tapeCurrent > TAPE_BLK_PAUSELEN) {
                         Tape::tapeStart=micros();
                         Tape::tapeEarBit=1;
                         Tape::tapeBitPulseCount=0;
                         Tape::tapePulseCount=0;
                         Tape::tapePhase=1;
-                        
                         Tape::tapeBlockLen+=(Tape::tapeCurrentByte | (readByteFile(Tape::tapefile) <<8))+ 2;
-
-                        //Serial.printf("%02X ",Tape::tapeCurrentByte);
-                        //Serial.printf("\n");
-
+                        Tape::tapeCurrentByte=readByteFile(Tape::tapefile);
                         Tape::tapebufByteCount+=2;
                         Tape::tapebufBitCount=0;
-
-                        Tape::tapeCurrentByte=readByteFile(Tape::tapefile);
-
                         if (Tape::tapeCurrentByte) {
-                            Tape::tapeHdrPulses=3223; 
+                            Tape::tapeHdrPulses=TAPE_HDR_SHORT; 
                         } else {
-                            Tape::tapeHdrPulses=8063;
+                            Tape::tapeHdrPulses=TAPE_HDR_LONG;
                         }
-
                     } else return tape_result;
-
                 } else {
-                    
-                    //Serial.printf("%u\n",Tape::tapebufByteCount);
-                    //Serial.printf("%u\n",Tape::tapeBlockLen);                    
-                    //Serial.printf("%u\n",Tape::tapeFileSize);
-                    
                     Tape::tapeStatus=TAPE_IDLE;
                     Tape::tapefile.close();
-
                     return tape_result;
-
                 }
                 break;
             } 
-
-            bitWrite(tape_result,6,(Tape::tapeEarBit << 6));
-            digitalWrite(SPEAKER_PIN, bitRead(tape_result,6)); // Send tape load sound to speaker
-            
+            bitWrite(tape_result,6,Tape::tapeEarBit);
+            digitalWrite(SPEAKER_PIN, Tape::tapeEarBit); // Send tape load sound to speaker
             return tape_result;
-
 }
