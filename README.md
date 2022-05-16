@@ -1,5 +1,7 @@
 # ZX-ESPectrum-Wiimote
 
+**LATEST UPDATE: Realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
+
 **LATEST UPDATES: 128K sound, .Z80 format (48/128), micro SD card, 4:3 aspect ratio selectable from menu.**
 
 An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
