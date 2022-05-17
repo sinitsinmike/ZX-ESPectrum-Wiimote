@@ -2,20 +2,13 @@
 
 **LATEST UPDATE: Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
 
-An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
+An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
 
-Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
+There are per-game customizable (through simple text files) correspondences from Wiimote keys to Spectrum keys.
 
-Please watch the [project video on YouTube](https://youtu.be/GXHBrQVTfBw) (spanish audio, english subtitles).
+Please watch the [project video on YouTube](https://youtu.be/ROthljwC5OA) (spanish audio, english subtitles).
 
-Quick start from PlatformIO:
-- Clone this repo and Open from VSCode/PlatFormIO
-- Copy your SNA files to /data/sna
-- Execute task: Upload File System Image
-- Execute task: Upload
-- Enjoy
-
-If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
+If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
@@ -78,9 +71,9 @@ All files under the `/data` subdirectory will be copied to the SPIFFS filesystem
 
 NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo3d/zx-spectrum-snake) and [Tetris](https://github.com/dcrespo3d/zx-spectrum-tetris). NOTE: the games have NO sound.
 
-NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo3d/zx-spectrum-snake) and [Tetris](https://github.com/dcrespo3d/zx-spectrum-tetris). NOTE: the games have NO sound.
-
 #### Using a external micro SD Card and copying games into it
+
+**(NOTE: this feature has been tested only on a Lilygo TTGo VGA32 board, which has build-in uSD card slot. Pins from hardware.h are from that board, if using a regular ESP32 you must connect the SD card CS, CLK, MISO and MOSI signals to the ESP32 and update pins in hardware.h accordingly)**
 
 If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself, so boot.cfg is on the root folder).
 

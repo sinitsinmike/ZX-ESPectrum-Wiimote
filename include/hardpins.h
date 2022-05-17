@@ -32,7 +32,6 @@
 
 #include "hardconfig.h"
 
-// adjusted for Lilygo TTGO
 #ifdef SPEAKER_PRESENT
 // NOTE: PIN 25 is hardwired in FabGL audio (used for AY3891x emulation)
 #define SPEAKER_PIN 25
@@ -79,9 +78,9 @@
 
 // 3 bit pins
 #ifdef COLOR_3B
-#define RED_PIN_3B 22
-#define GRE_PIN_3B 19
-#define BLU_PIN_3B 5
+#define RED_PIN_3B 13
+#define GRE_PIN_3B 12
+#define BLU_PIN_3B 14
 #endif // COLOR_3B
 
 // 6 bit pins
@@ -100,8 +99,8 @@
 #endif // COLOR_14B
 
 // VGA sync pins
-#define HSYNC_PIN 23
-#define VSYNC_PIN 15
+#define HSYNC_PIN 32
+#define VSYNC_PIN 33
 
 /////////////////////////////////////////////////
 // Colors for 3 bit mode
