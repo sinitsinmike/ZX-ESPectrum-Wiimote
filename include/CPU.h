@@ -53,6 +53,9 @@ public:
     // CPU Tstates elapsed in current frame
     static uint32_t tstates;
 
+    // CPU Tstates elapsed since reset
+    static uint64_t global_tstates;
+
     // Delay Contention: for emulating CPU slowing due to sharing bus with ULA
     // NOTE: Only 48K spectrum contention implemented. This function must be called
     // only when dealing with affected memory (use ADDRESS_IN_LOW_RAM macro)
