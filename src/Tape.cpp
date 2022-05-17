@@ -3,13 +3,14 @@
 #include <FS.h>
 #include "FileUtils.h"
 #include "hardpins.h"
+#include "CPU.h"
 #include "Tape.h"
 
 // Tape
 String Tape::tapeFileName = "none";
 byte Tape::tapeStatus = 0;
 byte Tape::tapePhase = 1;
-unsigned long Tape::tapeStart = 0;
+uint64_t Tape::tapeStart = 0;
 byte Tape::tapeEarBit = 0;
 uint32_t Tape::tapePulseCount = 0;
 uint16_t Tape::tapeBitPulseLen = TAPE_BIT0_PULSELEN;
@@ -39,7 +40,7 @@ uint8_t Tape::TAP_Play()
     Tape::tapebufByteCount=3;        
     Tape::tapebufBitCount=0;         
 
-    Tape::tapeStart=micros();
+    Tape::tapeStart=CPU::global_tstates;
     Tape::tapeStatus=TAPE_LOADING; // START LOAD
 
     return true;
@@ -47,13 +48,13 @@ uint8_t Tape::TAP_Play()
 
 uint8_t Tape::TAP_Read()
 {
-        uint8_t tape_result=0x00;
-    unsigned long tapeCurrent = micros() - Tape::tapeStart;
+    uint8_t tape_result=0x00;
+    uint64_t tapeCurrent = CPU::global_tstates - Tape::tapeStart;
     
     switch (Tape::tapePhase) {
     case 1: // SYNC
         if (tapeCurrent > TAPE_SYNC_LEN) {
-            Tape::tapeStart=micros();
+            Tape::tapeStart=CPU::global_tstates;
             Tape:: tapeEarBit ^= 1UL;
             Tape::tapePulseCount++;
             if (Tape::tapePulseCount>Tape::tapeHdrPulses) {
@@ -64,14 +65,14 @@ uint8_t Tape::TAP_Read()
         break;
     case 2: // SYNC 1
         if (tapeCurrent > TAPE_SYNC1_LEN) {
-            Tape::tapeStart=micros();
+            Tape::tapeStart=CPU::global_tstates;
             Tape:: tapeEarBit ^= 1UL;
             Tape::tapePhase++;
         }
         break;
     case 3: // SYNC 2
         if (tapeCurrent > TAPE_SYNC2_LEN) {
-            Tape::tapeStart=micros();
+            Tape::tapeStart=CPU::global_tstates;
             Tape:: tapeEarBit ^= 1UL;
             // Read 1st data bit of header for selecting pulse len
             if (Tape::tapeCurrentByte >> 7) Tape::tapeBitPulseLen=TAPE_BIT1_PULSELEN; else Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;                        
@@ -80,7 +81,7 @@ uint8_t Tape::TAP_Read()
         break;
     case 4: // DATA
         if (tapeCurrent > Tape::tapeBitPulseLen) {
-            Tape::tapeStart=micros();
+            Tape::tapeStart=CPU::global_tstates;
             Tape:: tapeEarBit ^= 1UL;
             Tape::tapeBitPulseCount++;
             if (Tape::tapeBitPulseCount==2) {
@@ -95,14 +96,14 @@ uint8_t Tape::TAP_Read()
             }
             if (Tape::tapebufByteCount > Tape::tapeBlockLen) {
                 Tape::tapePhase++;
-                Tape::tapeStart=micros();
+                Tape::tapeStart=CPU::global_tstates;
             }
         }
         break;
     case 5: // PAUSE
         if (Tape::tapebufByteCount < Tape::tapeFileSize) {
             if (tapeCurrent > TAPE_BLK_PAUSELEN) {
-                Tape::tapeStart=micros();
+                Tape::tapeStart=CPU::global_tstates;
                 Tape::tapeEarBit=1;
                 Tape::tapeBitPulseCount=0;
                 Tape::tapePulseCount=0;
