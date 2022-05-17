@@ -277,7 +277,9 @@ void ESPectrum::reset()
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
-    Mem::pagingLock = 1;
+
+    if (Config::getArch() == "48K") Mem::pagingLock = 1; else Mem::pagingLock = 0;  
+    
     Mem::modeSP3 = 0;
     Mem::romSP3 = 0;
     Mem::romInUse = 0;
