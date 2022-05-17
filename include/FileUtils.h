@@ -49,11 +49,7 @@ public:
     static File IRAM_ATTR safeOpenFileRead(String filename);
     static String         getFileEntriesFromDir(String path);
     static uint16_t       countFileEntriesFromDir(String path);
-    static String         getSortedSnaFileList();
-    static String         getSnaFileList();
-    static String         getSortedTapFileList();
-    static String         getTapFileList();
-
+    static String         getSortedFileList(String fileDir);
 
     static bool           hasSNAextension(String filename);
     static bool           hasZ80extension(String filename);
@@ -72,7 +68,6 @@ private:
 #define SNA_48K_SIZE 49179
 #define SNA_128K_SIZE1 131103
 #define SNA_128K_SIZE2 147487
-
 
 // inline utility functions for uniform access to file/memory
 // and making it easy to to implement SNA/Z80 functions

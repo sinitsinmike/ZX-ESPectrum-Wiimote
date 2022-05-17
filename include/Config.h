@@ -53,7 +53,6 @@ public:
     static String   sna_file_list;
     // list of snapshot display names
     static String   sna_name_list;
-
     // load lists of snapshots
     static void loadSnapshotLists();
 
@@ -61,7 +60,6 @@ public:
     static String   tap_file_list;
     // list of TAP display names
     static String   tap_name_list;
-
     // load lists of TAP files
     static void loadTapLists();
 

@@ -201,14 +201,16 @@ void OSD::do_OSD() {
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F6)) {
+        // Start .tap reproduction
         if (Tape::TAP_Play()==false) {
             OSD::osdCenteredMsg("Please select TAP file first", LEVEL_WARN);
             delay(1000);
         }
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F7)) {
+        // Stop .tap reproduction
         if (Tape::tapeStatus==TAPE_LOADING) {
-            Tape::tapeStatus=TAPE_IDLE; // STOP LOAD
+            Tape::tapeStatus=TAPE_IDLE;
             Tape::tapefile.close();            
         }
     }
@@ -227,7 +229,7 @@ void OSD::do_OSD() {
             // Change TAP
             unsigned short tapnum = menuRun(Config::tap_name_list);
             if (tapnum > 0) {
-                Tape::tapeFileName="/tap/" + rowGet(Config::tap_file_list, tapnum);
+                Tape::tapeFileName=DISK_TAP_DIR "/" + rowGet(Config::tap_file_list, tapnum);
             }
             menuRun(MENU_TAP_SELECTED);
         }
