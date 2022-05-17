@@ -116,7 +116,10 @@ uint8_t Tape::TAP_Read()
                 } else {
                     Tape::tapeHdrPulses=TAPE_HDR_LONG;
                 }
-            } else return tape_result;
+            } else {
+              tape_result = 0x40;
+              return tape_result;
+            }
         } else {
             Tape::tapeStatus=TAPE_IDLE;
             Tape::tapefile.close();

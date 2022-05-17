@@ -19,8 +19,6 @@ If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master bran
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
-This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
-
 ## Features
 
 - Spectrum 16/48 architecture emulation without PSRAM.

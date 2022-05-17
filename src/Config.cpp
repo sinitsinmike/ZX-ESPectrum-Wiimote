@@ -104,7 +104,7 @@ void Config::load() {
 void Config::loadSnapshotLists()
 {
     KB_INT_STOP;
-    sna_file_list = (String)MENU_SNA_TITLE + "\n" + FileUtils::getSortedSnaFileList();
+    sna_file_list = (String)MENU_SNA_TITLE + "\n" + FileUtils::getSortedFileList(DISK_SNA_DIR);
     sna_name_list = String(sna_file_list);
     sna_name_list.replace(".SNA", "");
     sna_name_list.replace(".sna", "");
@@ -118,7 +118,7 @@ void Config::loadSnapshotLists()
 void Config::loadTapLists()
 {
     KB_INT_STOP;
-    tap_file_list = (String)MENU_TAP_TITLE + "\n" + FileUtils::getSortedTapFileList();
+    tap_file_list = (String)MENU_TAP_TITLE + "\n" + FileUtils::getSortedFileList(DISK_TAP_DIR);
     tap_name_list = String(tap_file_list);
     tap_name_list.replace(".TAP", "");
     tap_name_list.replace(".tap", "");
