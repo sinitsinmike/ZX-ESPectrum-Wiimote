@@ -110,6 +110,7 @@ uint32_t CPU::microsPerFrame()
 ///////////////////////////////////////////////////////////////////////////////
 
 uint32_t CPU::tstates = 0;
+uint64_t CPU::global_tstates = 0;
 
 void CPU::setup()
 {
@@ -136,7 +137,9 @@ void CPU::reset() {
 
     #ifdef CPU_JLSANCHEZ
         Z80::reset();
-    #endif 
+    #endif
+
+    global_tstates = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -182,8 +185,17 @@ void CPU::loop()
             Tape::tapeStatus=TAPE_IDLE; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
             break;
         }
+
+        // frame Tstates before instruction
+        uint32_t pre_tstates = tstates;
        
         DO_Z80_INSTRUCTION;
+
+        // frame Tstates after instruction
+        uint32_t post_tstates = tstates;
+
+        // increase global Tstates
+        global_tstates += (post_tstates - pre_tstates);
 
         #ifdef CPU_PER_INSTRUCTION_TIMING
             if (partTstates > PIT_PERIOD) {
