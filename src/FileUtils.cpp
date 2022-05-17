@@ -305,3 +305,45 @@ String FileUtils::getSortedSnaFileList()
     return sortedEntries;
 }
 
+// Get all tap files sorted alphabetically
+String FileUtils::getSortedTapFileList()
+{
+    // get string of unsorted filenames, separated by newlines
+    String entries = getFileEntriesFromDir(DISK_TAP_DIR);
+
+    // count filenames (they always end at newline)
+    unsigned short count = 0;
+    for (unsigned short i = 0; i < entries.length(); i++) {
+        if (entries.charAt(i) == ASCII_NL) {
+            count++;
+        }
+    }
+
+    // array of filenames
+    String* filenames = (String*)malloc(count * sizeof(String));
+    // memory must be initialized to avoid crash on assign
+    memset(filenames, 0, count * sizeof(String));
+
+    // copy filenames from string to array
+    unsigned short ich = 0;
+    unsigned short ifn = 0;
+    for (unsigned short i = 0; i < entries.length(); i++) {
+        if (entries.charAt(i) == ASCII_NL) {
+            filenames[ifn++] = entries.substring(ich, i);
+            ich = i + 1;
+        }
+    }
+
+    // sort array
+    sortArray(filenames, count);
+
+    // string of sorted filenames
+    String sortedEntries = "";
+
+    // copy filenames from array to string
+    for (unsigned short i = 0; i < count; i++) {
+        sortedEntries += filenames[i] + '\n';
+    }
+
+    return sortedEntries;
+}

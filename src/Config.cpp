@@ -53,6 +53,8 @@ String   Config::ram_file = NO_RAM_FILE;
 String   Config::romSet = "SINCLAIR";
 String   Config::sna_file_list; // list of file names
 String   Config::sna_name_list; // list of names (without ext, '_' -> ' ')
+String   Config::tap_file_list; // list of file names
+String   Config::tap_name_list; // list of names (without ext, '_' -> ' ')
 bool     Config::slog_on = true;
 bool     Config::aspect_16_9 = false;
 
@@ -110,6 +112,16 @@ void Config::loadSnapshotLists()
     sna_name_list.replace(".z80", "");
     sna_name_list.replace("_", " ");
     sna_name_list.replace("-", " ");
+    KB_INT_START;
+}
+
+void Config::loadTapLists()
+{
+    KB_INT_STOP;
+    tap_file_list = (String)MENU_TAP_TITLE + "\n" + FileUtils::getSortedTapFileList();
+    tap_name_list = String(tap_file_list);
+    tap_name_list.replace(".TAP", "");
+    tap_name_list.replace(".tap", "");
     KB_INT_START;
 }
 

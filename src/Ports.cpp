@@ -33,6 +33,7 @@
 #include "PS2Kbd.h"
 #include "AySound.h"
 #include "ESPectrum.h"
+#include "Tape.h"
 
 #include <Arduino.h>
 
@@ -109,7 +110,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
     if ((portLow & 0x01) == 0x00) // (portLow == 0xFE) 
     {
         // all result bits initially set to 1, may be set to 0 eventually
-        uint8_t result = 0xFF;
+        uint8_t result = 0xbF;
 
         #ifdef EAR_PRESENT
         // EAR_PIN
@@ -148,8 +149,14 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         result &= zxkbres;
         #endif // ZX_KEYB_PRESENT
 
-        if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
+        if (Tape::tapeStatus==TAPE_LOADING) {
+            result |= Tape::TAP_Read();
+        } else {
+            if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
+        }
+
         return result;
+
     }
 
     // Kempston
@@ -182,13 +189,17 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
 
         #ifdef SPEAKER_PRESENT
-        digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
+        if (Tape::tapeStatus==TAPE_SAVING) {
+            digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker
+        } else {
+            digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
+        }
         #endif
 
         #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
         #endif
-        base[0x20] = data; // ? 
+        if(Tape::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data; // ? 
     }
     
     if ((portLow & 0x02) == 0x00)

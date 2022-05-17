@@ -30,7 +30,7 @@
 #include "PS2Kbd.h"
 #include "Z80_LKF/z80emu.h"
 #include "CPU.h"
-#include "z80_LKF/z80user.h"
+#include "Z80_LKF/z80user.h"
 #include <Arduino.h>
 
 #include "hardpins.h"
@@ -51,6 +51,7 @@
 #include "Ports.h"
 #include "Mem.h"
 #include "AySound.h"
+#include "Tape.h"
 
 // works, but not needed for now
 #pragma GCC optimize ("O3")
@@ -139,6 +140,7 @@ void ESPectrum::setup()
     FileUtils::initFileSystem();
     Config::load();
     Config::loadSnapshotLists();
+    Config::loadTapLists();
 
     Serial.printf("Free heap after filesystem: %d\n", ESP.getFreeHeap());
 
@@ -272,10 +274,11 @@ void ESPectrum::reset()
         Ports::wii[i] == 0x1F;
     }
     ESPectrum::borderColor = 7;
+    Tape::tapeStatus = TAPE_IDLE;    
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
-    Mem::pagingLock = 0;
+    Mem::pagingLock = 1;
     Mem::modeSP3 = 0;
     Mem::romSP3 = 0;
     Mem::romInUse = 0;
@@ -555,6 +558,7 @@ void ESPectrum::loop() {
 
     processKeyboard();
     updateWiimote2Keys();
+    
     OSD::do_OSD();
 
     xQueueSend(vidQueue, &param, portMAX_DELAY);

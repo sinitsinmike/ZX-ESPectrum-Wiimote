@@ -172,7 +172,7 @@
 // PS2_ARROWKEYS_AS_CURSOR will use arrow keys 
 // PS2_ARROWKEYS_AS_KEMPSTON will use arrow keys as kempston joystick
 // directions, with AltGr a fire button.
-#define PS2_ARROWKEYS_AS_CURSOR
+// #define PS2_ARROWKEYS_AS_CURSOR
 #define PS2_ARROWKEYS_AS_KEMPSTON
 
 // for using convenience keys, define just ONE of

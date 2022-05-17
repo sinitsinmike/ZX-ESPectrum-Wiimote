@@ -31,6 +31,7 @@
 #define ESPectrum_h
 
 #include "hardpins.h"
+#include <FS.h>
 
 // Declared vars
 #ifdef COLOR_3B
@@ -72,6 +73,7 @@ public:
 private:
     static void precalcColors();
     static void videoTask(void* unused);
+    
 };
 
 #endif

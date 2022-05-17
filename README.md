@@ -1,14 +1,23 @@
 # ZX-ESPectrum-Wiimote
 
-**LATEST UPDATES: 128K sound, .Z80 format (48/128), micro SD card, 4:3 aspect ratio.**
+**LATEST UPDATE: Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
 
-An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
+An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
-There are per-game customizable (through simple text files) correspondences from Wiimote keys to Spectrum keys.
+Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
 
-Please watch the [project video on YouTube](https://youtu.be/ROthljwC5OA) (spanish audio, english subtitles).
+Please watch the [project video on YouTube](https://youtu.be/GXHBrQVTfBw) (spanish audio, english subtitles).
 
-If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
+Quick start from PlatformIO:
+- Clone this repo and Open from VSCode/PlatFormIO
+- Copy your SNA files to /data/sna
+- Execute task: Upload File System Image
+- Execute task: Upload
+- Enjoy
+
+If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
+
+This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
@@ -71,9 +80,9 @@ All files under the `/data` subdirectory will be copied to the SPIFFS filesystem
 
 NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo3d/zx-spectrum-snake) and [Tetris](https://github.com/dcrespo3d/zx-spectrum-tetris). NOTE: the games have NO sound.
 
-#### Using a external micro SD Card and copying games into it
+NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo3d/zx-spectrum-snake) and [Tetris](https://github.com/dcrespo3d/zx-spectrum-tetris). NOTE: the games have NO sound.
 
-**(NOTE: this feature has been tested only on a Lilygo TTGo VGA32 board, which has build-in uSD card slot. Pins from hardware.h are from that board, if using a regular ESP32 you must connect the SD card CS, CLK, MISO and MOSI signals to the ESP32 and update pins in hardware.h accordingly)**
+#### Using a external micro SD Card and copying games into it
 
 If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself, so boot.cfg is on the root folder).
 
@@ -106,6 +115,10 @@ I have used VGA 3 bit driver (so BRIGHT attribute is lost), but it's simpler to 
 To connect, press 1 and 2 buttons in the Wiimote.
 
 All 4 leds will flash during connection phase, and only LED 1 will be ON when connected.
+
+Important note: wiimote suport is NOT enabled by default on the TTGO. I have experienced slowness at least once when developing, but seems to have gone forever. It may happen when the option is enabled, but a Wiimote has never been paired. I'm not completely sure, your mileage may vary.
+
+You can enable wiimote support uncommenting `#define WIIMOTE_PRESENT` in hardconfig.h
 
 ## OSD Menu
 
@@ -173,6 +186,7 @@ I have write a detailed story, with photos, of the development process of this e
 - [StormBytes](https://www.youtube.com/channel/UCvvVcAC0n4dCuZ-SIIYOUCQ) for his code and help for supporting the original ZX Spectrum keyboard.
 - Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (but it's a great library).
 - [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip, and for discussing details about this development.
+- [EremusOne](https://github.com/EremusOne) for adding multiple snapshot slots, .TAP support, and other fixes.
 
 ## And all the involved people from the golden age
 

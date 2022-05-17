@@ -51,6 +51,9 @@ public:
     static uint16_t       countFileEntriesFromDir(String path);
     static String         getSortedSnaFileList();
     static String         getSnaFileList();
+    static String         getSortedTapFileList();
+    static String         getTapFileList();
+
 
     static bool           hasSNAextension(String filename);
     static bool           hasZ80extension(String filename);
@@ -63,6 +66,7 @@ private:
 #define DISK_BOOT_FILENAME "/boot.cfg"
 #define DISK_ROM_DIR "/rom"
 #define DISK_SNA_DIR "/sna"
+#define DISK_TAP_DIR "/tap"
 #define DISK_PSNA_FILE "/persist/persist"
 #define NO_RAM_FILE "none"
 #define SNA_48K_SIZE 49179
