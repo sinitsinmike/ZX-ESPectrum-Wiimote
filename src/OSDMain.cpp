@@ -36,6 +36,7 @@
 #include "Wiimote2Keys.h"
 #include "Config.h"
 #include "FileSNA.h"
+#include "FileZ80.h"
 #include "AySound.h"
 #include "Mem.h"
 #include "Tape.h"
@@ -149,11 +150,10 @@ static void persistLoad(byte slotnumber)
         return;
     }
     OSD::osdCenteredMsg(OSD_PSNA_LOADING, LEVEL_INFO);
-    FileSNA::load(persistfname);
-    // if (!FileSNA::load(DISK_PSNA_FILE)) {
-    //     osdCenteredMsg(OSD_PSNA_LOAD_ERR, LEVEL_WARN);
-    //     delay(1000);
-    // }
+    if (!FileSNA::load(persistfname)) {
+         OSD::osdCenteredMsg(OSD_PSNA_LOAD_ERR, LEVEL_WARN);
+         delay(1000);
+    }
     if (Config::getArch() == "48K") AySound::reset();
     OSD::osdCenteredMsg(OSD_PSNA_LOADED, LEVEL_INFO);
     delay(400);
@@ -203,16 +203,13 @@ void OSD::do_OSD() {
     else if (PS2Keyboard::checkAndCleanKey(KEY_F6)) {
         // Start .tap reproduction
         if (Tape::TAP_Play()==false) {
-            OSD::osdCenteredMsg("Please select TAP file first", LEVEL_WARN);
+            OSD::osdCenteredMsg(OSD_TAPE_SELECT_ERR, LEVEL_WARN);
             delay(1000);
         }
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F7)) {
         // Stop .tap reproduction
-        if (Tape::tapeStatus==TAPE_LOADING) {
-            Tape::tapeStatus=TAPE_IDLE;
-            Tape::tapefile.close();            
-        }
+        if (Tape::tapeStatus==TAPE_LOADING) Tape::tapeStatus=TAPE_IDLE;
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
@@ -230,8 +227,12 @@ void OSD::do_OSD() {
             unsigned short tapnum = menuRun(Config::tap_name_list);
             if (tapnum > 0) {
                 Tape::tapeFileName=DISK_TAP_DIR "/" + rowGet(Config::tap_file_list, tapnum);
+                if (!Tape::TAP_Load()) {
+                    Tape::tapeFileName="none";
+                    OSD::osdCenteredMsg(OSD_TAPE_LOAD_ERR, LEVEL_WARN);
+                    delay(1000);
+                } else menuRun(MENU_TAP_SELECTED);
             }
-            menuRun(MENU_TAP_SELECTED);
         }
         else if (opt == 3) {
             // Change ROM
@@ -293,7 +294,7 @@ void OSD::do_OSD() {
                 // Soft
                 ESPectrum::reset();
                 if (Config::ram_file != (String)NO_RAM_FILE)
-                    FileSNA::load("/sna/" + Config::ram_file);
+                    FileSNA::load("/sna/" + Config::ram_file); // TO DO: fix error if ram_file is .z80 
             }
             else if (opt2 == 2) {
                 // Hard
