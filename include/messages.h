@@ -82,6 +82,9 @@
 #define OSD_PSNA_LOAD_ERR "ERROR Loading Persist Snapshot"
 #define OSD_PSNA_SAVED "Persist Snapshot Saved"
 
+#define OSD_TAPE_LOAD_ERR "ERROR Loading TAP file"
+#define OSD_TAPE_SELECT_ERR "Please select TAP file first"
+
 #define MENU_SNA_TITLE "Select Snapshot"
 #define MENU_TAP_TITLE "Select TAP file"
 #define MENU_TAP_SELECTED\
