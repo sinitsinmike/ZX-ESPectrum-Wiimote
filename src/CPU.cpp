@@ -173,22 +173,24 @@ void CPU::loop()
 
 	while (tstates < statesInFrame)
 	{
-		
+
     #ifdef CPU_JLSANCHEZ        
         switch (Z80::getRegPC()) {
     #endif
     #ifdef CPU_LINKEFONG
         switch (state->pc) {
     #endif
-        /*case 0x0556:
+/*
+        case 0x056c: // START LOAD
             break;
-        case 0x053f:
-            break; */
+        case 0x05e2: // END LOAD
+            break;
+*/
         case 0x04d0: // START SAVE (used for rerouting mic out to speaker in Ports.cpp)
             Tape::tapeStatus=TAPE_SAVING; 
             break;
         case 0x053e: // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
-            Tape::tapeStatus=TAPE_IDLE; 
+            Tape::tapeStatus=TAPE_STOPPED; 
             break;
         }
 

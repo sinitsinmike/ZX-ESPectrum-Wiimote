@@ -34,6 +34,7 @@
 #include "AySound.h"
 #include "ESPectrum.h"
 #include "Tape.h"
+#include "CPU.h"
 
 #include <Arduino.h>
 
@@ -106,6 +107,9 @@ static void detectZXKeyCombinationForMenu()
 
 uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 {
+    
+    // uint32_t ts_start = micros();
+    
     // 48K ULA
     if ((portLow & 0x01) == 0x00) // (portLow == 0xFE) 
     {
@@ -150,7 +154,23 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
         #endif // ZX_KEYB_PRESENT
 
         if (Tape::tapeStatus==TAPE_LOADING) {
+            
             bitWrite(result,6,Tape::TAP_Read());
+            
+            /*
+            uint32_t ts_end = micros();
+            uint32_t elapsed = ts_end - ts_start;
+            
+            static int ctr = 0;
+            if (ctr == 0) {
+            ctr = 8192;
+                Serial.printf("[TAPE] elapsed: %u\n", elapsed);
+            }
+            else ctr--;
+            */
+
+            //CPU::tstates+=1;
+
         } else {
             if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
         }
@@ -199,7 +219,8 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
         #endif
-        if(Tape::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data; // ? 
+        //if(Tape::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data;
+        base[0x20] = data; // ?
     }
     
     if ((portLow & 0x02) == 0x00)

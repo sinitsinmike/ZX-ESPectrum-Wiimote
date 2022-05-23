@@ -287,7 +287,8 @@ void ESPectrum::reset()
     Mem::romSP3 = 0;
     Mem::romInUse = 0;
 
-    Tape::tapeStatus = TAPE_IDLE;
+    Tape::tapeFileName = "none";
+    Tape::tapeStatus = TAPE_STOPPED;
 
     CPU::reset();
 }

@@ -1,31 +1,28 @@
-#include <Arduino.h>
-#include <string.h>
-#include <FS.h>
-#include "FileUtils.h"
 #include "hardpins.h"
+#include "FileUtils.h"
 #include "CPU.h"
 #include "Tape.h"
 
-// Tape
 String Tape::tapeFileName = "none";
-byte Tape::tapeStatus = TAPE_IDLE;
-byte Tape::tapePhase = TAPE_PHASE_SYNC;
-uint64_t Tape::tapeStart = 0;
-byte Tape::tapeEarBit = 0;
-uint32_t Tape::tapePulseCount = 0;
-uint16_t Tape::tapeBitPulseLen = TAPE_BIT0_PULSELEN;
-uint8_t Tape::tapeBitPulseCount=0;     
-uint8_t Tape::tapeBitMask=0x80;    
-uint32_t Tape::tapebufByteCount=0;
-uint16_t Tape::tapeHdrPulses=TAPE_HDR_LONG; 
-uint16_t Tape::tapeBlockLen=0;
-size_t Tape::tapeFileSize=0;
-uint8_t* Tape::tape = NULL;
+byte Tape::tapeStatus = TAPE_STOPPED;
+
+static uint8_t tapePhase;
+static uint64_t tapeStart;
+static uint32_t tapePulseCount;
+static uint16_t tapeBitPulseLen;   
+static uint8_t tapeBitPulseCount;     
+static uint32_t tapebufByteCount;
+static uint16_t tapeHdrPulses;
+static uint16_t tapeBlockLen;
+static size_t tapeFileSize;   
+static uint8_t* tape;
+static uint8_t tapeEarBit;
+static uint8_t tapeBitMask;    
 
 void Tape::Init()
 {
-    Tape::tape = (uint8_t*)ps_calloc(1, 0x20000);
-    if (Tape::tape == NULL) Serial.printf("Error allocating tape into PSRAM\n");
+    tape = (uint8_t*)ps_calloc(1, 0x100000); // 1 MB max TAP file size
+    if (tape == NULL) Serial.printf("Error allocating tape into PSRAM\n");
 }
 
 boolean Tape::TAP_Load()
@@ -34,9 +31,8 @@ boolean Tape::TAP_Load()
     File tapefile;
 
     tapefile = FileUtils::safeOpenFileRead(Tape::tapeFileName);
-    Tape::tapeFileSize = readBlockFile(tapefile, Tape::tape, 0x20000);
-    if (Tape::tapeFileSize == -1) return false;
-
+    tapeFileSize = readBlockFile(tapefile, tape, 0x100000);
+    if (tapeFileSize == -1) return false;
     tapefile.close();
 
     return true;
@@ -48,94 +44,99 @@ uint8_t Tape::TAP_Play()
     
     if (Tape::tapeFileName== "none") return false;
     
-    Tape::tapePhase=TAPE_PHASE_SYNC;
-    Tape::tapeEarBit=1;
-    Tape::tapePulseCount=0;
-    Tape::tapeBitPulseCount=0;
-    Tape::tapeBitMask=0x80;    
-    Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;
-    Tape::tapeHdrPulses=TAPE_HDR_LONG;
-    Tape::tapeBlockLen=(Tape::tape[0] | (Tape::tape[1] <<8))+ 2;
-    Tape::tapebufByteCount=2;
-    Tape::tapeStart=CPU::global_tstates;
-    Tape::tapeStatus=TAPE_LOADING;
-
+    switch (Tape::tapeStatus) {
+    case TAPE_STOPPED:
+        tapePhase=TAPE_PHASE_SYNC;
+        tapePulseCount=0;
+        tapeEarBit=LOW;
+        tapeBitMask=0x80;
+        tapeBitPulseCount=0;
+        tapeBitPulseLen=TAPE_BIT0_PULSELEN;
+        tapeHdrPulses=TAPE_HDR_LONG;
+        tapeBlockLen=(tape[0] | (tape[1] <<8)) + 2;
+        tapebufByteCount=2;
+        tapeStart=CPU::global_tstates;
+        Tape::tapeStatus=TAPE_LOADING;
+        break;
+    case TAPE_LOADING:
+        Tape::tapeStatus=TAPE_PAUSED;
+        break;
+    case TAPE_PAUSED:
+        tapeStart=CPU::global_tstates;        
+        Tape::tapeStatus=TAPE_LOADING;
+    }
+    
     return true;
 }
 
 uint8_t Tape::TAP_Read()
 {
-    uint64_t tapeCurrent = CPU::global_tstates - Tape::tapeStart;
+    uint64_t tapeCurrent = CPU::global_tstates - tapeStart;
     
-    switch (Tape::tapePhase) {
+    switch (tapePhase) {
     case TAPE_PHASE_SYNC:
         if (tapeCurrent > TAPE_SYNC_LEN) {
-            Tape::tapeStart=CPU::global_tstates;
-            Tape:: tapeEarBit ^= 1UL;
-            Tape::tapePulseCount++;
-            if (Tape::tapePulseCount>Tape::tapeHdrPulses) {
-                Tape::tapePulseCount=0;
-                Tape::tapePhase=TAPE_PHASE_SYNC1;
+            tapeStart=CPU::global_tstates;
+            tapeEarBit ^= 1;
+            tapePulseCount++;
+            if (tapePulseCount>tapeHdrPulses) {
+                tapePulseCount=0;
+                tapePhase=TAPE_PHASE_SYNC1;
             }
         }
         break;
     case TAPE_PHASE_SYNC1:
         if (tapeCurrent > TAPE_SYNC1_LEN) {
-            Tape::tapeStart=CPU::global_tstates;
-            Tape:: tapeEarBit ^= 1UL;
-            Tape::tapePhase=TAPE_PHASE_SYNC2;
+            tapeStart=CPU::global_tstates;
+            tapeEarBit ^= 1;
+            tapePhase=TAPE_PHASE_SYNC2;
         }
         break;
     case TAPE_PHASE_SYNC2:
         if (tapeCurrent > TAPE_SYNC2_LEN) {
-            Tape::tapeStart=CPU::global_tstates;
-            Tape:: tapeEarBit ^= 1UL;
-            if (Tape::tape[tapebufByteCount] & Tape::tapeBitMask) Tape::tapeBitPulseLen=TAPE_BIT1_PULSELEN; else Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;            
-            Tape::tapePhase=TAPE_PHASE_DATA;
+            tapeStart=CPU::global_tstates;
+            tapeEarBit ^= 1;
+            if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;            
+            tapePhase=TAPE_PHASE_DATA;
         }
         break;
     case TAPE_PHASE_DATA:
-        if (tapeCurrent > Tape::tapeBitPulseLen) {
-            Tape::tapeStart=CPU::global_tstates;
-            Tape:: tapeEarBit ^= 1UL;
-            Tape::tapeBitPulseCount++;
-            if (Tape::tapeBitPulseCount==2) {
-                Tape::tapeBitPulseCount=0;
-                Tape::tapeBitMask = Tape::tapeBitMask >> 1UL;
-                if (Tape::tapeBitMask==0) {
-                    Tape::tapeBitMask=0x80;
-                    Tape::tapebufByteCount++;
-                    if (Tape::tapebufByteCount == Tape::tapeBlockLen) {
-                        Tape::tapePhase=TAPE_PHASE_PAUSE;
+        if (tapeCurrent > tapeBitPulseLen) {
+            tapeStart=CPU::global_tstates;
+            tapeEarBit ^= 1;
+            tapeBitPulseCount++;
+            if (tapeBitPulseCount==2) {
+                tapeBitPulseCount=0;
+                tapeBitMask = (tapeBitMask >>1 | tapeBitMask <<7);
+                if (tapeBitMask==0x80) {
+                    tapebufByteCount++;
+                    if (tapebufByteCount == tapeBlockLen) {
+                        tapePhase=TAPE_PHASE_PAUSE;
+                        tapeEarBit=LOW;
                         break;
                     }
                 }
-                if (Tape::tape[Tape::tapebufByteCount] & Tape::tapeBitMask) Tape::tapeBitPulseLen=TAPE_BIT1_PULSELEN; else Tape::tapeBitPulseLen=TAPE_BIT0_PULSELEN;
+                if (tape[tapebufByteCount] & tapeBitMask) tapeBitPulseLen=TAPE_BIT1_PULSELEN; else tapeBitPulseLen=TAPE_BIT0_PULSELEN;
             }
         }
         break;
     case TAPE_PHASE_PAUSE:
-        if (Tape::tapebufByteCount < Tape::tapeFileSize) {
+        if (tapebufByteCount < tapeFileSize) {
             if (tapeCurrent > TAPE_BLK_PAUSELEN) {
-                Tape::tapeStart=CPU::global_tstates;
-                Tape::tapeEarBit=1;
-                Tape::tapePulseCount=0;
-                Tape::tapePhase=TAPE_PHASE_SYNC;
-
-                Tape::tapeBlockLen+=(Tape::tape[Tape::tapebufByteCount] | Tape::tape[Tape::tapebufByteCount + 1] <<8)+ 2;
-                Tape::tapebufByteCount+=2;
-                if (Tape::tape[Tape::tapebufByteCount]) Tape::tapeHdrPulses=TAPE_HDR_SHORT; else Tape::tapeHdrPulses=TAPE_HDR_LONG;
-
-            } else return 1;              
-        } else {
-            Tape::tapeStatus=TAPE_IDLE;
-            return 0;
-        }
+                tapeStart=CPU::global_tstates;
+                tapePulseCount=0;
+                tapePhase=TAPE_PHASE_SYNC;
+                tapeBlockLen+=(tape[tapebufByteCount] | tape[tapebufByteCount + 1] <<8)+ 2;
+                tapebufByteCount+=2;
+                if (tape[tapebufByteCount]) tapeHdrPulses=TAPE_HDR_SHORT; else tapeHdrPulses=TAPE_HDR_LONG;
+            }
+        } else Tape::tapeStatus=TAPE_STOPPED;
+        return LOW;
     } 
     
 #ifdef SPEAKER_PRESENT
-    digitalWrite(SPEAKER_PIN, Tape::tapeEarBit); // Send tape load sound to speaker
+    digitalWrite(SPEAKER_PIN, tapeEarBit); // Send tape load sound to speaker
 #endif
     
-    return Tape::tapeEarBit;
+    return tapeEarBit;
 }

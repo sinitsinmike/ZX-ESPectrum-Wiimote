@@ -209,7 +209,7 @@ void OSD::do_OSD() {
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F7)) {
         // Stop .tap reproduction
-        if (Tape::tapeStatus==TAPE_LOADING) Tape::tapeStatus=TAPE_IDLE;
+        if (Tape::tapeStatus==TAPE_LOADING || Tape::tapeStatus==TAPE_PAUSED) Tape::tapeStatus=TAPE_STOPPED;
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
