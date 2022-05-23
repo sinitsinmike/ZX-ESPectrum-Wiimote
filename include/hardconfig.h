@@ -77,7 +77,7 @@
 
 #define VIDEO_FRAME_TIMING
 
-// LOG_DEBUG_TIMING generates simple timing log messages to console very second.
+// LOG_DEBUG_TIMING generates simple timing log messages to console every second.
 // #define LOG_DEBUG_TIMING
 ///////////////////////////////////////////////////////////////////////////////
 
