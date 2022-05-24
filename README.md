@@ -2,13 +2,20 @@
 
 **LATEST UPDATES: Better CPU / Video tasks sync, allowing partial support of multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
 
-An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
+An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
-There are per-game customizable (through simple text files) correspondences from Wiimote keys to Spectrum keys.
+Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
 
-Please watch the [project video on YouTube](https://youtu.be/ROthljwC5OA) (spanish audio, english subtitles).
+Please watch the [project video on YouTube](https://youtu.be/GXHBrQVTfBw) (spanish audio, english subtitles).
 
-If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
+Quick start from PlatformIO:
+- Clone this repo and Open from VSCode/PlatFormIO
+- Copy your SNA files to /data/sna
+- Execute task: Upload File System Image
+- Execute task: Upload
+- Enjoy
+
+If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
@@ -31,7 +38,6 @@ This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) p
 - Z80 snapshot loading.
 - Quick (to memory) and persistent snapshot saving and loading (both 48K and 128K supported).
 - Internal SPIFFS support / external SD card support (only one of both, see hardconfig.h).
-- Original Spectrum Keyboard support, using 8 + 5 contacts ribbon connectors connected to 13 ESP pins.
 
 ## Work in progress
 
@@ -44,7 +50,7 @@ Windows, GNU/Linux and MacOS/X. This version has been developed using PlatformIO
 #### Install platformIO:
 
 - There is an extension for Atom and VSCode, please check [this website](https://platformio.org/).
-- Select your board, I have used a Espressif ESP32-WROVER.
+- Select your board, pico32 which behaves just like the TTGo VGA32.
 
 #### Customize platformio.ini
 
@@ -71,8 +77,6 @@ NEW: now including my own Spectrum 48K games: [Snake](https://github.com/dcrespo
 
 #### Using a external micro SD Card and copying games into it
 
-**(NOTE: this feature has been tested only on a Lilygo TTGo VGA32 board, which has build-in uSD card slot. Pins from hardware.h are from that board, if using a regular ESP32 you must connect the SD card CS, CLK, MISO and MOSI signals to the ESP32 and update pins in hardware.h accordingly)**
-
 If using external micro sd card (USE_SD_CARD #defined in hardconfig.h), you must copy files from the `/data` subdirectory to the root of the sd card (copy the contents of the folder, NOT the folder itself, so boot.cfg is on the root folder).
 
 The SD card should be formatted in FAT16 / FAT32.
@@ -93,11 +97,9 @@ Run these tasks (`Upload` also does a `Build`) whenever you make any change in t
 
 ## Hardware configuration and pinout
 
-See ESP32 pin assignment in `hardpins.h` or change it to your own preference.
+Pin assignment in `hardpins.h` is set to match the TTGo VGA32, use it as-is, or change it to your own preference. It is already set for the [TTGo version 1.4](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1083&FId=t3:50033:3).
 
-I have used VGA 3 bit driver (so BRIGHT attribute is lost), but it's simpler to connect and no R-2R DAC is needed. Also, I have assigned pins to bottom side of the ESP32, as it is too wide for usual breadboards.
-
-![esp32-pinout](./docs/esp32-pinout.jpg)
+I have used VGA 6 bit driver (so BRIGHT attribute is kept)
 
 ## Connecting a Wiimote
 
