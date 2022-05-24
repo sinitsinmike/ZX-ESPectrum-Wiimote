@@ -27,7 +27,8 @@
 #define TAPE_BIT0_PULSELEN 855 // tstates = 244 ms, lenght of pulse for bit 0
 #define TAPE_BIT1_PULSELEN 1710 // tstates = 488 ms, lenght of pulse for bit 1
 
-#define TAPE_BLK_PAUSELEN 3500000UL // 1 second of pause between blocks
+//#define TAPE_BLK_PAUSELEN 3500000UL // 1 second of pause between blocks
+#define TAPE_BLK_PAUSELEN 1750000UL // 1/2 second of pause between blocks
 //#define TAPE_BLK_PAUSELEN 875000UL // 1/4 second of pause between blocks
 
 class Tape

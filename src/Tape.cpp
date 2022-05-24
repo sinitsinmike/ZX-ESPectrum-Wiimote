@@ -21,27 +21,36 @@ static uint8_t tapeBitMask;
 
 void Tape::Init()
 {
-    tape = (uint8_t*)ps_calloc(1, 0x100000); // 1 MB max TAP file size
-    if (tape == NULL) Serial.printf("Error allocating tape into PSRAM\n");
+    tape = NULL;
 }
 
 boolean Tape::TAP_Load()
 {
-    
-    File tapefile;
+    if (NULL != tape) {
+        free(tape);
+        tape = NULL;
+    }
 
-    tapefile = FileUtils::safeOpenFileRead(Tape::tapeFileName);
-    tapeFileSize = readBlockFile(tapefile, tape, 0x100000);
-    if (tapeFileSize == -1) return false;
+    File tapefile = FileUtils::safeOpenFileRead(Tape::tapeFileName);
+    size_t filesize = tapefile.size();
+
+    tape = (uint8_t*)ps_calloc(1, filesize);
+    if (NULL == tape) {
+        tapefile.close();
+        return false;
+    }
+
+    Serial.printf("Allocated %lu bytes for .TAP\n", filesize);
+
+    tapeFileSize = readBlockFile(tapefile, tape, filesize);
     tapefile.close();
+    if (tapeFileSize != filesize) return false;
 
     return true;
-
 }
 
 uint8_t Tape::TAP_Play()
 {
-    
     if (Tape::tapeFileName== "none") return false;
     
     switch (Tape::tapeStatus) {
