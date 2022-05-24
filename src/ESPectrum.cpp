@@ -352,6 +352,10 @@ void ESPectrum::videoTask(void *unused) {
         int back, fore; // background and foreground colors
         int pix;        // final pixel color
 
+        int scanline;   // scanline ranges from 0 to 311
+        int statesPerLine = CPU::statesPerFrame() / 312;
+        int targetTstate;
+
         uint8_t* grmem;
 
 #ifdef VIDEO_FRAME_TIMING
@@ -362,7 +366,17 @@ void ESPectrum::videoTask(void *unused) {
     #endif
 #endif
 
-        for (int vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++) {
+        int prevTstates = CPU::tstates;
+
+        for (int vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)
+        {
+            // wait to (almost) correct tstate before beginning line render
+            scanline = 64 - borH + vgaY;
+            targetTstate = scanline * statesPerLine;
+            while (prevTstates != CPU::tstates && targetTstate > CPU::tstates)
+                delayMicroseconds(1);
+            prevTstates = CPU::tstates;
+
             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
             uint8_t* lineptr = vga.backBuffer[vgaY+offY];
             vgaX = offX;
