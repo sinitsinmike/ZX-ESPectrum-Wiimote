@@ -191,6 +191,9 @@ void ESPectrum::setup()
     tryAllocateSRamThenPSRam(Mem::rom2, "ROM2");
     tryAllocateSRamThenPSRam(Mem::rom3, "ROM3");
 
+    // Allocate RAM for loading TAP files
+    Tape::Init();
+
 #else
     Mem::rom0 = (byte *)malloc(16384);
 
@@ -284,7 +287,8 @@ void ESPectrum::reset()
     Mem::romSP3 = 0;
     Mem::romInUse = 0;
 
-    Tape::tapeStatus = TAPE_IDLE;
+    Tape::tapeFileName = "none";
+    Tape::tapeStatus = TAPE_STOPPED;
 
     CPU::reset();
 }
@@ -350,7 +354,13 @@ void ESPectrum::videoTask(void *unused) {
 
         uint8_t* grmem;
 
+#ifdef VIDEO_FRAME_TIMING
         uint32_t ts_start = micros();
+#else
+    #ifdef LOG_DEBUG_TIMING
+        uint32_t ts_start = micros();
+    #endif
+#endif
 
         for (int vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++) {
             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
@@ -409,14 +419,23 @@ void ESPectrum::videoTask(void *unused) {
             }
         }
 
+
+#ifdef VIDEO_FRAME_TIMING
         uint32_t ts_end = micros();
 
         uint32_t elapsed = ts_end - ts_start;
         uint32_t target = CPU::microsPerFrame();
         uint32_t idle = target - elapsed;
-#ifdef VIDEO_FRAME_TIMING
         if (idle < target)
             delayMicroseconds(idle);
+#else
+    #ifdef LOG_DEBUG_TIMING
+        uint32_t ts_end = micros();
+
+        uint32_t elapsed = ts_end - ts_start;
+        uint32_t target = CPU::microsPerFrame();
+        uint32_t idle = target - elapsed;
+    #endif
 #endif
 
 #ifdef LOG_DEBUG_TIMING
@@ -565,13 +584,15 @@ void ESPectrum::loop() {
     OSD::do_OSD();
 
     xQueueSend(vidQueue, &param, portMAX_DELAY);
+
+#ifdef LOG_DEBUG_TIMING 
     uint32_t ts_start = micros();
+#endif
 
     CPU::loop();
 
+#ifdef LOG_DEBUG_TIMING    
     uint32_t ts_end = micros();
-
-#ifdef LOG_DEBUG_TIMING
     uint32_t elapsed = ts_end - ts_start;
     uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;

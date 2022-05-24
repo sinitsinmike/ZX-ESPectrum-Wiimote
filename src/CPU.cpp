@@ -150,6 +150,8 @@ void CPU::loop()
     tstates = 0;
 
     #ifdef CPU_LINKEFONG
+        Z80_STATE *state;
+        state=&_zxCpu;
         #define DO_Z80_INSTRUCTION (tstates = Z80ExecuteInstruction(&_zxCpu, tstates, NULL))
         #define DO_Z80_INTERRUPT   (Z80Interrupt(&_zxCpu, 0xff, NULL))
     #endif
@@ -171,14 +173,24 @@ void CPU::loop()
 
 	while (tstates < statesInFrame)
 	{
-		
-        // Trap tape routines
+
+    #ifdef CPU_JLSANCHEZ        
         switch (Z80::getRegPC()) {
-        case 0x04d0: 
-            Tape::tapeStatus=TAPE_SAVING; // START SAVE (used for rerouting mic out to speaker in Ports.cpp)        
+    #endif
+    #ifdef CPU_LINKEFONG
+        switch (state->pc) {
+    #endif
+/*
+        case 0x056c: // START LOAD
             break;
-        case 0x053e:
-            Tape::tapeStatus=TAPE_IDLE; // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
+        case 0x05e2: // END LOAD
+            break;
+*/
+        case 0x04d0: // START SAVE (used for rerouting mic out to speaker in Ports.cpp)
+            Tape::tapeStatus=TAPE_SAVING; 
+            break;
+        case 0x053e: // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
+            Tape::tapeStatus=TAPE_STOPPED; 
             break;
         }
 
@@ -188,10 +200,10 @@ void CPU::loop()
         DO_Z80_INSTRUCTION;
 
         // frame Tstates after instruction
-        uint32_t post_tstates = tstates;
+        //uint32_t post_tstates = tstates;
 
         // increase global Tstates
-        global_tstates += (post_tstates - pre_tstates);
+        global_tstates += (tstates - pre_tstates);
 
         #ifdef CPU_PER_INSTRUCTION_TIMING
             if (partTstates > PIT_PERIOD) {
