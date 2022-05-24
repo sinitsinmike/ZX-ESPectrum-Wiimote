@@ -1,6 +1,6 @@
 # ZX-ESPectrum-Wiimote
 
-**LATEST UPDATE: Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
+**LATEST UPDATES: Better CPU / Video tasks sync, allowing partial support of multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
 
 An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based on bitluni's driver, with PS/2 keyboard support, using a Wiimote as input device, based on bigw00d's driver.
 
@@ -35,8 +35,6 @@ This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) p
 
 ## Work in progress
 
-- Synchronizing video generation with CPU T-states, for allowing some tricky multi-colour modes to work.
-- TAP tape image loading (still investigating how to do it).
 - Better AY-3-8912 emulation (128K sound is still a little dirty).
 
 ## Compiling and installing
