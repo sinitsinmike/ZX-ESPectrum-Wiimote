@@ -13,7 +13,7 @@ static uint16_t tapeBitPulseLen;
 static uint8_t tapeBitPulseCount;     
 static uint32_t tapebufByteCount;
 static uint16_t tapeHdrPulses;
-static uint16_t tapeBlockLen;
+static uint32_t tapeBlockLen;
 static size_t tapeFileSize;   
 static uint8_t* tape;
 static uint8_t tapeEarBit;
