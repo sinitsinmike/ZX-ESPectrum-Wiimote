@@ -202,14 +202,16 @@ void OSD::do_OSD() {
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F6)) {
         // Start .tap reproduction
-        if (Tape::TAP_Play()==false) {
+        if (Tape::tapeFileName=="none") {
             OSD::osdCenteredMsg(OSD_TAPE_SELECT_ERR, LEVEL_WARN);
-            delay(1000);
+            delay(1000);                
+        } else {
+            Tape::TAP_Play();
         }
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F7)) {
         // Stop .tap reproduction
-        if (Tape::tapeStatus==TAPE_LOADING || Tape::tapeStatus==TAPE_PAUSED) Tape::tapeStatus=TAPE_STOPPED;
+        Tape::tapeStatus=TAPE_STOPPED;
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();

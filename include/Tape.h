@@ -6,8 +6,11 @@
 // Tape status definitions
 #define TAPE_STOPPED 0
 #define TAPE_LOADING 1
-#define TAPE_SAVING 2
-#define TAPE_PAUSED 3
+#define TAPE_PAUSED 2
+
+// Saving status
+#define SAVE_STOPPED 0
+#define TAPE_SAVING 1
 
 // Tape phases
 #define TAPE_PHASE_SYNC 1
@@ -38,10 +41,12 @@ public:
     // Tape
     static String tapeFileName;
     static uint8_t tapeStatus;
+    static uint8_t SaveStatus;
+    static uint8_t romLoading;
 
     static void Init();
     static bool TAP_Load();
-    static uint8_t TAP_Play();
+    static void TAP_Play();
     static uint8_t TAP_Read();
 
 };
