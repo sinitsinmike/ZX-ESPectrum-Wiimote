@@ -347,26 +347,28 @@ void ESPectrum::videoTask(void *unused) {
     int borW = Config::aspect_16_9 ? BOR_W_16_9 : BOR_W_4_3;
     int borH = Config::aspect_16_9 ? BOR_H_16_9 : BOR_H_4_3;
 
+    int vgaY, ulaX;
+    int bmpOffset;     // offset for bitmap in graphic memory
+    int attOffset;     // offset for attrib in graphic memory
+    int att, bmp;   // attribute and bitmap
+    int bri;        // bright flag
+    int back, fore; // background and foreground colors
+
+    int scanline;   // scanline ranges from 0 to 311
+    int statesPerLine = CPU::statesPerFrame() / 312;
+    int targetTstate;
+    int prevTstates;
+
+    uint8_t paleta[2]; //0 backcolor 1 Forecolor
+    uint8_t a0,a1,a2,a3;
+    uint8_t border;
+
+    uint8_t* grmem;
+    uint32_t* lineptr32;
+
     while (1) {
+
         xQueueReceive(vidQueue, &param, portMAX_DELAY);
-
-        int bmpOffset;     // offset for bitmap in graphic memory
-        int attOffset;     // offset for attrib in graphic memory
-
-        int att, bmp;   // attribute and bitmap
-        int bri;        // bright flag
-        int back, fore; // background and foreground colors
-
-        int scanline;   // scanline ranges from 0 to 311
-        int statesPerLine = CPU::statesPerFrame() / 312;
-        int targetTstate;
-
-        uint8_t paleta[2]; //0 backcolor 1 Forecolor
-        uint8_t a0,a1,a2,a3;
-
-        uint16_t border;
-
-        uint8_t* grmem;
 
 #ifdef VIDEO_FRAME_TIMING
         uint32_t ts_start = micros();
@@ -376,9 +378,11 @@ void ESPectrum::videoTask(void *unused) {
     #endif
 #endif
 
-        int prevTstates = CPU::tstates;
-        
-        for (int vgaY = 0; vgaY < borH+SPEC_H; vgaY++)
+        prevTstates = CPU::tstates;
+
+        grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5; // ¿May videoLatch change during frame draw?
+
+        for (vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)        
         {
 
             // wait to (almost) correct tstate before beginning line render
@@ -388,31 +392,25 @@ void ESPectrum::videoTask(void *unused) {
                 delayMicroseconds(1);
             prevTstates = CPU::tstates;
 
-
-            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-            
             border = zxColor(borderColor,0);
-            
-            if (vgaY < borH) {
+            lineptr32 = (uint32_t *)(vga.backBuffer[vgaY+offY]+offX);                            
 
-                // Paint up and down border sections
-                memset(vga.backBuffer[vgaY+offY]+offX,border,borW+SPEC_W+borW);
-                memset(vga.backBuffer[vgaY+offY+borH+SPEC_H]+offX,border,borW+SPEC_W+borW);
+            if (vgaY < borH || vgaY >= borH + SPEC_H) {
+
+                memset(lineptr32,border,borW+SPEC_W+borW); // Paint up and down border sections
 
             }
             else
             {
 
-                // Paint left and right border sections
-                memset(vga.backBuffer[vgaY+offY]+offX,border,borW);
-                memset(vga.backBuffer[vgaY+offY]+offX+SPEC_W+borW,border,borW);
+                memset(lineptr32,border,borW); // Paint left border section
+                
+                lineptr32 += (borW>>2);
 
                 bmpOffset = offBmp[vgaY - borH];
                 attOffset = offAtt[vgaY - borH];
-
-                uint32_t* lineptr32 = (uint32_t *)(vga.backBuffer[vgaY+offY]+offX+borW);
-
-                for (int ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
+                
+                for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
                 {
                     att = grmem[attOffset];  // get attribute byte
                     attOffset++;
@@ -434,18 +432,21 @@ void ESPectrum::videoTask(void *unused) {
                     a2= paleta[(bmp >>5) & 0x01];
                     a3= paleta[(bmp >>4) & 0x01];
                     lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                    lineptr32++;
 
                     a0= paleta[(bmp >>3) & 0x01];
                     a1= paleta[(bmp >>2) & 0x01];
                     a2= paleta[(bmp >>1) & 0x01];
                     a3= paleta[bmp & 0x01];
-                    lineptr32[1] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-
-                    lineptr32+=2;
+                    lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                    lineptr32++;
 
                 }
 
+                memset(lineptr32,border,borW); // Paint right border section
+
             }
+
         }
 
 
