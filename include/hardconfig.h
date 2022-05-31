@@ -231,7 +231,7 @@
 //
 // define TAPE_TRAPS for emulator trapping LOAD and SAVE rom code. In some 
 // titles it could help with right loading or auto-stoping tape in right places.
-// (It a .tap doesn't load with this #define try disabling it)
+// (If a .tap doesn't load with tape load active try disabling it)
 
 //#define TAPE_TRAPS
 ///////////////////////////////////////////////////////////////////////////////
