@@ -173,7 +173,8 @@ void CPU::loop()
 
 	while (tstates < statesInFrame)
 	{
-
+    
+    #ifdef TAPE_TRAPS
     #ifdef CPU_JLSANCHEZ        
         switch (Z80::getRegPC()) {
     #endif
@@ -216,6 +217,7 @@ void CPU::loop()
 
             break;
         }
+    #endif
 
         // frame Tstates before instruction
         uint32_t pre_tstates = tstates;
