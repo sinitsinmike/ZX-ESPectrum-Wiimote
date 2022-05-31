@@ -347,9 +347,13 @@ void ESPectrum::videoTask(void *unused) {
     int borW = Config::aspect_16_9 ? BOR_W_16_9 : BOR_W_4_3;
     int borH = Config::aspect_16_9 ? BOR_H_16_9 : BOR_H_4_3;
 
-    int vgaY, ulaX;
-    int bmpOffset;     // offset for bitmap in graphic memory
-    int attOffset;     // offset for attrib in graphic memory
+    int borW_4 = borW >> 2;
+    int bWb_4 = (borW + SPEC_W + borW) >> 2;
+
+    int vgaY;       // from 0 to RESY - 1 
+    int ulaX;       // from 0 to 32
+    int bmpOffset;  // offset for bitmap in graphic memory
+    int attOffset;  // offset for attrib in graphic memory
     int att, bmp;   // attribute and bitmap
     int bri;        // bright flag
     int back, fore; // background and foreground colors
@@ -359,7 +363,7 @@ void ESPectrum::videoTask(void *unused) {
     int targetTstate;
     int prevTstates;
 
-    uint8_t paleta[2]; //0 backcolor 1 Forecolor
+    uint8_t palette[2]; //0 backcolor 1 Forecolor
     uint8_t a0,a1,a2,a3;
     uint8_t border;
 
@@ -380,10 +384,10 @@ void ESPectrum::videoTask(void *unused) {
 
         prevTstates = CPU::tstates;
 
-        grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5; // ¿May videoLatch change during frame draw?
-
         for (vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)        
         {
+            // ¿May videoLatch change during frame draw?
+            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
 
             // wait to (almost) correct tstate before beginning line render
             scanline = 64 - borH + vgaY;
@@ -392,61 +396,61 @@ void ESPectrum::videoTask(void *unused) {
                 delayMicroseconds(1);
             prevTstates = CPU::tstates;
 
-            border = zxColor(borderColor,0);
             lineptr32 = (uint32_t *)(vga.backBuffer[vgaY+offY]+offX);                            
 
-            if (vgaY < borH || vgaY >= borH + SPEC_H) {
-
-                memset(lineptr32,border,borW+SPEC_W+borW); // Paint up and down border sections
-
+            if (vgaY < borH || vgaY >= borH + SPEC_H)
+            {
+                // top / bottom border
+                for (int i = 0; i < bWb_4; i++) {
+                    border = zxColor(borderColor, 0);
+                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
+                }
             }
             else
             {
-
-                memset(lineptr32,border,borW); // Paint left border section
+                // left border
+                for (int i = 0; i < borW_4; i++) {
+                    border = zxColor(borderColor, 0);
+                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
+                }
                 
-                lineptr32 += (borW>>2);
-
                 bmpOffset = offBmp[vgaY - borH];
                 attOffset = offAtt[vgaY - borH];
                 
                 for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
                 {
-                    att = grmem[attOffset];  // get attribute byte
-                    attOffset++;
+                    att = grmem[attOffset++];  // get attribute byte
 
                     bri = att & 0x40;
                     fore = zxColor(att & 0b111, bri);
                     back = zxColor((att >> 3) & 0b111, bri);
                     if ((att >> 7) && flashing) {
-                        paleta[0]= fore; paleta[1]= back;
+                        palette[0] = fore; palette[1] = back;
                     } else {
-                        paleta[0]= back; paleta[1]= fore;
+                        palette[0] = back; palette[1] = fore;
                     }
 
-                    bmp = grmem[bmpOffset];  // get bitmap byte
-                    bmpOffset++;
+                    bmp = grmem[bmpOffset++];  // get bitmap byte
 
-                    a0= paleta[(bmp >>7) & 0x01];
-                    a1= paleta[(bmp >>6) & 0x01];
-                    a2= paleta[(bmp >>5) & 0x01];
-                    a3= paleta[(bmp >>4) & 0x01];
-                    lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-                    lineptr32++;
+                    a0 = palette[(bmp >> 7) & 0x01];
+                    a1 = palette[(bmp >> 6) & 0x01];
+                    a2 = palette[(bmp >> 5) & 0x01];
+                    a3 = palette[(bmp >> 4) & 0x01];
+                    *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
 
-                    a0= paleta[(bmp >>3) & 0x01];
-                    a1= paleta[(bmp >>2) & 0x01];
-                    a2= paleta[(bmp >>1) & 0x01];
-                    a3= paleta[bmp & 0x01];
-                    lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-                    lineptr32++;
-
+                    a0 = palette[(bmp >> 3) & 0x01];
+                    a1 = palette[(bmp >> 2) & 0x01];
+                    a2 = palette[(bmp >> 1) & 0x01];
+                    a3 = palette[bmp & 0x01];
+                    *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
                 }
 
-                memset(lineptr32,border,borW); // Paint right border section
-
+                // right border
+                for (int i = 0; i < borW_4; i++) {
+                    border = zxColor(borderColor, 0);
+                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
+                }
             }
-
         }
 
 
