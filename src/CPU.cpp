@@ -180,17 +180,40 @@ void CPU::loop()
     #ifdef CPU_LINKEFONG
         switch (state->pc) {
     #endif
-/*
-        case 0x056c: // START LOAD
+        case 0x0556: // START LOAD        
+            Tape::romLoading=true;
+            if (Tape::tapeStatus!=TAPE_LOADING && Tape::tapeFileName!="none") Tape::TAP_Play();
+            // Serial.printf("------\n");
+            // Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
             break;
-        case 0x05e2: // END LOAD
-            break;
-*/
         case 0x04d0: // START SAVE (used for rerouting mic out to speaker in Ports.cpp)
-            Tape::tapeStatus=TAPE_SAVING; 
+            Tape::SaveStatus=TAPE_SAVING; 
+            // Serial.printf("------\n");
+            // Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
             break;
-        case 0x053e: // END SAVE (used for stop rerouting mic out to speaker in Ports.cpp)
-            Tape::tapeStatus=TAPE_STOPPED; 
+        case 0x053f: // END LOAD / SAVE
+            Tape::romLoading=false;
+            if (Tape::tapeStatus!=TAPE_STOPPED)
+                #ifdef CPU_JLSANCHEZ
+                if (Z80::isCarryFlag()) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
+                #endif
+                #ifdef CPU_LINKEFONG                
+                if (state->registers.byte[Z80_F] & 0x01) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
+                #endif
+            Tape::SaveStatus=SAVE_STOPPED;
+            
+            /*
+            Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
+            Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
+            #ifdef CPU_JLSANCHEZ
+            Serial.printf("Carry Flag: %u\n", Z80::isCarryFlag());            
+            #endif
+            #ifdef CPU_LINKEFONG
+            Serial.printf("Carry Flag: %u\n", state->registers.byte[Z80_F] & 0x01);            
+            #endif
+            Serial.printf("------\n");
+            */
+
             break;
         }
 

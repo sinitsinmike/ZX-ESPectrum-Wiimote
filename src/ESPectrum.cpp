@@ -170,6 +170,9 @@ void ESPectrum::setup()
     // precalculate colors for current VGA mode
     precalcColors();
 
+    // precalculate ULA SWAP values
+    precalcULASWAP();
+
     vga.clear(0);
 
     Serial.printf("Free heap after vga: %d \n", ESP.getFreeHeap());
@@ -289,6 +292,8 @@ void ESPectrum::reset()
 
     Tape::tapeFileName = "none";
     Tape::tapeStatus = TAPE_STOPPED;
+    Tape::SaveStatus = SAVE_STOPPED;
+    Tape::romLoading = false;
 
     CPU::reset();
 }
@@ -321,7 +326,17 @@ static int calcY(int offset);
 static int calcX(int offset);
 static void swap_flash(word *a, word *b);
 
+// Precalc ULA_SWAP
+static int offBmp[SPEC_H];
+static int offAtt[SPEC_H];
 #define ULA_SWAP(y) ((y & 0xC0) | ((y & 0x38) >> 3) | ((y & 0x07) << 3))
+void ESPectrum::precalcULASWAP()
+{
+    for (int i = 0; i < SPEC_H; i++) {
+        offBmp[i] = ULA_SWAP(i) << 5;
+        offAtt[i] = ((i >> 3) << 5) + 0x1800;
+    }
+}
 
 void ESPectrum::videoTask(void *unused) {
     videoTaskIsRunning = true;
@@ -332,31 +347,28 @@ void ESPectrum::videoTask(void *unused) {
     int borW = Config::aspect_16_9 ? BOR_W_16_9 : BOR_W_4_3;
     int borH = Config::aspect_16_9 ? BOR_H_16_9 : BOR_H_4_3;
 
+    int vgaY, ulaX;
+    int bmpOffset;     // offset for bitmap in graphic memory
+    int attOffset;     // offset for attrib in graphic memory
+    int att, bmp;   // attribute and bitmap
+    int bri;        // bright flag
+    int back, fore; // background and foreground colors
+
+    int scanline;   // scanline ranges from 0 to 311
+    int statesPerLine = CPU::statesPerFrame() / 312;
+    int targetTstate;
+    int prevTstates;
+
+    uint8_t paleta[2]; //0 backcolor 1 Forecolor
+    uint8_t a0,a1,a2,a3;
+    uint8_t border;
+
+    uint8_t* grmem;
+    uint32_t* lineptr32;
+
     while (1) {
+
         xQueueReceive(vidQueue, &param, portMAX_DELAY);
-    
-        int vgaX;   // from 0 to RESX - 1
-        int vgaY;   // from 0 to RESY - 1
-        int speX;   // from 0 to 256
-        int speY;   // from 0 to 192
-        int ulaX;   // from 0 to 32
-        int ulaY;   // from 0 to 192, bit-swapped 76210543
-
-        int bmpOffset;     // offset for bitmap in graphic memory
-        int attOffset;     // offset for attrib in graphic memory
-
-        int att, bmp;   // attribute and bitmap
-        int fla, bri;   // flash and bright flags
-        int pap, ink;   // paper and ink color
-        int aux;        // auxiliary for flash swapping
-        int back, fore; // background and foreground colors
-        int pix;        // final pixel color
-
-        int scanline;   // scanline ranges from 0 to 311
-        int statesPerLine = CPU::statesPerFrame() / 312;
-        int targetTstate;
-
-        uint8_t* grmem;
 
 #ifdef VIDEO_FRAME_TIMING
         uint32_t ts_start = micros();
@@ -366,10 +378,13 @@ void ESPectrum::videoTask(void *unused) {
     #endif
 #endif
 
-        int prevTstates = CPU::tstates;
+        prevTstates = CPU::tstates;
 
-        for (int vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)
+        grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5; // ¿May videoLatch change during frame draw?
+
+        for (vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)        
         {
+
             // wait to (almost) correct tstate before beginning line render
             scanline = 64 - borH + vgaY;
             targetTstate = scanline * statesPerLine;
@@ -377,60 +392,61 @@ void ESPectrum::videoTask(void *unused) {
                 delayMicroseconds(1);
             prevTstates = CPU::tstates;
 
-            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-            uint8_t* lineptr = vga.backBuffer[vgaY+offY];
-            vgaX = offX;
+            border = zxColor(borderColor,0);
+            lineptr32 = (uint32_t *)(vga.backBuffer[vgaY+offY]+offX);                            
+
             if (vgaY < borH || vgaY >= borH + SPEC_H) {
-                for (int i = 0; i < borW+SPEC_W+borW; i++, vgaX++) {
-                    lineptr[vgaX^2] = zxColor(borderColor, 0);
-                }
+
+                memset(lineptr32,border,borW+SPEC_W+borW); // Paint up and down border sections
+
             }
             else
             {
-                speY = vgaY - borH;
-                ulaY = ULA_SWAP(speY);
-                lineptr = vga.backBuffer[speY+offY+borH];
 
-                vgaX = offX;
-                for (int i = 0; i < borW; i++, vgaX++) {
-                    lineptr[vgaX^2] = zxColor(borderColor, 0);
-                }
+                memset(lineptr32,border,borW); // Paint left border section
+                
+                lineptr32 += (borW>>2);
 
-                bmpOffset =   ulaY << 5;
-                attOffset = ((speY >> 3) << 5) + 0x1800;
-
+                bmpOffset = offBmp[vgaY - borH];
+                attOffset = offAtt[vgaY - borH];
+                
                 for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
                 {
-                    att = grmem[attOffset + ulaX];  // get attribute byte
+                    att = grmem[attOffset];  // get attribute byte
+                    attOffset++;
 
-                    ink = (att     ) & 0b111;
-                    pap = (att >> 3) & 0b111;
-                    bri = (att >> 6) & 1;
-                    fla = (att >> 7);
-                    fore = zxColor(ink, bri);
-                    back = zxColor(pap, bri);
-
-                    if (fla && flashing) {
-                        aux = fore; fore = back; back = aux;
+                    bri = att & 0x40;
+                    fore = zxColor(att & 0b111, bri);
+                    back = zxColor((att >> 3) & 0b111, bri);
+                    if ((att >> 7) && flashing) {
+                        paleta[0]= fore; paleta[1]= back;
+                    } else {
+                        paleta[0]= back; paleta[1]= fore;
                     }
 
-                    bmp = grmem[bmpOffset + ulaX];  // get bitmap byte
-                    for (int i = 0; i < 8; i++) // foreach pixel within a byte
-                    {   
-                        uint32_t mask = 0x80 >> i;
-                        if (bmp & mask) pix = fore;
-                        else            pix = back;
-                        lineptr[vgaX^2] = pix;
-                        vgaX++;
-                    }
+                    bmp = grmem[bmpOffset];  // get bitmap byte
+                    bmpOffset++;
+
+                    a0= paleta[(bmp >>7) & 0x01];
+                    a1= paleta[(bmp >>6) & 0x01];
+                    a2= paleta[(bmp >>5) & 0x01];
+                    a3= paleta[(bmp >>4) & 0x01];
+                    lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                    lineptr32++;
+
+                    a0= paleta[(bmp >>3) & 0x01];
+                    a1= paleta[(bmp >>2) & 0x01];
+                    a2= paleta[(bmp >>1) & 0x01];
+                    a3= paleta[bmp & 0x01];
+                    lineptr32[0] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                    lineptr32++;
+
                 }
 
-                for (int i = 0; i < borW; i++, vgaX++) {
-                    lineptr[vgaX^2] = zxColor(borderColor, 0);
-                }
-
+                memset(lineptr32,border,borW); // Paint right border section
 
             }
+
         }
 
 

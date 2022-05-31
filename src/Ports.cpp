@@ -168,9 +168,7 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
             }
             else ctr--;
             */
-
-            //CPU::tstates+=1;
-
+           
         } else {
             if (base[0x20] & 0x18) result |= (0xe0); else result |= (0xa0); // ISSUE 2 behaviour
         }
@@ -209,7 +207,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
 
         #ifdef SPEAKER_PRESENT
-        if (Tape::tapeStatus==TAPE_SAVING) {
+        if (Tape::SaveStatus==TAPE_SAVING) {
             digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker
         } else {
             digitalWrite(SPEAKER_PIN, bitRead(data, 4)); // speaker
@@ -219,7 +217,6 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         #ifdef MIC_PRESENT
         digitalWrite(MIC_PIN, bitRead(data, 3)); // tape_out
         #endif
-        //if(Tape::tapeStatus==TAPE_LOADING) base[0x20] = 0; else base[0x20] = data;
         base[0x20] = data; // ?
     }
     

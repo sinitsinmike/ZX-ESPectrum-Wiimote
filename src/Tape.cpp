@@ -5,6 +5,8 @@
 
 String Tape::tapeFileName = "none";
 byte Tape::tapeStatus = TAPE_STOPPED;
+byte Tape::SaveStatus = SAVE_STOPPED;
+uint8_t Tape::romLoading = false;
 
 static uint8_t tapePhase;
 static uint64_t tapeStart;
@@ -31,6 +33,8 @@ boolean Tape::TAP_Load()
         tape = NULL;
     }
 
+    Tape::tapeStatus=TAPE_STOPPED;
+
     File tapefile = FileUtils::safeOpenFileRead(Tape::tapeFileName);
     size_t filesize = tapefile.size();
 
@@ -49,10 +53,8 @@ boolean Tape::TAP_Load()
     return true;
 }
 
-uint8_t Tape::TAP_Play()
+void Tape::TAP_Play()
 {
-    if (Tape::tapeFileName== "none") return false;
-    
     switch (Tape::tapeStatus) {
     case TAPE_STOPPED:
         tapePhase=TAPE_PHASE_SYNC;
@@ -74,8 +76,6 @@ uint8_t Tape::TAP_Play()
         tapeStart=CPU::global_tstates;        
         Tape::tapeStatus=TAPE_LOADING;
     }
-    
-    return true;
 }
 
 uint8_t Tape::TAP_Read()
