@@ -205,7 +205,7 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     if ((portLow & 0x01) == 0x00)
     {
         ESPectrum::borderColor = data & 0x07;
-
+        
         #ifdef SPEAKER_PRESENT
         if (Tape::SaveStatus==TAPE_SAVING) {
             digitalWrite(SPEAKER_PIN, bitRead(data, 3)); // re-route tape out data to speaker

@@ -65,6 +65,8 @@ public:
     // graphics
     static VGA vga;
     static uint8_t borderColor;
+    static uint8_t lastBorder[312];
+    static uint8_t lineChanged[192];
     static uint16_t zxColor(uint8_t color, uint8_t bright);
     static void waitForVideoTask();
 
@@ -73,6 +75,7 @@ public:
 private:
     static void precalcColors();
     static void precalcULASWAP();
+    static void precalcborder32();
     static void videoTask(void* unused);
     
 };

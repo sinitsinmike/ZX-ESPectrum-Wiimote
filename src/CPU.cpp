@@ -144,6 +144,12 @@ void CPU::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void CPU::setintpending()
+{
+    interruptPending = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
@@ -274,8 +280,26 @@ uint8_t Z80Ops::peek8(uint16_t address) {
 }
 void Z80Ops::poke8(uint16_t address, uint8_t value) {
     // 3 clocks for write byte to RAM
-    if (ADDRESS_IN_LOW_RAM(address))
+    if (ADDRESS_IN_LOW_RAM(address)) {
         CPU::tstates += CPU::delayContention(CPU::tstates);
+
+        uint16_t addrvid = address & 0x3fff;
+        uint16_t rowbase;
+        uint8_t chgdata=1;
+        if (addrvid < 0x1800) { // Bitmap
+                // Convert from Spectrum memory video to plain buffer
+                rowbase = addrvid >> 5;
+                rowbase = ((rowbase & 0xC0) | ((rowbase & 0x38) >> 3) | ((rowbase & 0x07) << 3));
+                ESPectrum::lineChanged[rowbase]=1;
+        } else if (addrvid < 0x1b00) { // Attr
+                rowbase = (addrvid - 0x1800) >> 5;
+                rowbase = rowbase * 8;
+                if (value & 0x80) chgdata++;
+                for (int i=0;i<8;i++) 
+                    ESPectrum::lineChanged[rowbase + i] = chgdata;
+        }
+
+    }
 
     CPU::tstates += 3;
     Mem::writebyte(address, value);

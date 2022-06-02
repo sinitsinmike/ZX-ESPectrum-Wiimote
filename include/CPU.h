@@ -44,6 +44,8 @@ public:
     // call this for resetting the CPU
     static void reset();
 
+    static void setintpending();
+
     // get the number of CPU Tstates per frame (machine dependant)
     static uint32_t statesPerFrame();
 
@@ -84,7 +86,7 @@ inline uint8_t CPU::delayContention(uint32_t currentTstates)
 
 	// only the 192 lines between 64 and 255 have graphic data, the rest is border
 	if (line < 64 || line >= 256) return 0;
-
+    
 	// only the first 128 t-states of each line correspond to a graphic data transfer
 	// the remaining 96 t-states correspond to border
 	int halfpix = currentTstates % 224;

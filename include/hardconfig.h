@@ -59,7 +59,7 @@
 // delayMicros() will be called after few instructions so CPU runs almost realtime.
 ///////////////////////////////////////////////////////////////////////////////
 
-#define CPU_PER_INSTRUCTION_TIMING
+//#define CPU_PER_INSTRUCTION_TIMING
 
 // CPU_PIT_PERIOD controls every how many cycles (approx) delayMicros() is called.
 // The lowest the value, the highest the precision, but there is a small performance
@@ -78,7 +78,7 @@
 #define VIDEO_FRAME_TIMING
 
 // LOG_DEBUG_TIMING generates simple timing log messages to console every second.
-// #define LOG_DEBUG_TIMING
+#define LOG_DEBUG_TIMING
 ///////////////////////////////////////////////////////////////////////////////
 
 
