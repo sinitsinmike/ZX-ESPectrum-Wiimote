@@ -279,7 +279,6 @@ uint8_t Z80Ops::peek8(uint16_t address) {
     return Mem::readbyte(address);
 }
 void Z80Ops::poke8(uint16_t address, uint8_t value) {
-    // 3 clocks for write byte to RAM
     if (ADDRESS_IN_LOW_RAM(address)) {
         CPU::tstates += CPU::delayContention(CPU::tstates);
 
@@ -290,8 +289,87 @@ void Z80Ops::poke8(uint16_t address, uint8_t value) {
                 // Convert from Spectrum memory video to plain buffer
                 rowbase = addrvid >> 5;
                 rowbase = ((rowbase & 0xC0) | ((rowbase & 0x38) >> 3) | ((rowbase & 0x07) << 3));
+
+                // uint32_t *lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[rowbase + 4]);
+
+                // lineptr32 += 13;
+                // lineptr32 += ((addrvid & 0x001F) * 2);
+
+                // uint8_t *grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;                
+
+                // uint8_t att=grmem[0x1800 + ((rowbase / 8) * 32) + (addrvid & 0x001F)];
+
+                // int bri = att & 0x40;
+                // int fore = ESPectrum::zxColor(att & 0b111, bri);
+                // int back = ESPectrum::zxColor((att >> 3) & 0b111, bri);
+                // uint8_t palette[2]; //0 backcolor 1 Forecolor
+                // if ((att >> 7) /*&& flashing*/) {
+                //     palette[0] = fore; palette[1] = back;
+                // } else {
+                //     palette[0] = back; palette[1] = fore;
+                // }
+
+                // uint8_t a0 = palette[(value >> 7) & 0x01];
+                // uint8_t a1 = palette[(value >> 6) & 0x01];
+                // uint8_t a2 = palette[(value >> 5) & 0x01];
+                // uint8_t a3 = palette[(value >> 4) & 0x01];
+                // *lineptr32 = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                // lineptr32++;
+
+                // a0 = palette[(value >> 3) & 0x01];
+                // a1 = palette[(value >> 2) & 0x01];
+                // a2 = palette[(value >> 1) & 0x01];
+                // a3 = palette[value & 0x01];
+                // *lineptr32 = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                
                 ESPectrum::lineChanged[rowbase]=1;
         } else if (addrvid < 0x1b00) { // Attr
+
+                // addrvid -= 0x1800;
+                // rowbase = (addrvid >> 5) * 8;
+
+                // uint8_t att=value;
+
+                // int bri = att & 0x40;
+                // int fore = ESPectrum::zxColor(att & 0b111, bri);
+                // int back = ESPectrum::zxColor((att >> 3) & 0b111, bri);
+                // uint8_t palette[2]; //0 backcolor 1 Forecolor
+                // if ((att >> 7) /*&& flashing*/) {
+                //     palette[0] = fore; palette[1] = back;
+                // } else {
+                //     palette[0] = back; palette[1] = fore;
+                // }
+
+                // uint8_t *grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;                
+
+                // int memoffset = ((addrvid & 0x300) << 3) | (addrvid & 0xFF);
+
+                // for (int i=0;i<8;i++) {
+
+                //     uint32_t *lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[4+rowbase]);
+                //     lineptr32 += 13;
+                //     lineptr32 += ((addrvid & 0x001F) * 2);
+
+                //     uint8_t data=grmem[memoffset];
+
+                //     uint8_t a0 = palette[(data >> 7) & 0x01];
+                //     uint8_t a1 = palette[(data >> 6) & 0x01];
+                //     uint8_t a2 = palette[(data >> 5) & 0x01];
+                //     uint8_t a3 = palette[(data >> 4) & 0x01];
+                //     *lineptr32 = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                //     lineptr32++;
+
+                //     a0 = palette[(data >> 3) & 0x01];
+                //     a1 = palette[(data >> 2) & 0x01];
+                //     a2 = palette[(data >> 1) & 0x01];
+                //     a3 = palette[data & 0x01];
+                //     *lineptr32 = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+
+                //     rowbase++;
+                //     memoffset+=256;
+
+                // }
+
                 rowbase = (addrvid - 0x1800) >> 5;
                 rowbase = rowbase * 8;
                 if (value & 0x80) chgdata++;
@@ -301,6 +379,7 @@ void Z80Ops::poke8(uint16_t address, uint8_t value) {
 
     }
 
+    // 3 clocks for write byte to RAM
     CPU::tstates += 3;
     Mem::writebyte(address, value);
 }
