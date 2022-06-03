@@ -63,6 +63,7 @@ void setup_cpuspeed();
 
 // ESPectrum graphics variables
 byte ESPectrum::borderColor = 7;
+uint16_t ESPectrum::scanline = 0;
 byte ESPectrum::lastBorder[312];
 uint8_t ESPectrum::lineChanged[192];
 VGA ESPectrum::vga;
@@ -694,6 +695,8 @@ uint8_t* lineptr;
 
 bool firstHalf;
 
+int ESPectrum::scanoffset = 223;
+
 void ESPectrum::loop() {
 
     if (halfsec) {
@@ -721,9 +724,20 @@ void ESPectrum::loop() {
     #endif
 
     CPU::tstates = 0;
-    int scanline = 0;
-    uint32_t scanlinestates = 0;
     int statesPerLine = 224;
+    scanline = 0;
+    uint32_t scanlinestates = statesPerLine;    
+
+    scanline = scanoffset / statesPerLine;
+    scanlinestates = scanoffset % statesPerLine;
+
+    static int ctr2 = 0;
+    if (ctr2 == 0) {
+        ctr2 = 50;
+        Serial.printf("Scanline: %u; Scanoffset: %u; Scanlinestates: %u\n", scanline,scanoffset,scanlinestates);
+    }
+    else ctr2--;
+    
     while (CPU::tstates < statesInFrame)
 	{
 
@@ -749,8 +763,6 @@ void ESPectrum::loop() {
 
         // wait to (almost) correct tstate before beginning line render
         if (scanlinestates > statesPerLine) {
-
-            scanline++;
 
             /*
             if (scanline>55 && scanline<60) {
@@ -806,7 +818,7 @@ void ESPectrum::loop() {
                 // Main screen
                 if (ESPectrum::lineChanged[scanline-60]) {
 
-                    grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;                
+                    grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
                     
                     bmpOffset = offBmp[(scanline - 56) - 4];
                     attOffset = offAtt[(scanline - 56) - 4];
@@ -852,8 +864,6 @@ void ESPectrum::loop() {
                     }
                     lastBorder[scanline]=borderColor;
                 }
-
-
             }
             if (scanline>251 && scanline<256) {
                 
@@ -868,8 +878,12 @@ void ESPectrum::loop() {
                 }
             }
             
-            scanlinestates = 0;
+            scanline++;
 
+//          scanlinestates -= statesPerLine; // This is more correct (on CPU loop exit, all scanlines have been drawn)
+                                             // but doesn't fit perfect in Aquaplane's border sync
+            scanlinestates = 0;
+            
         }
 
         /*
@@ -966,7 +980,7 @@ void ESPectrum::loop() {
     if (ctr == 0) {
         ctr = 50;
         Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
-        Serial.printf("Scanline: %u\n", scanline);
+        Serial.printf("Scanline: %u; Scanoffset: %u\n", scanline,scanoffset);
     }
     else ctr--;
 #endif
