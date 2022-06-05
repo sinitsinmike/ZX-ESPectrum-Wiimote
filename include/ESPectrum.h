@@ -70,7 +70,6 @@ public:
     static uint8_t lastBorder[312];
     static uint8_t lineChanged[192];
     static uint16_t zxColor(uint8_t color, uint8_t bright);
-    static void waitForVideoTask();
 
     static void processKeyboard();
 

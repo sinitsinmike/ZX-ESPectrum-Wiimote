@@ -173,14 +173,21 @@ void OSD::do_OSD() {
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
-        AySound::disable();
-        quickSave();
-        AySound::enable();
+        
+        ESPectrum::scanoffset-=1;
+        
+        // AySound::disable();
+        // quickSave();
+        // AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
-        AySound::disable();
-        quickLoad();
-        AySound::enable();
+
+        ESPectrum::scanoffset+=1;
+
+
+        // AySound::disable();
+        // quickLoad();
+        // AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
         AySound::disable();
@@ -337,7 +344,6 @@ void OSD::errorPanel(String errormsg) {
     if (Config::slog_on)
         Serial.println(errormsg);
 
-    ESPectrum::waitForVideoTask();
     VGA& vga = ESPectrum::vga;
 
     vga.fillRect(x, y, OSD_W, OSD_H, OSD::zxColor(0, 0));
@@ -392,7 +398,6 @@ void OSD::osdCenteredMsg(String msg, byte warn_level) {
         paper = OSD::zxColor(1, 0);
     }
 
-    ESPectrum::waitForVideoTask();
     VGA& vga = ESPectrum::vga;
 
     vga.fillRect(x, y, w, h, paper);

@@ -153,7 +153,6 @@ void OSD::menuPrintRow(byte virtual_row_num, byte line_type) {
 
 // Draw the complete menu
 void OSD::menuDraw() {
-    ESPectrum::waitForVideoTask();
     VGA& vga = ESPectrum::vga;
     // Set font
     vga.setFont(Font6x8);

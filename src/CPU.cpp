@@ -323,6 +323,7 @@ void Z80Ops::poke8(uint16_t address, uint8_t value) {
                 // *lineptr32 = a2 | (a3<<8) | (a0<<16) | (a1<<24);
                 
                 ESPectrum::lineChanged[rowbase]=1;
+
         } else if (addrvid < 0x1b00) { // Attr
 
                 // addrvid -= 0x1800;
@@ -372,7 +373,7 @@ void Z80Ops::poke8(uint16_t address, uint8_t value) {
 
                 rowbase = (addrvid - 0x1800) >> 5;
                 rowbase = rowbase * 8;
-                if (value & 0x80) chgdata++;
+                if (value & 0x80) chgdata++; // Flashing bit on
                 for (int i=0;i<8;i++) 
                     ESPectrum::lineChanged[rowbase + i] = chgdata;
         }

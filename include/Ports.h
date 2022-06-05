@@ -46,6 +46,10 @@ public:
 
     // write port
     static void output(uint8_t portLow, uint8_t portHigh, uint8_t data);
+
+    static void preIO(int port);
+
+    static void postIO(int port);
 };
 
 
