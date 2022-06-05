@@ -553,13 +553,12 @@ void ESPectrum::loop() {
     uint32_t scanlinestates;
     uint32_t scanlinestatesR;
 
-//  scanline = scanoffset / statesPerLine;
     scanline = 0;
-    scanlinestates = scanoffset % statesPerLine;
-//    scanlinestates = 32;
-//    scanlinestatesR = 144;
-    scanlinestatesR = (scanlinestates + 112) % statesPerLine;
+//  scanlinestates = 32;
+//  scanlinestatesR = 144;
 
+    scanlinestates = scanoffset % statesPerLine;
+    scanlinestatesR = (scanlinestates + 112) % statesPerLine;
 
     static int ctr2 = 0;
     if (ctr2 == 0) {
@@ -600,7 +599,7 @@ void ESPectrum::loop() {
 
                 // Top border
                 if (lastBorder[scanline]!=borderColor) {
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-59]);
+                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
                     for (int i = 0; i < 90; i++) {
                         *lineptr32 = border32[borderColor];
                         lineptr32++;
@@ -611,7 +610,7 @@ void ESPectrum::loop() {
 
             if (scanline>63 && scanline<256) {
                 
-                lineptr32 = (uint32_t *)(vga.backBuffer[scanline-59]);
+                lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
 
                 // Left border
                 if (lastBorder[scanline]!=borderColor) {
@@ -675,7 +674,7 @@ void ESPectrum::loop() {
                 }
             }
 
-            if (scanline>255 && scanline<260 || scanline==0) {
+            if (scanline>255 && scanline<260) {
                 
                 if (lastBorder[scanline]!=borderColor) {
                     // Bottom border
@@ -688,7 +687,6 @@ void ESPectrum::loop() {
                 }
             }
 
-            //scanline++;
             scanlinestates -= statesPerLine; 
             
         }
@@ -701,7 +699,7 @@ void ESPectrum::loop() {
                 // Main screen
                 if (ESPectrum::lineChanged[scanline-64]) {
 
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-59]);
+                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
                     
                     grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
                     
@@ -749,9 +747,8 @@ void ESPectrum::loop() {
 
             scanline++;
             scanlinestatesR -= statesPerLine; 
-            
-        }
 
+        }
 
 	}
 
