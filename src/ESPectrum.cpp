@@ -520,7 +520,7 @@ uint8_t* lineptr;
 
 bool firstHalf;
 
-int ESPectrum::scanoffset = 32;
+int ESPectrum::scanoffset = 0;
 
 void ESPectrum::loop() {
 
@@ -550,20 +550,25 @@ void ESPectrum::loop() {
 
     CPU::tstates = 0;
     int statesPerLine = 224;
-    uint32_t scanlinestates;
-    uint32_t scanlinestatesR;
+    int scanlinestates;
+    int scanlinestatesR;
 
-    scanline = 0;
-//  scanlinestates = 32;
-//  scanlinestatesR = 144;
+    scanline = 1;
+    int scanlineR = 0;    
+//    scanlinestates = 32;
+//    scanlinestatesR = 144;
 
-    scanlinestates = scanoffset % statesPerLine;
-    scanlinestatesR = (scanlinestates + 112) % statesPerLine;
+//    scanlinestates = scanoffset % statesPerLine;
+//    scanlinestatesR = (scanlinestates + 112) % statesPerLine;
+
+//    scanlinestates = 235; // 235 as start value seems ok for left half of main screen
+    scanlinestates = 11; // 235 as start value seems ok for left half of main screen
+    scanlinestatesR = 144;
 
     static int ctr2 = 0;
     if (ctr2 == 0) {
         ctr2 = 50;
-        Serial.printf("Scanline: %u; Scanoffset: %u; Scanlinestates: %u; ScanlinestatesR: %u\n", scanline,scanoffset,scanlinestates,scanlinestatesR);
+        Serial.printf("Scanline: %u; Scanoffset: %u; Scanlinestates: %d; ScanlinestatesR: %d\n", scanline,scanoffset,scanlinestates,scanlinestatesR);
     }
     else ctr2--;
 
@@ -622,7 +627,7 @@ void ESPectrum::loop() {
 
 
                 // Main screen
-                if (ESPectrum::lineChanged[scanline-64]) {
+                //if (ESPectrum::lineChanged[scanline-64]) {
 
                     grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
                     
@@ -630,6 +635,7 @@ void ESPectrum::loop() {
                     attOffset = offAtt[(scanline - 60) - 4];
                     
                     for (ulaX = 0; ulaX < 16; ulaX++) // foreach byte in line
+//                    for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line                    
                     {
                         att = grmem[attOffset++];  // get attribute byte
 
@@ -662,7 +668,7 @@ void ESPectrum::loop() {
 
                     lineptr32+=32;
 
-                } else lineptr32+=64;
+                //} else lineptr32+=64;
                 
                 // Right border
                 if (lastBorder[scanline]!=borderColor) {
@@ -687,6 +693,7 @@ void ESPectrum::loop() {
                 }
             }
 
+            scanline++;
             scanlinestates -= statesPerLine; 
             
         }
@@ -694,17 +701,17 @@ void ESPectrum::loop() {
         // wait to (almost) correct tstate before beginning line render
         if ((scanlinestatesR >= statesPerLine)) {
 
-            if (scanline>63 && scanline<256) {
+            if (scanlineR>63 && scanlineR<256) {
                 
                 // Main screen
-                if (ESPectrum::lineChanged[scanline-64]) {
+//                if (ESPectrum::lineChanged[scanline-64]) {
 
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
+                    lineptr32 = (uint32_t *)(vga.backBuffer[scanlineR-60]);
                     
                     grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
                     
-                    bmpOffset = offBmp[(scanline - 60) - 4];
-                    attOffset = offAtt[(scanline - 60) - 4];
+                    bmpOffset = offBmp[(scanlineR - 60) - 4];
+                    attOffset = offAtt[(scanlineR - 60) - 4];
                     
                     bmpOffset+=16;
                     attOffset+=16;
@@ -739,13 +746,13 @@ void ESPectrum::loop() {
 
                     }
 
-                    ESPectrum::lineChanged[scanline-64] &= 0xfe;
+  //                  ESPectrum::lineChanged[scanline-64] &= 0xfe;
 
-                }
+//                }
                 
             }
 
-            scanline++;
+            scanlineR++;
             scanlinestatesR -= statesPerLine; 
 
         }

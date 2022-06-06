@@ -92,13 +92,9 @@ inline uint8_t CPU::delayContention(uint32_t currentTstates)
 	// the remaining 96 t-states correspond to border
 	int halfpix = currentTstates % 224;
 	if (halfpix >= 128) return 0;
-    
-    //if (halfpix < 64 || halfpix >= 192) return 0; //¿More correct maybe?
 
 	int modulo = halfpix % 8;
 	return wait_states[modulo];
 }
-
-
 
 #endif // CPU_h
