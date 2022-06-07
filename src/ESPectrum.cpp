@@ -520,7 +520,24 @@ uint8_t* lineptr;
 
 bool firstHalf;
 
+
+
 int ESPectrum::scanoffset = 0;
+
+int tstateDraw_tbl[192]={
+14335,14559,14783,15007,15231,15455,15679,15903,16127,16351,16575,16799,17023,17247,17471,17695,
+17919,18143,18367,18591,18815,19039,19263,19487,19711,19935,20159,20383,20607,20831,21055,21279,
+21503,21727,21951,22175,22399,22623,22847,23071,23295,23519,23743,23967,24191,24415,24639,24863,
+25087,25311,25535,25759,25983,26207,26431,26655,26879,27103,27327,27551,27775,27999,28223,28447,
+28671,28895,29119,29343,29567,29791,30015,30239,30463,30687,30911,31135,31359,31583,31807,32031,
+32255,32479,32703,32927,33151,33375,33599,33823,34047,34271,34495,34719,34943,35167,35391,35615,
+35839,36063,36287,36511,36735,36959,37183,37407,37631,37855,38079,38303,38527,38751,38975,39199,
+39423,39647,39871,40095,40319,40543,40767,40991,41215,41439,41663,41887,42111,42335,42559,42783,
+43007,43231,43455,43679,43903,44127,44351,44575,44799,45023,45247,45471,45695,45919,46143,46367,
+46591,46815,47039,47263,47487,47711,47935,48159,48383,48607,48831,49055,49279,49503,49727,49951,
+50175,50399,50623,50847,51071,51295,51519,51743,51967,52191,52415,52639,52863,53087,53311,53535,
+53759,53983,54207,54431,54655,54879,55103,55327,55551,55775,55999,56223,56447,56671,56895,57119
+};                    
 
 void ESPectrum::loop() {
 
@@ -537,6 +554,8 @@ void ESPectrum::loop() {
 
 #ifdef LOG_DEBUG_TIMING 
     uint32_t ts_start = micros();
+    uint32_t ts_startV;
+    uint32_t ts_elapsedV=0;     
 #endif
 
     uint32_t statesInFrame = CPU::statesPerFrame();
@@ -553,17 +572,24 @@ void ESPectrum::loop() {
     int scanlinestates;
     int scanlinestatesR;
 
-    scanline = 1;
+    scanline = 0;
     int scanlineR = 0;    
-//    scanlinestates = 32;
-//    scanlinestatesR = 144;
+
+    scanlinestates = 235;
+    //scanlinestatesR = 144;
+
+    int linedraw_cnt = 0;
+    int coldraw_cnt = 0;
+    uint32_t tstate_rest;
+    int DrawStatus=0;
+    int tstateDraw=14335;
+    int tstate_max = 0;
 
 //    scanlinestates = scanoffset % statesPerLine;
 //    scanlinestatesR = (scanlinestates + 112) % statesPerLine;
 
-//    scanlinestates = 235; // 235 as start value seems ok for left half of main screen
-    scanlinestates = 11; // 235 as start value seems ok for left half of main screen
-    scanlinestatesR = 144;
+    //scanlinestates = 235; // 235 (or 11 with scanline = 1) as start value seems ok for left half of main screen
+    //scanlinestatesR = 144;
 
     static int ctr2 = 0;
     if (ctr2 == 0) {
@@ -572,6 +598,8 @@ void ESPectrum::loop() {
     }
     else ctr2--;
 
+    //tstateDraw_tbl[0]=14335;
+    //for(int i=1;i<192;i++) tstateDraw_tbl[i]=tstateDraw_tbl[i-1]+224;
 
     while (CPU::tstates < statesInFrame)
 	{
@@ -592,52 +620,127 @@ void ESPectrum::loop() {
         prevTstates = CPU::tstates;
         #endif
 
-        CPU::global_tstates += (CPU::tstates - pre_tstates); // increase global Tstates
+        uint32_t tstate_diff = CPU::tstates - pre_tstates;
+        
+        CPU::global_tstates += tstate_diff; // increase global Tstates
 
-        scanlinestates += (CPU::tstates - pre_tstates);
-        scanlinestatesR += (CPU::tstates - pre_tstates);        
+        if (tstate_diff>tstate_max) tstate_max=tstate_diff;
 
-        // wait to (almost) correct tstate before beginning line render
-        if (scanlinestates >= statesPerLine) {
+        // scanlinestates += tstate_diff;
+        // scanlinestatesR += tstate_diff;
 
-            if (scanline>59 && scanline<64) {
+        //
+        // TWO PIXEL AT A TIME VERSION
+        //
+        if (DrawStatus==0) {
 
-                // Top border
-                if (lastBorder[scanline]!=borderColor) {
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
-                    for (int i = 0; i < 90; i++) {
-                        *lineptr32 = border32[borderColor];
-                        lineptr32++;
-                    }
-                    lastBorder[scanline]=borderColor;
+            if (CPU::tstates > tstateDraw) {
+                
+                tstate_diff = CPU::tstates - tstateDraw;
+                tstateDraw += 224;
+
+              //lineptr32 = (uint32_t *)(vga.backBuffer[linedraw_cnt + 4]);                
+              //lineptr32+= 13;
+                lineptr = (uint8_t *)(vga.backBuffer[linedraw_cnt + 4]);
+                lineptr+= 52;
+
+                bmpOffset = offBmp[linedraw_cnt];
+                attOffset = offAtt[linedraw_cnt];
+
+                coldraw_cnt = 0;
+
+                grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+                
+                att = grmem[attOffset];  // get attribute byte
+
+                bri = att & 0x40;
+                fore = zxColor(att & 0b111, bri);
+                back = zxColor((att >> 3) & 0b111, bri);
+                if ((att >> 7) && flashing) {
+                    palette[0] = fore; palette[1] = back;
+                } else {
+                    palette[0] = back; palette[1] = fore;
                 }
+
+                bmp = grmem[bmpOffset];  // get bitmap byte
+
+                DrawStatus = 1;
+
             }
 
-            if (scanline>63 && scanline<256) {
-                
-                lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
+        } 
+        
+        if (DrawStatus == 1 /* LINEDRAW */) {
 
-                // Left border
-                if (lastBorder[scanline]!=borderColor) {
-                    for (int i = 0; i < 13; i++) {
-                        *lineptr32 = border32[borderColor];
-                        lineptr32++;
+            // if (((tstate_diff % 2) == 0) && (coldraw_cnt % 4 == 0)) {
+
+            //     for (int i=0;i<tstate_diff / 2;i++) {
+                    
+            //         a0 = palette[(bmp >> (7 - (coldraw_cnt % 8))) & 0x01];
+            //         a1 = palette[(bmp >> (6 - (coldraw_cnt % 8))) & 0x01];
+            //         a2 = palette[(bmp >> (5 - (coldraw_cnt % 8))) & 0x01];
+            //         a3 = palette[(bmp >> (4 - (coldraw_cnt % 8))) & 0x01];
+            //         lineptr32[coldraw_cnt >> 2] = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+
+            //         coldraw_cnt += 4;
+                    
+            //         if (coldraw_cnt>255) {
+            //             DrawStatus = 0;
+            //             linedraw_cnt++;
+            //             if (linedraw_cnt>191) DrawStatus = 2;
+            //             coldraw_cnt = 0;
+            //             break;
+            //         }
+
+            //         if ((coldraw_cnt % 8) == 0) {
+
+            //             attOffset++;
+            //             bmpOffset++;
+
+            //             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+
+            //             att = grmem[attOffset];  // get attribute byte
+
+            //             bri = att & 0x40;
+            //             fore = zxColor(att & 0b111, bri);
+            //             back = zxColor((att >> 3) & 0b111, bri);
+            //             if ((att >> 7) && flashing) {
+            //                 palette[0] = fore; palette[1] = back;
+            //             } else {
+            //                 palette[0] = back; palette[1] = fore;
+            //             }
+
+            //             bmp = grmem[bmpOffset];  // get bitmap byte
+
+            //         }
+
+            //     }
+
+            // } else {
+
+                for (int i=0;i<tstate_diff;i++) {
+                    
+                    lineptr[coldraw_cnt ^ 2] = palette[bitRead(bmp,7 - (coldraw_cnt % 8))];
+                    coldraw_cnt++;
+                    lineptr[coldraw_cnt ^ 2] = palette[bitRead(bmp,7 - (coldraw_cnt % 8))];
+                    coldraw_cnt++;
+
+                    if (coldraw_cnt>255) {
+                            DrawStatus = 0;
+                            linedraw_cnt++;
+                            if (linedraw_cnt>191) DrawStatus = 2;
+                            coldraw_cnt = 0;
+                            break;
                     }
-                } else lineptr32+=13;
 
+                    if ((coldraw_cnt % 8) == 0) {
 
-                // Main screen
-                //if (ESPectrum::lineChanged[scanline-64]) {
+                        attOffset++;
+                        bmpOffset++;
 
-                    grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-                    
-                    bmpOffset = offBmp[(scanline - 60) - 4];
-                    attOffset = offAtt[(scanline - 60) - 4];
-                    
-                    for (ulaX = 0; ulaX < 16; ulaX++) // foreach byte in line
-//                    for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line                    
-                    {
-                        att = grmem[attOffset++];  // get attribute byte
+                        grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+
+                        att = grmem[attOffset];  // get attribute byte
 
                         bri = att & 0x40;
                         fore = zxColor(att & 0b111, bri);
@@ -648,114 +751,256 @@ void ESPectrum::loop() {
                             palette[0] = back; palette[1] = fore;
                         }
 
-                        bmp = grmem[bmpOffset++];  // get bitmap byte
-
-                        a0 = palette[(bmp >> 7) & 0x01];
-                        a1 = palette[(bmp >> 6) & 0x01];
-                        a2 = palette[(bmp >> 5) & 0x01];
-                        a3 = palette[(bmp >> 4) & 0x01];
-                        *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-
-                        a0 = palette[(bmp >> 3) & 0x01];
-                        a1 = palette[(bmp >> 2) & 0x01];
-                        a2 = palette[(bmp >> 1) & 0x01];
-                        a3 = palette[bmp & 0x01];
-                        *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+                        bmp = grmem[bmpOffset];  // get bitmap byte
 
                     }
 
-                    //ESPectrum::lineChanged[scanline-64] &= 0xfe;
-
-                    lineptr32+=32;
-
-                //} else lineptr32+=64;
-                
-                // Right border
-                if (lastBorder[scanline]!=borderColor) {
-                    for (int i = 0; i < 13; i++) {
-                        *lineptr32 = border32[borderColor];
-                        lineptr32++;                    
-                    }
-                    lastBorder[scanline]=borderColor;
                 }
-            }
 
-            if (scanline>255 && scanline<260) {
+            //}
+
+        }
+
+        // //
+        // // ONE PIXEL AT A TIME VERSION
+        // //
+        // if (DrawStatus==0) {
+
+        //     if (CPU::tstates > (tstateDraw + scanoffset)) {
                 
-                if (lastBorder[scanline]!=borderColor) {
-                    // Bottom border
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
-                    for (int i = 0; i < 90; i++) {
-                        *lineptr32 = border32[borderColor];
-                        lineptr32++;
-                    }
-                    lastBorder[scanline]=borderColor;
-                }
-            }
+        //         lineptr = (uint8_t *)(vga.backBuffer[linedraw_cnt + 4]);
+        //         lineptr+= 52;
+        //         bmpOffset = offBmp[linedraw_cnt];
+        //         attOffset = offAtt[linedraw_cnt];
+        //         coldraw_cnt = 0;
+        //         tstate_diff = CPU::tstates - (tstateDraw + scanoffset);
+        //         tstateDraw+=224;
 
-            scanline++;
-            scanlinestates -= statesPerLine; 
+        //         grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+                
+        //         att = grmem[attOffset];  // get attribute byte
+
+        //         bri = att & 0x40;
+        //         fore = zxColor(att & 0b111, bri);
+        //         back = zxColor((att >> 3) & 0b111, bri);
+        //         if ((att >> 7) && flashing) {
+        //             palette[0] = fore; palette[1] = back;
+        //         } else {
+        //             palette[0] = back; palette[1] = fore;
+        //         }
+
+        //         bmp = grmem[bmpOffset];  // get bitmap byte
+
+        //         DrawStatus = 1;
+
+        //     }
+
+        // } 
+        
+        // if (DrawStatus == 1 /* LINEDRAW */) {
+
+        //     for (int i=0;i<(tstate_diff * 2);i++) {
+                 
+        //           lineptr[coldraw_cnt^2] = palette[bitRead(bmp,7 - (coldraw_cnt % 8))];
+
+        //           coldraw_cnt++;
+
+        //           if (coldraw_cnt>255) {
+        //                 DrawStatus = 0;
+        //                 linedraw_cnt++;
+        //                 if (linedraw_cnt>191) DrawStatus = 3;
+        //                 coldraw_cnt = 0;
+        //                 break;
+        //           }
+
+        //           if ((coldraw_cnt % 8) == 0) {
+
+        //             attOffset++;
+        //             bmpOffset++;
+
+        //             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+
+        //             att = grmem[attOffset];  // get attribute byte
+
+        //             bri = att & 0x40;
+        //             fore = zxColor(att & 0b111, bri);
+        //             back = zxColor((att >> 3) & 0b111, bri);
+        //             if ((att >> 7) && flashing) {
+        //                 palette[0] = fore; palette[1] = back;
+        //             } else {
+        //                 palette[0] = back; palette[1] = fore;
+        //             }
+
+        //             bmp = grmem[bmpOffset];  // get bitmap byte
+
+        //           }
+
+        //     }
+
+        // }
+
+//         // wait to (almost) correct tstate before beginning line render
+//         if (scanlinestates >= statesPerLine) {
+
+//             if (scanline>59 && scanline<64) {
+
+//                 // Top border
+//                 if (lastBorder[scanline]!=borderColor) {
+//                     lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
+//                     for (int i = 0; i < 90; i++) {
+//                         *lineptr32 = border32[borderColor];
+//                         lineptr32++;
+//                     }
+//                     lastBorder[scanline]=borderColor;
+//                 }
+
+//             }
+
+//             if (scanline>63 && scanline<256) {
+
+//                 lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
+
+//                 // Left border
+//                 if (lastBorder[scanline]!=borderColor) {
+//                     for (int i = 0; i < 13; i++) {
+//                         *lineptr32 = border32[borderColor];
+//                         lineptr32++;
+//                     }
+//                 } else lineptr32+=13;
+
+
+//                 // Main screen
+//                 if (ESPectrum::lineChanged[scanline-64]!=0) {
+
+//                     grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+                    
+//                     bmpOffset = offBmp[(scanline - 60) - 4];
+//                     attOffset = offAtt[(scanline - 60) - 4];
+                    
+//                     for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
+// //                  for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line                    
+//                     {
+//                         att = grmem[attOffset++];  // get attribute byte
+
+//                         bri = att & 0x40;
+//                         fore = zxColor(att & 0b111, bri);
+//                         back = zxColor((att >> 3) & 0b111, bri);
+//                         if ((att >> 7) && flashing) {
+//                             palette[0] = fore; palette[1] = back;
+//                         } else {
+//                             palette[0] = back; palette[1] = fore;
+//                         }
+
+//                         bmp = grmem[bmpOffset++];  // get bitmap byte
+
+//                         a0 = palette[(bmp >> 7) & 0x01];
+//                         a1 = palette[(bmp >> 6) & 0x01];
+//                         a2 = palette[(bmp >> 5) & 0x01];
+//                         a3 = palette[(bmp >> 4) & 0x01];
+//                         *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+
+//                         a0 = palette[(bmp >> 3) & 0x01];
+//                         a1 = palette[(bmp >> 2) & 0x01];
+//                         a2 = palette[(bmp >> 1) & 0x01];
+//                         a3 = palette[bmp & 0x01];
+//                         *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+
+//                     }
+
+//                     ESPectrum::lineChanged[scanline-64] &= 0xfe;
+
+//                     //lineptr32+=32;
+
+//                 } else lineptr32+=64;
+                
+//                 // Right border
+//                 if (lastBorder[scanline]!=borderColor) {
+//                     for (int i = 0; i < 13; i++) {
+//                         *lineptr32 = border32[borderColor];
+//                         lineptr32++;                    
+//                     }
+//                     lastBorder[scanline]=borderColor;
+//                 }
+
+//             }
+
+//             if (scanline>255 && scanline<260) {
+
+//                 if (lastBorder[scanline]!=borderColor) {
+//                     // Bottom border
+//                     lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
+//                     for (int i = 0; i < 90; i++) {
+//                         *lineptr32 = border32[borderColor];
+//                         lineptr32++;
+//                     }
+//                     lastBorder[scanline]=borderColor;
+//                 }
+
+//             }
+
+//             scanline++;
+//             scanlinestates -= statesPerLine; 
             
-        }
+//         }
 
-        // wait to (almost) correct tstate before beginning line render
-        if ((scanlinestatesR >= statesPerLine)) {
+        // // wait to (almost) correct tstate before beginning line render
+        // if ((scanlinestatesR >= statesPerLine)) {
 
-            if (scanlineR>63 && scanlineR<256) {
+        //     if (scanline>63 && scanline<256) {
                 
-                // Main screen
-//                if (ESPectrum::lineChanged[scanline-64]) {
+        //         // Main screen
+        //         if (ESPectrum::lineChanged[scanline-64]!=0) {
 
-                    lineptr32 = (uint32_t *)(vga.backBuffer[scanlineR-60]);
+        //             lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
                     
-                    grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+        //             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
                     
-                    bmpOffset = offBmp[(scanlineR - 60) - 4];
-                    attOffset = offAtt[(scanlineR - 60) - 4];
+        //             bmpOffset = offBmp[(scanlineR - 60) - 4];
+        //             attOffset = offAtt[(scanlineR - 60) - 4];
                     
-                    bmpOffset+=16;
-                    attOffset+=16;
-                    lineptr32+=45;
+        //             bmpOffset+=16;
+        //             attOffset+=16;
+        //             lineptr32+=45;
 
-                    for (ulaX = 0; ulaX < 16; ulaX++) // foreach byte in line
-                    {
-                        att = grmem[attOffset++];  // get attribute byte
+        //             for (ulaX = 0; ulaX < 16; ulaX++) // foreach byte in line
+        //             {
+        //                 att = grmem[attOffset++];  // get attribute byte
 
-                        bri = att & 0x40;
-                        fore = zxColor(att & 0b111, bri);
-                        back = zxColor((att >> 3) & 0b111, bri);
-                        if ((att >> 7) && flashing) {
-                            palette[0] = fore; palette[1] = back;
-                        } else {
-                            palette[0] = back; palette[1] = fore;
-                        }
+        //                 bri = att & 0x40;
+        //                 fore = zxColor(att & 0b111, bri);
+        //                 back = zxColor((att >> 3) & 0b111, bri);
+        //                 if ((att >> 7) && flashing) {
+        //                     palette[0] = fore; palette[1] = back;
+        //                 } else {
+        //                     palette[0] = back; palette[1] = fore;
+        //                 }
 
-                        bmp = grmem[bmpOffset++];  // get bitmap byte
+        //                 bmp = grmem[bmpOffset++];  // get bitmap byte
 
-                        a0 = palette[(bmp >> 7) & 0x01];
-                        a1 = palette[(bmp >> 6) & 0x01];
-                        a2 = palette[(bmp >> 5) & 0x01];
-                        a3 = palette[(bmp >> 4) & 0x01];
-                        *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+        //                 a0 = palette[(bmp >> 7) & 0x01];
+        //                 a1 = palette[(bmp >> 6) & 0x01];
+        //                 a2 = palette[(bmp >> 5) & 0x01];
+        //                 a3 = palette[(bmp >> 4) & 0x01];
+        //                 *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
 
-                        a0 = palette[(bmp >> 3) & 0x01];
-                        a1 = palette[(bmp >> 2) & 0x01];
-                        a2 = palette[(bmp >> 1) & 0x01];
-                        a3 = palette[bmp & 0x01];
-                        *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
+        //                 a0 = palette[(bmp >> 3) & 0x01];
+        //                 a1 = palette[(bmp >> 2) & 0x01];
+        //                 a2 = palette[(bmp >> 1) & 0x01];
+        //                 a3 = palette[bmp & 0x01];
+        //                 *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
 
-                    }
+        //             }
 
-  //                  ESPectrum::lineChanged[scanline-64] &= 0xfe;
+        //             ESPectrum::lineChanged[scanline-64] &= 0xfe;
 
-//                }
+        //         }
                 
-            }
+        //     }
 
-            scanlineR++;
-            scanlinestatesR -= statesPerLine; 
+        //     scanline++;
+        //     scanlinestatesR -= statesPerLine; 
 
-        }
+        // }
 
 	}
 
@@ -769,6 +1014,7 @@ void ESPectrum::loop() {
 
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
+    uint32_t elapsedV = ts_elapsedV;
     uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;
     // if (idle < target)
@@ -778,7 +1024,9 @@ void ESPectrum::loop() {
     if (ctr == 0) {
         ctr = 50;
         Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
-        Serial.printf("Scanline: %u; Scanoffset: %u\n", scanline,scanoffset);
+        Serial.printf("[VidTask] elapsed: %u\n", elapsedV);
+        Serial.printf("Scanline: %u; Scanoffset: %d\n", scanline,scanoffset);
+        Serial.printf("Tstate_max: %u\n", tstate_max);        
     }
     else ctr--;
 
