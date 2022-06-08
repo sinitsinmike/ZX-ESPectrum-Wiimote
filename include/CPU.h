@@ -45,8 +45,6 @@ public:
     // call this for resetting the CPU
     static void reset();
 
-    static void setintpending();
-
     // get the number of CPU Tstates per frame (machine dependant)
     static uint32_t statesPerFrame();
 
@@ -76,31 +74,26 @@ public:
 //
 inline uint8_t CPU::delayContention(uint32_t currentTstates)
 {
-    
     // sequence of wait states
     static uint8_t wait_states[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
 
 	// delay states one t-state BEFORE the first pixel to be drawn
-	currentTstates += 1;
+    currentTstates++;
 
 	// each line spans 224 t-states
 	int line = currentTstates / 224;
 
-	// only the 192 lines between 64 and 255 have graphic data, the rest is border
+    // only the 192 lines between 64 and 255 have graphic data, the rest is border
 	if (line < 64 || line >= 256) return 0;
-    
+
 	// only the first 128 t-states of each line correspond to a graphic data transfer
 	// the remaining 96 t-states correspond to border
 	int halfpix = currentTstates % 224;
 
 	if (halfpix >= 128) return 0;
-    
-    //if (halfpix < 72 + ESPectrum::scanoffset || halfpix >= 200 + ESPectrum::scanoffset) return 0;
-    
-    //if (halfpix < 19 + ESPectrum::scanoffset || halfpix >= 147 + ESPectrum::scanoffset) return 0;
 
-	int modulo = halfpix % 8;
-	return wait_states[modulo];
+    return(wait_states[halfpix & 0x07]);
+
 }
 
 #endif // CPU_h
