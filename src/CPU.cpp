@@ -263,9 +263,11 @@ void CPU::loop()
 uint8_t Z80Ops::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock
     if (ADDRESS_IN_LOW_RAM(address))
-        CPU::tstates += CPU::delayContention(CPU::tstates);
+        ESPectrum::tstatesAdd(CPU::delayContention(CPU::tstates));        
+//        CPU::tstates += CPU::delayContention(CPU::tstates);
 
-    CPU::tstates += 4;
+//    CPU::tstates += 4;
+    ESPectrum::tstatesAdd(4);
     return Mem::readbyte(address);
 }
 
@@ -273,32 +275,40 @@ uint8_t Z80Ops::fetchOpcode(uint16_t address) {
 uint8_t Z80Ops::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     if (ADDRESS_IN_LOW_RAM(address))
-        CPU::tstates += CPU::delayContention(CPU::tstates);
+        ESPectrum::tstatesAdd(CPU::delayContention(CPU::tstates));        
+        //CPU::tstates += CPU::delayContention(CPU::tstates);
 
-    CPU::tstates += 3;
+    //CPU::tstates += 3;
+    ESPectrum::tstatesAdd(3);    
     return Mem::readbyte(address);
 }
 void Z80Ops::poke8(uint16_t address, uint8_t value) {
     if (ADDRESS_IN_LOW_RAM(address)) {
-        CPU::tstates += CPU::delayContention(CPU::tstates);
-        uint16_t addrvid = address & 0x3fff;
-        uint16_t rowbase;
-        uint8_t chgdata=1;
-        if (addrvid < 0x1800) { // Bitmap
-            // Convert from Spectrum memory video to plain buffer
-            rowbase = addrvid >> 5;
-            rowbase = ((rowbase & 0xC0) | ((rowbase & 0x38) >> 3) | ((rowbase & 0x07) << 3));
-            ESPectrum::lineChanged[rowbase] |= 0x01;
-        } else if (addrvid < 0x1b00) { // Attr
-            rowbase = (addrvid - 0x1800) >> 5;
-            rowbase = rowbase * 8;
-            if (value & 0x80) chgdata=0x03; // Flashing bit on
-            for (int i=0;i<8;i++) ESPectrum::lineChanged[rowbase + i] |= chgdata;
-        }
+
+//        CPU::tstates += CPU::delayContention(CPU::tstates);
+        
+        ESPectrum::tstatesAdd(CPU::delayContention(CPU::tstates));        
+
+        // uint16_t addrvid = address & 0x3fff;
+        // uint16_t rowbase;
+        // uint8_t chgdata=1;
+        // if (addrvid < 0x1800) { // Bitmap
+        //     // Convert from Spectrum memory video to plain buffer
+        //     rowbase = addrvid >> 5;
+        //     rowbase = ((rowbase & 0xC0) | ((rowbase & 0x38) >> 3) | ((rowbase & 0x07) << 3));
+        //     ESPectrum::lineChanged[rowbase] |= 0x01;
+        // } else if (addrvid < 0x1b00) { // Attr
+        //     rowbase = (addrvid - 0x1800) >> 5;
+        //     rowbase = rowbase * 8;
+        //     if (value & 0x80) chgdata=0x03; // Flashing bit on
+        //     for (int i=0;i<8;i++) ESPectrum::lineChanged[rowbase + i] |= chgdata;
+        // }
+
     }
 
     // 3 clocks for write byte to RAM
-    CPU::tstates += 3;
+//    CPU::tstates += 3;
+    ESPectrum::tstatesAdd(3);
     Mem::writebyte(address, value);
 }
 
@@ -318,14 +328,16 @@ void Z80Ops::poke16(uint16_t address, RegisterPair word) {
 /* In/Out byte from/to IO Bus */
 uint8_t Z80Ops::inPort(uint16_t port) {
     // 3 clocks for read byte from bus
-    CPU::tstates += 3;
+    //CPU::tstates += 3;
+    ESPectrum::tstatesAdd(3);
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
     return Ports::input(loport, hiport);
 }
 void Z80Ops::outPort(uint16_t port, uint8_t value) {
     // 4 clocks for write byte to bus
-    CPU::tstates += 4;
+    //CPU::tstates += 4;
+    ESPectrum::tstatesAdd(4);
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
     Ports::output(loport, hiport, value);
@@ -336,16 +348,19 @@ void Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
     // Additional clocks to be added on some instructions
     if (ADDRESS_IN_LOW_RAM(address)) {
         for (int idx = 0; idx < wstates; idx++) {
-            CPU::tstates += CPU::delayContention(CPU::tstates) + 1;
+//            CPU::tstates += CPU::delayContention(CPU::tstates) + 1;
+            ESPectrum::tstatesAdd(CPU::delayContention(CPU::tstates) + 1);        
         }
     }
     else
-        CPU::tstates += wstates;
+        ESPectrum::tstatesAdd(wstates);
+        //CPU::tstates += wstates;
 }
 
 /* Clocks needed for processing INT and NMI */
 void Z80Ops::interruptHandlingTime(int32_t wstates) {
-    CPU::tstates += wstates;
+    //CPU::tstates += wstates;
+    ESPectrum::tstatesAdd(wstates);
 }
 
 /* Callback to know when the INT signal is active */
