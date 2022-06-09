@@ -257,11 +257,9 @@ uint8_t Z80Ops::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock
     if (ADDRESS_IN_LOW_RAM(address))
         ESPectrum::ALU_video(CPU::delayContention(CPU::tstates) + 4);        
-        //CPU::tstates += CPU::delayContention(CPU::tstates) + 4;
-    else
+    else {
         ESPectrum::ALU_video(4);
-        //CPU::tstates += 4;
-
+    }
 
     return Mem::readbyte(address);
 }
@@ -271,39 +269,45 @@ uint8_t Z80Ops::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     if (ADDRESS_IN_LOW_RAM(address))
         ESPectrum::ALU_video(CPU::delayContention(CPU::tstates) + 3);
-        //CPU::tstates += CPU::delayContention(CPU::tstates) + 3;
-    else
-        ESPectrum::ALU_video(3);    
-        //CPU::tstates += 3;
+    else {
+        if ((ESPectrum::ALU_video_rest)) // If rest > 0
+            ESPectrum::ALU_video(3);
+        else {
+            ESPectrum::ALU_video_rest=3;
+            CPU::tstates+=3;
+        }
+    }
 
     return Mem::readbyte(address);
 }
 void Z80Ops::poke8(uint16_t address, uint8_t value) {
     if (ADDRESS_IN_LOW_RAM(address)) {
+       
         ESPectrum::ALU_video(CPU::delayContention(CPU::tstates) + 3);
-        //CPU::tstates += CPU::delayContention(CPU::tstates);
-        
-        // uint16_t addrvid = address & 0x3fff;
-        // uint16_t rowbase;
-        // uint8_t chgdata=1;
-        // if (addrvid < 0x1800) { // Bitmap
-        //     // Convert from Spectrum memory video to plain buffer
-        //     rowbase = addrvid >> 5;
-        //     rowbase = ((rowbase & 0xC0) | ((rowbase & 0x38) >> 3) | ((rowbase & 0x07) << 3));
-        //     ESPectrum::lineChanged[rowbase] |= 0x01;
-        // } else if (addrvid < 0x1b00) { // Attr
-        //     rowbase = (addrvid - 0x1800) >> 5;
-        //     rowbase = rowbase * 8;
-        //     if (value & 0x80) chgdata=0x03; // Flashing bit on
-        //     for (int i=0;i<8;i++) ESPectrum::lineChanged[rowbase + i] |= chgdata;
-        // }
 
-    } else
-    // 3 clocks for write byte to RAM
-        ESPectrum::ALU_video(3);
-        //CPU::tstates += 3;
+        if (address < 0x5800) { // Bitmap
+            ESPectrum::lineChanged[address & 0x3fff] |= 0x01;
+        } else if (address < 0x5b00) { // Attr
+            byte chgdata;
+            uint16_t addrvid = address & 0x3fff;
+            int rowbase = ((addrvid - 0x1800) >> 5) << 3;
+            if (value & 0x80) chgdata=0x03; else chgdata=0x01; // Flashing bit on
+            for (int i=0;i<8;i++){
+                ESPectrum::lineChanged[ESPectrum::offBmp[rowbase + i] + (addrvid & 0x1f)] |= chgdata;
+            }
+        }
+
+    } else {
+        if ((ESPectrum::ALU_video_rest)) // If rest > 0
+            ESPectrum::ALU_video(3);
+        else {
+            ESPectrum::ALU_video_rest=3;
+            CPU::tstates+=3;
+        }
+    }
 
     Mem::writebyte(address, value);
+
 }
 
 /* Read/Write word from/to RAM */
@@ -322,8 +326,13 @@ void Z80Ops::poke16(uint16_t address, RegisterPair word) {
 /* In/Out byte from/to IO Bus */
 uint8_t Z80Ops::inPort(uint16_t port) {
     // 3 clocks for read byte from bus
-    ESPectrum::ALU_video(3);
-    //CPU::tstates += 3;
+    if ((ESPectrum::ALU_video_rest)) // If rest > 0
+        ESPectrum::ALU_video(3);
+    else {
+        ESPectrum::ALU_video_rest=3;
+        CPU::tstates+=3;
+    }
+   
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
     return Ports::input(loport, hiport);
@@ -331,7 +340,6 @@ uint8_t Z80Ops::inPort(uint16_t port) {
 void Z80Ops::outPort(uint16_t port, uint8_t value) {
     // 4 clocks for write byte to bus
     ESPectrum::ALU_video(4);
-    //CPU::tstates += 4;
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
     Ports::output(loport, hiport, value);
@@ -341,20 +349,29 @@ void Z80Ops::outPort(uint16_t port, uint8_t value) {
 void Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
     // Additional clocks to be added on some instructions
     if (ADDRESS_IN_LOW_RAM(address)) {
-        for (int idx = 0; idx < wstates; idx++) {
-            ESPectrum::ALU_video(CPU::delayContention(CPU::tstates) + 1);        
-            //CPU::tstates += CPU::delayContention(CPU::tstates) + 1;
+        int sumstates = 0;
+        for (int idx = 0; idx < wstates; idx++)
+            sumstates+=CPU::delayContention(CPU::tstates) + 1;
+        ESPectrum::ALU_video(sumstates);
+    }
+    else {
+        if ((ESPectrum::ALU_video_rest + wstates) > 3) // If > 3
+            ESPectrum::ALU_video(wstates);
+        else {
+            ESPectrum::ALU_video_rest += wstates;
+            CPU::tstates+=wstates;
         }
     }
-    else
-        ESPectrum::ALU_video(wstates);
-        //CPU::tstates += wstates;
 }
 
 /* Clocks needed for processing INT and NMI */
 void Z80Ops::interruptHandlingTime(int32_t wstates) {
-    ESPectrum::ALU_video(wstates);
-    //CPU::tstates += wstates;
+    if ((ESPectrum::ALU_video_rest + wstates) > 3) // If > 3
+        ESPectrum::ALU_video(wstates);
+    else {
+        ESPectrum::ALU_video_rest += wstates;
+        CPU::tstates+=wstates;
+    }
 }
 
 /* Callback to know when the INT signal is active */

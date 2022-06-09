@@ -63,15 +63,19 @@ public:
     static void reset();
 
     // graphics
+    #define SPEC_W 256
+    #define SPEC_H 192
+
     static VGA vga;
     static uint8_t borderColor;
     static uint16_t scanline;
     static int scanoffset;
     static uint8_t lastBorder[312];
-    static uint8_t lineChanged[192];
+    static uint8_t lineChanged[6144];
+    static int offBmp[SPEC_H];
     static uint16_t zxColor(uint8_t color, uint8_t bright);
     static void ALU_video(int statestoadd);
-
+    static int ALU_video_rest;
     static void processKeyboard();
 
 private:
