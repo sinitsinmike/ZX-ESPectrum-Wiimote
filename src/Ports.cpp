@@ -108,9 +108,6 @@ static void detectZXKeyCombinationForMenu()
 uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 {
     
-    //preIO((portHigh << 8) || portLow);
-    //postIO((portHigh << 8) || portLow);
-
     // uint32_t ts_start = micros();
     
     // 48K ULA
@@ -204,8 +201,6 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
 
-    //preIO((portHigh << 8) || portLow);
-
     // 48K ULA
     if ((portLow & 0x01) == 0x00)
     {
@@ -225,8 +220,6 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         base[0x20] = data; // ?
     }
     
-    //postIO((portHigh << 8) || portLow);
-
     if ((portLow & 0x02) == 0x00)
     {
         // 128K AY
@@ -266,114 +259,4 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
 
     }
     
-}
-
-/*
-* Las operaciones de I/O se producen entre los ciclos T3 y T4 de la CPU,
-* y justo ahí es donde podemos encontrar la contención en los accesos. Los
-* ciclos de contención son exactamente iguales a los de la memoria, con los
-* siguientes condicionantes dependiendo del estado del bit A0 y de si el
-* puerto accedido se encuentra entre las direcciones 0x4000-0x7FFF:
-*
-* High byte in 0x40 (0xc0) to 0x7f (0xff)?     Low bit  Contention pattern
-*                                      No      Reset    N:1, C:3
-*                                      No      Set      N:1, N:3
-*                                      Yes     Reset    C:1, C:3
-*                                      Yes     Set      C:1, C:1, C:1, C:1
-*
-* La columna 'Contention Pattern' se lee 'N:x', no contención x ciclos
-* 'C:n' se lee contención seguido de n ciclos sin contención.
-* Así pues se necesitan dos rutinas, la que añade el t-estado inicial
-* con sus contenciones cuando procede y la que añade los 3 estados finales
-* con la contención correspondiente.
-*/
-void Ports::preIO(int port) {
-
-    //if (contendedIOPage[port >>> 14]) {
-    if ((port >> 14) == 1) {    
-
-        CPU::tstates += CPU::delayContention(CPU::tstates);
-
-        // clock.addTstates(delayTstates[clock.getTstates()] + 1);
-        // if (clock.getTstates() >= nextEvent) {
-        //     updateScreen(clock.getTstates());
-        // }
-
-    } else {
-
-        CPU::tstates += 1;
-
-//        clock.addTstates(1);
-
-    }
-}
-
-void Ports::postIO(int port) {
-
-    /*
-    *
-    * PARA MODELOS DISTINTOS DE 48K -> A ESTUDIAR
-    * 
-    * /
-    if (spectrumModel.codeModel == MachineTypes.CodeModel.SPECTRUMPLUS3) {
-        clock.addTstates(3);
-        return;
-    }
-
-    if (specSettings.isULAplus() && (port & 0x0004) == 0) {
-        clock.addTstates(delayTstates[clock.getTstates()] + 3);
-        if (clock.getTstates() >= nextEvent) {
-            updateScreen(clock.getTstates());
-        }
-        return;
-    }
-    */
-
-    if ((port & 0x0001) != 0) {
-
-//        if (contendedIOPage[port >>> 14]) {
-        if ((port >> 14) == 1) {    
-            // A0 == 1 y es contended IO
-            CPU::tstates += CPU::delayContention(CPU::tstates);
-
-//            clock.addTstates(delayTstates[clock.getTstates()] + 1);
-
-//            if (clock.getTstates() >= nextEvent) {
-//                updateScreen(clock.getTstates());
-//            }
-
-            CPU::tstates += CPU::delayContention(CPU::tstates);
-
-            // clock.addTstates(delayTstates[clock.getTstates()] + 1);
-
-            // if (clock.getTstates() >= nextEvent) {
-            //     updateScreen(clock.getTstates());
-            // }
-
-            CPU::tstates += CPU::delayContention(CPU::tstates);
-
-            // clock.addTstates(delayTstates[clock.getTstates()] + 1);
-
-            // if (clock.getTstates() >= nextEvent) {
-            //     updateScreen(clock.getTstates());
-            // }
-
-        } else {
-            // A0 == 1 y no es contended IO
-            CPU::tstates += 3;
-//            clock.addTstates(3);
-        }
-
-    } else {
-        // A0 == 0
-//        clock.addTstates(delayTstates[clock.getTstates()] + 3);
-
-        CPU::tstates += CPU::delayContention(CPU::tstates) + 2;
-
-        // if (clock.getTstates() >= nextEvent) {
-        //     updateScreen(clock.getTstates());
-        // }
-
-    }
-
 }

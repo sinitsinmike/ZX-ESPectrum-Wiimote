@@ -173,21 +173,14 @@ void OSD::do_OSD() {
         AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F2)) {
-        
-        ESPectrum::scanoffset-=1;
-        
-        // AySound::disable();
-        // quickSave();
-        // AySound::enable();
+        AySound::disable();
+        quickSave();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F3)) {
-
-        ESPectrum::scanoffset+=1;
-
-
-        // AySound::disable();
-        // quickLoad();
-        // AySound::enable();
+        AySound::disable();
+        quickLoad();
+        AySound::enable();
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F4)) {
         AySound::disable();

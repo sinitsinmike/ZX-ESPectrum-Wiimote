@@ -62,28 +62,13 @@ public:
     // reset machine
     static void reset();
 
-    // graphics
-    #define SPEC_W 256
-    #define SPEC_H 192
-
     static VGA vga;
-    static uint8_t borderColor;
-    static uint16_t scanline;
-    static int scanoffset;
-    static uint8_t lastBorder[312];
-    static uint8_t lineChanged[6144];
-    static int offBmp[SPEC_H];
-    static uint16_t zxColor(uint8_t color, uint8_t bright);
-    static void ALU_video(int statestoadd);
-    static int ALU_video_rest;
-    static void processKeyboard();
-
-private:
-    static void precalcColors();
-    static void precalcULASWAP();
-    static void precalcborder32();
-    static void videoTask(void* unused);
     
+    static uint8_t lastBorder[312];    
+    static uint8_t borderColor;
+    static byte flashing;
+    static void processKeyboard();
+   
 };
 
 #endif
