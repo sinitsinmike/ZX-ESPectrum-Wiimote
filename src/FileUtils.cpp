@@ -60,7 +60,8 @@ static SPIClass customSPI;
 void zx_reset();
 
 // Globals
-void IRAM_ATTR FileUtils::initFileSystem() {
+//void IRAM_ATTR FileUtils::initFileSystem() {
+void FileUtils::initFileSystem() {
 #ifdef USE_INT_FLASH
 // using internal storage (spi flash)
     Serial.println("Initializing internal storage...");

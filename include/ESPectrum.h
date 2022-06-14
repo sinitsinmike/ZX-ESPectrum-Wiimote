@@ -46,6 +46,11 @@
 #define VGA VGA6Bit
 #endif
 
+// #ifdef COLOR_6B
+// #include "vga_6bit.h"
+// #define VGA VGA6Bit
+// #endif
+
 #ifdef COLOR_14B
 #include "ESP32Lib/VGA/VGA14Bit.h"
 #include "ESP32Lib/VGA/VGA14BitI.h"

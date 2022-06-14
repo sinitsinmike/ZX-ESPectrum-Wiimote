@@ -165,6 +165,11 @@ void ESPectrum::setup()
 
     ALU_video_init();
 
+    borderColor = 0;
+    for (int i=0;i<312;i++) {
+        lastBorder[i]=8; // 8 -> Force repaint of border
+    }
+
     vga.clear(0);
 
     Serial.printf("Free heap after vga: %d \n", ESP.getFreeHeap());
