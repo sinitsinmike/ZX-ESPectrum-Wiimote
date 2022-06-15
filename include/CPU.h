@@ -65,7 +65,6 @@ public:
 
 static unsigned int offBmp[SPEC_H];
 static unsigned int offAtt[SPEC_H];
-//static unsigned int lineChanged[6144];
 
 void ALU_video_init();
 void ALU_video_reset();

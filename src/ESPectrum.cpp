@@ -76,7 +76,6 @@ void setup_cpuspeed();
 
 // ESPectrum graphics variables
 VGA ESPectrum::vga;
-byte ESPectrum::lastBorder[312];
 byte ESPectrum::borderColor = 7;
 
 bool isLittleEndian()
@@ -166,9 +165,6 @@ void ESPectrum::setup()
     ALU_video_init();
 
     borderColor = 0;
-    for (int i=0;i<312;i++) {
-        lastBorder[i]=8; // 8 -> Force repaint of border
-    }
 
     vga.clear(0);
 
@@ -276,9 +272,6 @@ void ESPectrum::reset()
     }
 
     borderColor = 7;
-    for (i=0;i<312;i++) {
-        lastBorder[i]=8; // 8 -> Force repaint of border
-    }
 
     ALU_video_reset();
 
