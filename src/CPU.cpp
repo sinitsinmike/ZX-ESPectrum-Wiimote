@@ -321,7 +321,7 @@ void ula_contend_port_late( uint16_t port )
 uint8_t IRAM_ATTR Z80Ops::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock
     if (ADDRESS_IN_LOW_RAM(address))
-        ALU_video(delayContention(CPU::tstates) + 4);        
+        ALU_video(delayContention(CPU::tstates) + 4);
     else
         ALU_video(4);
 
@@ -338,11 +338,12 @@ uint8_t IRAM_ATTR Z80Ops::peek8(uint16_t address) {
 
     return Mem::readbyte(address);
 }
+
 void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
     if (ADDRESS_IN_LOW_RAM(address)) {
        
         ALU_video(delayContention(CPU::tstates) + 3);
-
+        
         // #ifndef NO_VIDEO
         // if (address < 0x5800) { // Bitmap
         //     lineChanged[address & 0x3fff] |= 0x01;
@@ -358,18 +359,22 @@ void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
         // #endif
 
     } else 
-        ALU_video(3);
+        ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        //CPU::tstates+=3;
 
     Mem::writebyte(address, value);
 }
 
 /* Read/Write word from/to RAM */
 uint16_t IRAM_ATTR Z80Ops::peek16(uint16_t address) {
+
     // Order matters, first read lsb, then read msb, don't "optimize"
     uint8_t lsb = Z80Ops::peek8(address);
     uint8_t msb = Z80Ops::peek8(address + 1);
+
     return (msb << 8) | lsb;
 }
+
 void IRAM_ATTR Z80Ops::poke16(uint16_t address, RegisterPair word) {
     // Order matters, first write lsb, then write msb, don't "optimize"
     Z80Ops::poke8(address, word.byte8.lo);
@@ -384,6 +389,7 @@ uint8_t IRAM_ATTR Z80Ops::inPort(uint16_t port) {
     
     // 3 clocks for read byte from bus (4 according to https://worldofspectrum.org/faq/reference/48kreference.htm#IOContention)
     ALU_video(4); // No contended I/O
+    //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
@@ -395,7 +401,8 @@ void IRAM_ATTR Z80Ops::outPort(uint16_t port, uint8_t value) {
     
     // 4 clocks for write byte to bus
     ALU_video(4); // No contended I/O
-  
+    //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+
     //ula_contend_port_early( port );   // Contended I/O
 
     uint8_t hiport = port >> 8;
@@ -411,16 +418,19 @@ void IRAM_ATTR Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
     // Additional clocks to be added on some instructions
     if (ADDRESS_IN_LOW_RAM(address)) {
         for (int idx = 0; idx < wstates; idx++)
-            ALU_video(delayContention(CPU::tstates) + 1);
+            //CPU::tstates += delayContention(CPU::tstates) + 1;
+            ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     }
     else
-        ALU_video(wstates);
+        ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        //CPU::tstates+=wstates;
 
 }
 
 /* Clocks needed for processing INT and NMI */
 void IRAM_ATTR Z80Ops::interruptHandlingTime(int32_t wstates) {
-    ALU_video(wstates);
+    ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+    //CPU::tstates+=wstates;
 }
 
 /* Callback to know when the INT signal is active */
@@ -442,6 +452,23 @@ static word spectrum_colors[NUM_SPECTRUM_COLORS] = {
 };
 
 // static word specfast_colors[128]; // Array for faster color calc in ALU_video
+
+static unsigned int lastBorder[312]= { 0 };
+
+#define TSTATES_PER_LINE 224
+
+#define TS_PHASE_1_320x240 8943  // START OF VISIBLE ULA DRAW @ 320x240, SCANLINE 40
+#define TS_PHASE_2_320x240 14319 // START OF LEFT BORDER OF TOP LEFT CORNER OF MAINSCREEN, SCANLINE 64
+#define TS_PHASE_3_320x240 57327 // START OF BOTTOM BORDER, SCANLINE 256
+
+#define TS_PHASE_1_320x240_BE 8945  // START OF VISIBLE ULA DRAW @ 320x240, SCANLINE 40 (ADDED 2 FOR BORDER EFFECTS TO FIT. NEED TO STUDY)
+#define TS_PHASE_3_320x240_BE 57329 // START OF BOTTOM BORDER, SCANLINE 256 (ADDED 2 FOR BORDER EFFECTS TO FIT. NEED TO STUDY)
+
+#define TS_PHASE_1_360x200 13415 // START OF VISIBLE ULA DRAW @ 360x200, SCANLINE 60
+#define TS_PHASE_2_360x200 14311 // START OF LEFT BORDER OF TOP LEFT CORNER OF MAINSCREEN, SCANLINE 64
+#define TS_PHASE_3_360x200 57319 // START OF BOTTOM BORDER, SCANLINE 256
+
+bool is169;
 
 void precalcColors() {
     for (int i = 0; i < NUM_SPECTRUM_COLORS; i++) {
@@ -492,60 +519,27 @@ void ALU_video_init() {
 
     precalcborder32();  // Precalc border 32 bits values
 
+    for (int i=0;i<312;i++) {
+        lastBorder[i]=8; // 8 -> Force repaint of border
+    }
+
+    is169 = Config::aspect_16_9 ? true : false;
+    
     // for (int i=0;i<6144;i++) lineChanged[i]=1; // Mark screen changed array as dirty
 
 }
 
 void ALU_video_reset() {
 
+    for (int i=0;i<312;i++) {
+        lastBorder[i]=8; // 8 -> Force repaint of border
+    }
+
+    is169 = Config::aspect_16_9 ? true : false;
+    
     // for (int i=0;i<6144;i++) lineChanged[i]=1; // Mark screen changed array as dirty
 
 }
-
-// //             if (scanline>59 && scanline<64) {
-// //                 // Top border
-// //                 if (lastBorder[scanline]!=borderColor) {
-// //                     lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
-// //                     for (int i = 0; i < 90; i++) {
-// //                         *lineptr32 = border32[borderColor];
-// //                         lineptr32++;
-// //                     }
-// //                     lastBorder[scanline]=borderColor;
-// //                 }
-// //             }
-// //             if (scanline>63 && scanline<256) {
-// //                 lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
-// //                 // Left border
-// //                 if (lastBorder[scanline]!=borderColor) {
-// //                     for (int i = 0; i < 13; i++) {
-// //                         *lineptr32 = border32[borderColor];
-// //                         lineptr32++;
-// //                     }
-// //                 } else lineptr32+=13;
-
-// //                 // Main screen
-// //                 lineptr32+=64;
-// //                 
-// //                 // Right border
-// //                 if (lastBorder[scanline]!=borderColor) {
-// //                     for (int i = 0; i < 13; i++) {
-// //                         *lineptr32 = border32[borderColor];
-// //                         lineptr32++;                    
-// //                     }
-// //                     lastBorder[scanline]=borderColor;
-// //                 }
-// //             }
-// //             if (scanline>255 && scanline<260) {
-// //                 if (lastBorder[scanline]!=borderColor) {
-// //                     // Bottom border
-// //                     lineptr32 = (uint32_t *)(vga.backBuffer[scanline-60]);
-// //                     for (int i = 0; i < 90; i++) {
-// //                         *lineptr32 = border32[borderColor];
-// //                         lineptr32++;
-// //                     }
-// //                     lastBorder[scanline]=borderColor;
-// //                 }
-// //             }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  VIDEO DRAW FUNCTION
@@ -560,75 +554,60 @@ static unsigned int a0,a1,a2,a3;
 static uint8_t* grmem;
 static uint32_t* lineptr32;
 
-#define TSTATES_PER_LINE 224
-
-#define TS_PHASE_1 13415 // START OF VISIBLE ULA DRAW @ 360x200, SCANLINE 60
-#define TS_PHASE_2 14311 // START OF LEFT BORDER OF TOP LEFT CORNER OF MAINSCREEN, SCANLINE 64
-#define TS_PHASE_3 57319 // START OF BOTTOM BORDER, SCANLINE 256
-
 // DrawStatus values
 #define TOPBORDER_BLANK 0
 #define TOPBORDER 1
 #define MAINSCREEN_BLANK 2
 #define LEFTBORDER 3
-#define LINEDRAW 4
-#define RIGHTBORDER 5
-#define BOTTOMBORDER_BLANK 6
-#define BOTTOMBORDER 7
-#define BLANK 8
+#define LINEDRAW_SYNC 4
+#define LINEDRAW 5
+#define RIGHTBORDER 6
+#define BOTTOMBORDER_BLANK 7
+#define BOTTOMBORDER 8
+#define BLANK 9
 
-static unsigned int tstateDraw=TS_PHASE_1; // Drawing start point (in Tstates)
-static unsigned char DrawStatus=TOPBORDER_BLANK;
+///////////////////////////////////////////////////////////////////////////////
+// ALU_video -> Fast Border
+///////////////////////////////////////////////////////////////////////////////
+static unsigned char DrawStatus=BLANK;
+static unsigned int tstateDraw; // Drawing start point (in Tstates)
 static unsigned int linedraw_cnt;
+static unsigned int mainscrline_cnt;
 static unsigned int coldraw_cnt;
 static unsigned int ALU_video_rest;
 static unsigned int brd;
 
-///////////////////////////////////////////////////////////////////////////////
-static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
+static void ALU_video(unsigned int statestoadd) {
 
     CPU::tstates += statestoadd;
     
-    if (DrawStatus==TOPBORDER_BLANK) {
-
-        if (CPU::tstates > tstateDraw) {
-
-            statestoadd = CPU::tstates - tstateDraw;
-            tstateDraw += TSTATES_PER_LINE;
-
-            lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
-            lineptr32 += 1; // Border offset for 360x200
-            coldraw_cnt = 0;
-
-            DrawStatus = TOPBORDER;
-
-        }
-
-    }
+#ifndef NO_VIDEO
 
     if (DrawStatus==TOPBORDER) {
 
-        statestoadd += ALU_video_rest;
-        ALU_video_rest = statestoadd & 0x03; // Mod 4
+        if (CPU::tstates > tstateDraw) {
 
-        brd = ESPectrum::borderColor;
+            tstateDraw += TSTATES_PER_LINE;
 
-        for (int i=0; i < (statestoadd >> 2); i++) {
+            brd = ESPectrum::borderColor;
+            if (lastBorder[linedraw_cnt] != brd) {
 
-            *lineptr32++ = border32[brd];
-            *lineptr32++ = border32[brd];            
+                lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
+                if (is169) lineptr32++; // Border offset for 360 x 200
 
-            coldraw_cnt++;
-
-            if (coldraw_cnt > 43) {
-                DrawStatus = TOPBORDER_BLANK;
-                ALU_video_rest=0;
-                linedraw_cnt++;
-                if (linedraw_cnt > 3) {
-                    DrawStatus = MAINSCREEN_BLANK;
-                    tstateDraw= TS_PHASE_2;
+                for (int i=0; i < (is169 ? 44 : 40) ; i++) {
+                    *lineptr32++ = border32[brd];
+                    *lineptr32++ = border32[brd];            
                 }
-                return;
+
+                lastBorder[linedraw_cnt]=brd;
+            }
+
+            linedraw_cnt++;
+
+            if (linedraw_cnt >= (is169 ? 4 : 24)) {
+                DrawStatus = LEFTBORDER;
+                tstateDraw = is169 ? TS_PHASE_2_360x200 : TS_PHASE_2_320x240;
             }
 
         }
@@ -637,62 +616,52 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
     }
 
-    if (DrawStatus==MAINSCREEN_BLANK) {
+    if (DrawStatus==LEFTBORDER) {
      
         if (CPU::tstates > tstateDraw) {
 
-            statestoadd = CPU::tstates - tstateDraw;
-            tstateDraw += TSTATES_PER_LINE;
             lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
-            lineptr32 += 1; // Border offset for 360x200
-            coldraw_cnt = 0;
-            DrawStatus = LEFTBORDER;
+            if (is169) lineptr32++; // Border offset for 360 x 200
+
+            brd = ESPectrum::borderColor;
+            if (lastBorder[linedraw_cnt] != brd) {
+                for (int i=0; i < (is169 ? 6 : 4); i++) {    
+                    *lineptr32++ = border32[brd];
+                    *lineptr32++ = border32[brd];
+                }
+            } else lineptr32+=(is169 ? 12 : 8);
+
+            if (is169) tstateDraw += 24; else tstateDraw += 16;
+
+            DrawStatus = LINEDRAW_SYNC;
 
         }
-
-    }    
-
-    if (DrawStatus==LEFTBORDER) {
-     
-        statestoadd += ALU_video_rest;
-        ALU_video_rest = statestoadd & 0x03; // Mod 4
         
-        brd = ESPectrum::borderColor;
-
-        for (int i=0; i < (statestoadd >> 2); i++) {    
-
-            *lineptr32++ = border32[brd];
-            *lineptr32++ = border32[brd];
-
-            coldraw_cnt++;
-
-            if (coldraw_cnt > 5) {  
-                
-                DrawStatus = LINEDRAW;
-                
-                bmpOffset = offBmp[linedraw_cnt - 4];
-                attOffset = offAtt[linedraw_cnt - 4];
-
-                grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-
-                // This is, maybe, more correct but it seems not needed
-                // statestoadd -= ((i + 1) << 2);
-                // ALU_video_rest += statestoadd;
-
-                ALU_video_rest = 0;
-
-                return;
-
-            }
-
-        }
-
         return;
 
     }    
 
-    if (DrawStatus == LINEDRAW) {
+    if (DrawStatus == LINEDRAW_SYNC) {
 
+        if (CPU::tstates > tstateDraw) {
+
+            statestoadd = CPU::tstates - tstateDraw;
+
+            bmpOffset = offBmp[mainscrline_cnt];
+            attOffset = offAtt[mainscrline_cnt];
+
+            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+
+            coldraw_cnt = 0;
+            ALU_video_rest = 0;
+            DrawStatus = LINEDRAW;
+
+        } else return;
+
+    }
+
+    if (DrawStatus == LINEDRAW) {
+   
         statestoadd += ALU_video_rest;
         ALU_video_rest = statestoadd & 0x03; // Mod 4
 
@@ -748,18 +717,9 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
             coldraw_cnt++;
 
-            if (coldraw_cnt > 37) {
-
+            if (coldraw_cnt >= 32) {
                 DrawStatus = RIGHTBORDER;
-
-                // // This is, maybe, more correct but it seems not needed
-                // statestoadd -= ((i+1) << 2);
-                // ALU_video_rest += statestoadd;
-
-                ALU_video_rest = 0;
-
                 return;
-
             }
 
         }
@@ -770,79 +730,57 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
     if (DrawStatus==RIGHTBORDER) {
      
-        statestoadd += ALU_video_rest;
-        ALU_video_rest = statestoadd & 0x03; // Mod 4
-
-        brd = ESPectrum::borderColor;
-
-        for (int i=0; i < (statestoadd >> 2); i++) {
-
-            *lineptr32++ = border32[brd];
-            *lineptr32++ = border32[brd];
-
-            coldraw_cnt++;
-
-            if (coldraw_cnt > 43 ) { 
-
-                DrawStatus = MAINSCREEN_BLANK;
-                linedraw_cnt++;
-                ALU_video_rest=0;
-
-                if (linedraw_cnt > 195) {
-                    DrawStatus = BOTTOMBORDER_BLANK;
-                    tstateDraw = TS_PHASE_3;
-                }
-        
-                return;
-
+        if (lastBorder[linedraw_cnt] != brd) {
+            for (int i=0; i < (is169 ? 6 : 4); i++) {
+                *lineptr32++ = border32[brd];
+                *lineptr32++ = border32[brd];
             }
+            lastBorder[linedraw_cnt]=brd;            
+        }
 
+        mainscrline_cnt++;
+        linedraw_cnt++;
+
+        if (mainscrline_cnt < 192) {
+            DrawStatus = LEFTBORDER;
+            if (is169) tstateDraw += 200; else tstateDraw += 208;
+        } else {
+            mainscrline_cnt = 0;
+            DrawStatus = BOTTOMBORDER;
+            tstateDraw = is169 ? TS_PHASE_3_360x200 : TS_PHASE_3_320x240;
         }
 
         return;
 
     }    
 
-    if (DrawStatus==BOTTOMBORDER_BLANK) {
-
-            if (CPU::tstates > tstateDraw) {
-
-                statestoadd = CPU::tstates - tstateDraw;
-                tstateDraw += TSTATES_PER_LINE;
-
-                lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
-                lineptr32 += 1; // Border offset for 360x200
-                coldraw_cnt = 0;
-
-                DrawStatus = BOTTOMBORDER;
-
-            }
-
-    }
-
     if (DrawStatus==BOTTOMBORDER) {
 
-        statestoadd += ALU_video_rest;
-        ALU_video_rest = statestoadd & 0x03; // Mod 4
+        if (CPU::tstates > tstateDraw) {
 
-        brd = ESPectrum::borderColor;
+            // SCANLINE DELAY MIGHT BE HERE
 
-        for (int i=0; i < (statestoadd >> 2); i++) {    
 
-            *lineptr32++ = border32[brd];
-            *lineptr32++ = border32[brd];
+            tstateDraw += TSTATES_PER_LINE;
 
-            coldraw_cnt++;
+            brd = ESPectrum::borderColor;
+            if (lastBorder[linedraw_cnt] != brd) {
 
-            if (coldraw_cnt > 43) {
-                DrawStatus = BOTTOMBORDER_BLANK;
-                ALU_video_rest=0;
-                linedraw_cnt++;
-                if (linedraw_cnt > 199) {
-                    DrawStatus = BLANK;
-                    tstateDraw= TS_PHASE_1;
+                lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
+                if (is169) lineptr32++; // Border offset for 360 x 200
+
+                for (int i=0; i < (is169 ? 44 : 40); i++) {    
+                    *lineptr32++ = border32[brd];
+                    *lineptr32++ = border32[brd];
                 }
-                return;
+
+                lastBorder[linedraw_cnt]=brd;            
+            }
+
+            linedraw_cnt++;
+            if (linedraw_cnt > (is169 ? 199 : 239)) {
+                linedraw_cnt=0;
+                DrawStatus = BLANK;
             }
 
         }
@@ -851,47 +789,135 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
     }
 
-    if (DrawStatus==BLANK) {
-     
-         if (CPU::tstates < tstateDraw) {
-            linedraw_cnt=0;
-            DrawStatus=TOPBORDER_BLANK;
+    if (DrawStatus==BLANK)
+        if (CPU::tstates < TSTATES_PER_LINE) {
+            DrawStatus = TOPBORDER;
+            tstateDraw = is169 ? TS_PHASE_1_360x200 : TS_PHASE_1_320x240;
         }
-    
-    }
+
+#endif
 
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
+// ///////////////////////////////////////////////////////////////////////////////
+// // ALU_video -> Border drawed in sync with tstates version
+// // only for 4:3 (320x240)
+// // Works almost perfect with Bordertrix demo but it is slow
+// ///////////////////////////////////////////////////////////////////////////////
+// static unsigned char DrawStatus=BLANK;
+// static unsigned int tstateDraw; // Drawing start point (in Tstates)
+// static unsigned int linedraw_cnt;
+// static unsigned int coldraw_cnt;
+// static unsigned int ALU_video_rest;
+// static unsigned int brd;
+
+// static void ALU_video(unsigned int statestoadd) {
 
 //     CPU::tstates += statestoadd;
-
+    
 // #ifndef NO_VIDEO
-//     if (DrawStatus==0) {
+
+//     if (DrawStatus==TOPBORDER_BLANK) {
 
 //         if (CPU::tstates > tstateDraw) {
-            
+
 //             statestoadd = CPU::tstates - tstateDraw;
 //             tstateDraw += TSTATES_PER_LINE;
-            
-//             lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt + 4]);
-//             lineptr32 += 13;
-            
-//             bmpOffset = offBmp[linedraw_cnt];
-//             attOffset = offAtt[linedraw_cnt];
 
-//             grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-
+//             lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
 //             coldraw_cnt = 0;
 
-//             DrawStatus = 1;
+//             DrawStatus = TOPBORDER;
 
 //         }
 
-//     } 
+//     }
 
-//     if (DrawStatus == 1 /* LINEDRAW */) {
+//     if (DrawStatus==TOPBORDER) {
+
+//         statestoadd += ALU_video_rest;
+//         ALU_video_rest = statestoadd & 0x03; // Mod 4
+
+//         brd = ESPectrum::borderColor;
+
+//         for (int i=0; i < (statestoadd >> 2); i++) {
+
+//             *lineptr32++ = border32[brd];
+//             *lineptr32++ = border32[brd];            
+
+//             coldraw_cnt++;
+
+//             if (coldraw_cnt > 39) {
+//                 DrawStatus = TOPBORDER_BLANK;
+//                 ALU_video_rest=0;
+//                 linedraw_cnt++;
+//                 if (linedraw_cnt > 23) {
+//                     DrawStatus = MAINSCREEN_BLANK;
+//                     tstateDraw= TS_PHASE_2_320x240;
+//                 }
+//                 return;
+//             }
+
+//         }
+
+//         return;
+
+//     }
+
+//     if (DrawStatus==MAINSCREEN_BLANK) {
+     
+//         if (CPU::tstates > tstateDraw) {
+
+//             statestoadd = CPU::tstates - tstateDraw;
+//             tstateDraw += TSTATES_PER_LINE;
+//             lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
+//             coldraw_cnt = 0;
+//             DrawStatus = LEFTBORDER;
+
+//         }
+
+//     }    
+
+//     if (DrawStatus==LEFTBORDER) {
+     
+//         statestoadd += ALU_video_rest;
+//         ALU_video_rest = statestoadd & 0x03; // Mod 4
+        
+//         brd = ESPectrum::borderColor;
+
+//         for (int i=0; i < (statestoadd >> 2); i++) {    
+
+//             *lineptr32++ = border32[brd];
+//             *lineptr32++ = border32[brd];
+
+//             coldraw_cnt++;
+
+//             if (coldraw_cnt > 3) {  
+                
+//                 DrawStatus = LINEDRAW;
+                
+//                 bmpOffset = offBmp[linedraw_cnt - 24];
+//                 attOffset = offAtt[linedraw_cnt - 24];
+
+//                 grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
+
+//                 // This is, maybe, more correct but it seems not needed
+//                 // statestoadd -= ((i + 1) << 2);
+//                 // ALU_video_rest += statestoadd;
+
+//                 ALU_video_rest = 0;
+
+//                 return;
+
+//             }
+
+//         }
+
+//         return;
+
+//     }    
+
+//     if (DrawStatus == LINEDRAW) {
 
 //         statestoadd += ALU_video_rest;
 //         ALU_video_rest = statestoadd & 0x03; // Mod 4
@@ -948,25 +974,117 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
 //             coldraw_cnt++;
 
-//             if (coldraw_cnt & 0x20) {  // coldraw_cnt > 32
-//                 DrawStatus = 0;
-//                 ALU_video_rest=0;
-//                 linedraw_cnt++;
-//                 if (linedraw_cnt > 191) DrawStatus = 2;
-//                 break;
+//             if (coldraw_cnt > 35) {
+
+//                 DrawStatus = RIGHTBORDER;
+
+//                 // // This is, maybe, more correct but it seems not needed
+//                 // statestoadd -= ((i+1) << 2);
+//                 // ALU_video_rest += statestoadd;
+
+//                 ALU_video_rest = 0;
+
+//                 return;
+
 //             }
 
 //         }
 
-//     } else if (DrawStatus==2) {
+//         return;
+
+//     }
+
+//     if (DrawStatus==RIGHTBORDER) {
+     
+//         statestoadd += ALU_video_rest;
+//         ALU_video_rest = statestoadd & 0x03; // Mod 4
+
+//         brd = ESPectrum::borderColor;
+
+//         for (int i=0; i < (statestoadd >> 2); i++) {
+
+//             *lineptr32++ = border32[brd];
+//             *lineptr32++ = border32[brd];
+
+//             coldraw_cnt++;
+
+//             if (coldraw_cnt > 39 ) { 
+
+//                 DrawStatus = MAINSCREEN_BLANK;
+//                 linedraw_cnt++;
+//                 ALU_video_rest=0;
+
+//                 if (linedraw_cnt > 215 ) {
+//                     DrawStatus = BOTTOMBORDER_BLANK;
+//                     tstateDraw = TS_PHASE_3_320x240_BE;
+//                 }
         
-//         if (CPU::tstates < TSTATES_TLC_MAINSCR) {
-//             tstateDraw=TSTATES_TLC_MAINSCR;
+//                 return;
+
+//             }
+
+//         }
+
+//         return;
+
+//     }    
+
+//     if (DrawStatus==BOTTOMBORDER_BLANK) {
+
+//             if (CPU::tstates > tstateDraw) {
+
+//                 statestoadd = CPU::tstates - tstateDraw;
+//                 tstateDraw += TSTATES_PER_LINE;
+
+//                 lineptr32 = (uint32_t *)(ESPectrum::vga.backBuffer[linedraw_cnt]);
+//                 coldraw_cnt = 0;
+
+//                 DrawStatus = BOTTOMBORDER;
+
+//             }
+
+//     }
+
+//     if (DrawStatus==BOTTOMBORDER) {
+
+//         statestoadd += ALU_video_rest;
+//         ALU_video_rest = statestoadd & 0x03; // Mod 4
+
+//         brd = ESPectrum::borderColor;
+
+//         for (int i=0; i < (statestoadd >> 2); i++) {    
+
+//             *lineptr32++ = border32[brd];
+//             *lineptr32++ = border32[brd];
+
+//             coldraw_cnt++;
+
+//             if (coldraw_cnt > 39) {
+//                 DrawStatus = BOTTOMBORDER_BLANK;
+//                 ALU_video_rest=0;
+//                 linedraw_cnt++;
+//                 if (linedraw_cnt > 239) {
+//                     DrawStatus = BLANK;
+//                 }
+//                 return;
+//             }
+
+//         }
+
+//         return;
+
+//     }
+
+//     if (DrawStatus==BLANK) {
+     
+//          if (CPU::tstates < TSTATES_PER_LINE) {
 //             linedraw_cnt=0;
-//             DrawStatus=0;
+//             tstateDraw= TS_PHASE_1_320x240_BE;
+//             DrawStatus=TOPBORDER_BLANK;
 //         }
     
 //     }
+
 // #endif
 
 // }
