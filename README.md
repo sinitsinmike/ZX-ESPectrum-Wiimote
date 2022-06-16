@@ -1,6 +1,10 @@
 # ZX-ESPectrum-Wiimote
 
-**LATEST UPDATES: Better CPU / Video tasks sync, allowing partial support of multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
+**IMPORTANT: this branch is here for historical reasons, as there are some pointers on the internet pointing here. But this branch will _NOT_ be updated.**
+
+**Use the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote) instead.**
+
+LATEST UPDATES: Better CPU / Video tasks sync, allowing partial support of multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape.
 
 An emulation of the ZX-Spectrum computer on an Lilygo TTGo VGA32.
 
@@ -14,8 +18,6 @@ Quick start from PlatformIO:
 - Execute task: Upload File System Image
 - Execute task: Upload
 - Enjoy
-
-If you have an ESP32 other than LilyGo TTGo VGA32, please check the [master branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote).
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
 
