@@ -72,6 +72,7 @@ public:
 
 private:
     static void precalcColors();
+    static void precalcULASWAP();
     static void videoTask(void* unused);
     
 };

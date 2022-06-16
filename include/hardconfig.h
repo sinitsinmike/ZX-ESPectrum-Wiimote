@@ -91,8 +91,8 @@
 // - COLOR_14B: 14 bit color (RRRRRGGGGGBBBB), using 14 pins and 2 bytes per pixel
 ///////////////////////////////////////////////////////////////////////////////
 
-#define COLOR_3B
-// #define COLOR_6B
+//#define COLOR_3B
+#define COLOR_6B
 // #define COLOR_14B
 
 // check: only one must be defined
@@ -178,8 +178,8 @@
 // for using convenience keys, define just ONE of
 // PS2_CONVENIENCE_KEYS_EN for english keyboard: [backspace][,][.][/][;][´][-][=]
 // PS2_CONVENIENCE_KEYS_EN for SPANISH keyboard: [backspace][,][.][-][´][+]
-#define PS2_CONVENIENCE_KEYS_EN
-// #define PS2_CONVENIENCE_KEYS_ES
+//#define PS2_CONVENIENCE_KEYS_EN
+#define PS2_CONVENIENCE_KEYS_ES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -191,7 +191,7 @@
 // also, you should define wiimote button mappings for each game.
 //
 
-#define WIIMOTE_PRESENT
+// #define WIIMOTE_PRESENT
 ///////////////////////////////////////////////////////////////////////////////
 
 
