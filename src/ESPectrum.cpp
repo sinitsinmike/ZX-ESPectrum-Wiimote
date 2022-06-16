@@ -415,7 +415,8 @@ void ESPectrum::loop() {
     halfsec = !(sp_int_ctr % 25);
 
     processKeyboard();
-    updateWiimote2Keys();
+    
+    //updateWiimote2Keys();
     
     OSD::do_OSD();
 
@@ -441,8 +442,10 @@ void ESPectrum::loop() {
         ctr = 10;
         sumelapsed+=elapsed;
         ctrcount++;
-        Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
-        Serial.printf("[CPUTask] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
+        if ((ctrcount & 0x001F) == 0) {
+            Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
+            Serial.printf("[CPUTask] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
+        }
     }
     else ctr--;
 #endif

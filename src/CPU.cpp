@@ -40,26 +40,21 @@
 #include "Config.h"
 #include "Tape.h"
 
+// #include <stdio.h>
+// #include <string.h>
+// #include <unistd.h>
+// #include "esp_timer.h"
+// #include "esp_log.h"
+// #include "esp_sleep.h"
+// #include "sdkconfig.h"
+
 #pragma GCC optimize ("O3")
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CPU_LINKEFONG
-
-#include "Z80_LKF/z80emu.h"
-Z80_STATE _zxCpu;
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef CPU_JLSANCHEZ
-
 #include "Z80_JLS/z80.h"
 static bool createCalled = false;
 static bool interruptPending = false;
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -114,16 +109,12 @@ uint64_t CPU::global_tstates = 0;
 
 void CPU::setup()
 {
-    #ifdef CPU_LINKEFONG
-    #endif
 
-    #ifdef CPU_JLSANCHEZ
-        if (!createCalled)
-        {
-            Z80::create();
-            createCalled = true;
-        }
-    #endif
+    if (!createCalled)
+    {
+        Z80::create();
+        createCalled = true;
+    }
 
     ESPectrum::reset();
 }
@@ -131,34 +122,30 @@ void CPU::setup()
 ///////////////////////////////////////////////////////////////////////////////
 
 void CPU::reset() {
-    #ifdef CPU_LINKEFONG
-        Z80Reset(&_zxCpu);
-    #endif
 
-    #ifdef CPU_JLSANCHEZ
-        Z80::reset();
-    #endif
-
+    Z80::reset();
     global_tstates = 0;
+
 }
 
+// static unsigned int timer_count;
+// static unsigned int timer_calls;
+
+// static void periodic_timer_callback(void* arg)
+// {
+//     timer_count += 64;
+// }
+
 ///////////////////////////////////////////////////////////////////////////////
+//static unsigned long ula_micros;
+
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
     tstates = 0;
 
-    #ifdef CPU_LINKEFONG
-        Z80_STATE *state;
-        state=&_zxCpu;
-        #define DO_Z80_INSTRUCTION (tstates = Z80ExecuteInstruction(&_zxCpu, tstates, NULL))
-        #define DO_Z80_INTERRUPT   (Z80Interrupt(&_zxCpu, 0xff, NULL))
-    #endif
-
-    #ifdef CPU_JLSANCHEZ
-        #define DO_Z80_INSTRUCTION (Z80::execute())
-        #define DO_Z80_INTERRUPT   (interruptPending = true)
-    #endif
+    #define DO_Z80_INSTRUCTION (Z80::execute())
+    #define DO_Z80_INTERRUPT   (interruptPending = true)
     //Z80ExecuteCycles(&_zxCpu, CalcTStates(), NULL);
 
     #ifdef CPU_PER_INSTRUCTION_TIMING
@@ -167,19 +154,33 @@ void CPU::loop()
         #define PIT_PERIOD 50
         begin_timing(statesInFrame, microsPerFrame());
     #endif
-
+    
+//     // Timer for doing periodic delay
+//     timer_count=0;
+//     timer_calls=0;
+//     esp_timer_create_args_t periodic_timer_args = {};
+//     periodic_timer_args.callback = &periodic_timer_callback;
+//     periodic_timer_args.name = "periodic";
+//     esp_timer_handle_t periodic_timer;
+//     esp_timer_create(&periodic_timer_args, &periodic_timer);
+//    /* Start the timers */
+//     uint64_t microsperscanline = CPU::microsPerFrame() / 312;
+//     esp_timer_start_periodic(periodic_timer, microsperscanline);
+    
     tstates = 0;
+
+//    unsigned int tstates_do_timing = 0x1f;
+
+    // unsigned long start_micros = micros();
+    // unsigned long tstate_cnt = 0;
+
+    // ula_micros = micros();
 
 	while (tstates < statesInFrame)
 	{
     
     #ifdef TAPE_TRAPS
-    #ifdef CPU_JLSANCHEZ        
         switch (Z80::getRegPC()) {
-    #endif
-    #ifdef CPU_LINKEFONG
-        switch (state->pc) {
-    #endif
         case 0x0556: // START LOAD        
             Tape::romLoading=true;
             if (Tape::tapeStatus!=TAPE_LOADING && Tape::tapeFileName!="none") Tape::TAP_Play();
@@ -194,23 +195,13 @@ void CPU::loop()
         case 0x053f: // END LOAD / SAVE
             Tape::romLoading=false;
             if (Tape::tapeStatus!=TAPE_STOPPED)
-                #ifdef CPU_JLSANCHEZ
                 if (Z80::isCarryFlag()) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
-                #endif
-                #ifdef CPU_LINKEFONG                
-                if (state->registers.byte[Z80_F] & 0x01) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
-                #endif
             Tape::SaveStatus=SAVE_STOPPED;
             
             /*
             Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
             Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
-            #ifdef CPU_JLSANCHEZ
             Serial.printf("Carry Flag: %u\n", Z80::isCarryFlag());            
-            #endif
-            #ifdef CPU_LINKEFONG
-            Serial.printf("Carry Flag: %u\n", state->registers.byte[Z80_F] & 0x01);            
-            #endif
             Serial.printf("------\n");
             */
 
@@ -223,11 +214,31 @@ void CPU::loop()
        
         DO_Z80_INSTRUCTION;
 
-        // frame Tstates after instruction
-        //uint32_t post_tstates = tstates;
-
         // increase global Tstates
         global_tstates += (tstates - pre_tstates);
+
+        // if (tstates >= tstates_do_timing) {
+        //     tstates_do_timing += 32;
+
+
+        // }
+
+        // tstate_cnt += (tstates - pre_tstates);
+        // if (tstate_cnt >= 224 ) {
+        //     tstate_cnt = tstates % 224;
+        //     unsigned long micros_elapsed = micros() - start_micros;
+        //     unsigned long tstate_micros = (tstates - 1) * 3.5;
+        //     if (tstate_micros > micros_elapsed) {
+        //         delayMicroseconds((tstate_micros) - micros_elapsed);
+        //     }
+        // }
+
+        // uint32_t tstate_to_be = (timer_count - 64) / 3;
+        // if (tstates < tstate_to_be) {
+        //     esp_timer_stop(periodic_timer);            
+        //     delayMicroseconds((tstate_to_be - tstates) * 3 );
+        //     esp_timer_start_periodic(periodic_timer, microsperscanline);            
+        // }
 
         #ifdef CPU_PER_INSTRUCTION_TIMING
             if (partTstates > PIT_PERIOD) {
@@ -241,6 +252,17 @@ void CPU::loop()
         #endif
 	}
     
+    // /* Clean up and finish timer */
+    // esp_timer_stop(periodic_timer);
+    // esp_timer_delete(periodic_timer);
+    //Serial.printf("Timercalls: %u\n", timer_calls);
+
+    // uint32_t micros_elapsed = micros() - start_micros;
+    // uint32_t microsperframe = CPU::microsPerFrame();
+    // if (micros_elapsed < microsperframe)
+    //     delayMicroseconds(microsperframe - micros_elapsed);
+
+
     #ifdef CPU_PER_INSTRUCTION_TIMING
         delay_instruction(tstates);
     #endif
@@ -359,8 +381,8 @@ void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
         // #endif
 
     } else 
-        ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-        //CPU::tstates+=3;
+        //ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        CPU::tstates+=3;
 
     Mem::writebyte(address, value);
 }
@@ -388,8 +410,8 @@ uint8_t IRAM_ATTR Z80Ops::inPort(uint16_t port) {
     //ula_contend_port_late( port );    // Contended I/O
     
     // 3 clocks for read byte from bus (4 according to https://worldofspectrum.org/faq/reference/48kreference.htm#IOContention)
-    ALU_video(4); // No contended I/O
-    //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+    //ALU_video(4); // No contended I/O
+    CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     
     uint8_t hiport = port >> 8;
     uint8_t loport = port & 0xFF;
@@ -400,8 +422,8 @@ uint8_t IRAM_ATTR Z80Ops::inPort(uint16_t port) {
 void IRAM_ATTR Z80Ops::outPort(uint16_t port, uint8_t value) {
     
     // 4 clocks for write byte to bus
-    ALU_video(4); // No contended I/O
-    //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+    //ALU_video(4); // No contended I/O
+    CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
 
     //ula_contend_port_early( port );   // Contended I/O
 
@@ -418,19 +440,19 @@ void IRAM_ATTR Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
     // Additional clocks to be added on some instructions
     if (ADDRESS_IN_LOW_RAM(address)) {
         for (int idx = 0; idx < wstates; idx++)
-            //CPU::tstates += delayContention(CPU::tstates) + 1;
-            ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+            CPU::tstates += delayContention(CPU::tstates) + 1;
+            //ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     }
     else
-        ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-        //CPU::tstates+=wstates;
+        //ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        CPU::tstates+=wstates;
 
 }
 
 /* Clocks needed for processing INT and NMI */
 void IRAM_ATTR Z80Ops::interruptHandlingTime(int32_t wstates) {
-    ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-    //CPU::tstates+=wstates;
+    //ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+    CPU::tstates+=wstates;
 }
 
 /* Callback to know when the INT signal is active */
