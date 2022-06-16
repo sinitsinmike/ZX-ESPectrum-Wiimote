@@ -6,6 +6,8 @@ An emulation of the ZX-Spectrum computer on an ESP32 chip with VGA output based 
 
 There are per-game customizable (through simple text files) correspondences from Wiimote keys to Spectrum keys.
 
+**This version is adjusted for using on a ESP32 Devkit with custom pin connection to VGA, PS/2 and audio**
+
 Please watch the [project video on YouTube](https://youtu.be/ROthljwC5OA) (spanish audio, english subtitles).
 
 If you have a LilyGo TTGo VGA32, please check the [lilygo-ttgo-vga32 branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/lilygo-ttgo-vga32).
