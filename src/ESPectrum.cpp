@@ -28,9 +28,7 @@
 //
 
 #include "PS2Kbd.h"
-#include "Z80_LKF/z80emu.h"
 #include "CPU.h"
-#include "Z80_LKF/z80user.h"
 #include <Arduino.h>
 
 #include "hardpins.h"
@@ -66,14 +64,6 @@ void setup_cpuspeed();
 //const int BUFFER_SIZE = 2000;
 
 // SETUP *************************************
-#ifdef AR_16_9
-#define VGA_AR_MODE MODE360x200
-#endif
-
-#ifdef AR_4_3
-#define VGA_AR_MODE MODE320x240
-#endif
-
 // ESPectrum graphics variables
 VGA ESPectrum::vga;
 byte ESPectrum::borderColor = 7;
@@ -403,37 +393,33 @@ void ESPectrum::processKeyboard() {
    | LOOP core 1 |
    +-------------+
  */
-byte ESPectrum::flashing = 0;
-int halfsec, sp_int_ctr;
+
+//static double totalseconds=0;
 
 void ESPectrum::loop() {
 
-    if (halfsec) {
-        flashing = ~flashing;
-    }
-    sp_int_ctr++;
-    halfsec = !(sp_int_ctr % 25);
-
     processKeyboard();
     
-    //updateWiimote2Keys();
+    updateWiimote2Keys();
     
     OSD::do_OSD();
 
-#ifdef LOG_DEBUG_TIMING 
+#ifdef LOG_DEBUG_TIMING
     uint32_t ts_start = micros();
 #endif
 
     CPU::loop();
 
-#ifdef LOG_DEBUG_TIMING    
+#ifdef LOG_DEBUG_TIMING
+
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
+    // totalseconds += elapsed;
     uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;
-    
-    //if (idle < target)
-    //    delayMicroseconds(idle);
+
+    // if (idle < target)
+    //     delayMicroseconds(idle);
 
     static int ctr = 0;
     static int ctrcount = 0;
@@ -442,9 +428,13 @@ void ESPectrum::loop() {
         ctr = 10;
         sumelapsed+=elapsed;
         ctrcount++;
-        if ((ctrcount & 0x001F) == 0) {
+        if ((ctrcount & 0x000F) == 0) {
             Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
             Serial.printf("[CPUTask] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
+            // Serial.printf("[Framecnt] %u\n", framecnt);                 
+            // Serial.printf("[FPS] %f\n", framecnt / (totalseconds / 1000000));
+            // totalseconds = 0;
+            // framecnt = 0;
         }
     }
     else ctr--;

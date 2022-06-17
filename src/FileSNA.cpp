@@ -42,59 +42,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CPU_LINKEFONG
-#include "Z80_LKF/z80emu.h"
-extern Z80_STATE _zxCpu;
-
-#define Z80_SET_AF(v) _zxCpu.registers.word[Z80_AF] = (v)
-#define Z80_SET_BC(v) _zxCpu.registers.word[Z80_BC] = (v)
-#define Z80_SET_DE(v) _zxCpu.registers.word[Z80_DE] = (v)
-#define Z80_SET_HL(v) _zxCpu.registers.word[Z80_HL] = (v)
-
-#define Z80_SET_AFx(v) _zxCpu.alternates[Z80_AF] = (v)
-#define Z80_SET_BCx(v) _zxCpu.alternates[Z80_BC] = (v)
-#define Z80_SET_DEx(v) _zxCpu.alternates[Z80_DE] = (v)
-#define Z80_SET_HLx(v) _zxCpu.alternates[Z80_HL] = (v)
-
-#define Z80_SET_IY(v) _zxCpu.registers.word[Z80_IY] = (v)
-#define Z80_SET_IX(v) _zxCpu.registers.word[Z80_IX] = (v)
-
-#define Z80_SET_SP(v) _zxCpu.registers.word[Z80_SP] = (v)
-#define Z80_SET_PC(v) _zxCpu.pc = (v)
-
-#define Z80_SET_I(v) _zxCpu.i = (v)
-#define Z80_SET_R(v) _zxCpu.r = (v)
-#define Z80_SET_IM(v) _zxCpu.im = (v)
-#define Z80_SET_IFF1(v) _zxCpu.iff1 = (v)
-#define Z80_SET_IFF2(v) _zxCpu.iff2 = (v)
-
-#define Z80_GET_AF() (_zxCpu.registers.word[Z80_AF])
-#define Z80_GET_BC() (_zxCpu.registers.word[Z80_BC])
-#define Z80_GET_DE() (_zxCpu.registers.word[Z80_DE])
-#define Z80_GET_HL() (_zxCpu.registers.word[Z80_HL])
-
-#define Z80_GET_AFx() (_zxCpu.alternates[Z80_AF])
-#define Z80_GET_BCx() (_zxCpu.alternates[Z80_BC])
-#define Z80_GET_DEx() (_zxCpu.alternates[Z80_DE])
-#define Z80_GET_HLx() (_zxCpu.alternates[Z80_HL])
-
-#define Z80_GET_IY() (_zxCpu.registers.word[Z80_IY])
-#define Z80_GET_IX() (_zxCpu.registers.word[Z80_IX])
-
-#define Z80_GET_SP() (_zxCpu.registers.word[Z80_SP])
-#define Z80_GET_PC() (_zxCpu.pc)
-
-#define Z80_GET_I() (_zxCpu.i)
-#define Z80_GET_R() (_zxCpu.r)
-#define Z80_GET_IM() (_zxCpu.im)
-#define Z80_GET_IFF1() (_zxCpu.iff1)
-#define Z80_GET_IFF2() (_zxCpu.iff2)
-
-#endif // CPU_LINKEFONG
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef CPU_JLSANCHEZ
 #include "Z80_JLS/z80.h"
 
 #define Z80_GET_AF() Z80::getRegAF()
@@ -140,8 +87,6 @@ extern Z80_STATE _zxCpu;
 #define Z80_SET_IM(v) Z80::setIM((Z80::IntMode)(v))
 #define Z80_SET_IFF1(v) Z80::setIFF1(v)
 #define Z80_SET_IFF2(v) Z80::setIFF2(v)
-
-#endif  // CPU_JLSANCHEZ
 
 ///////////////////////////////////////////////////////////////////////////////
 

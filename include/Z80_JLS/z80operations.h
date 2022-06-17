@@ -12,7 +12,6 @@
 #define Z80OPERATIONS_H
 
 #include "../hardconfig.h"
-#ifdef CPU_JLSANCHEZ
 
 #include <stdint.h>
 
@@ -46,7 +45,5 @@ public:
     /* Callback to know when the INT signal is active */
     static bool isActiveINT(void);
 };
-
-#endif // CPU_JLSANCHEZ
 
 #endif // Z80OPERATIONS_H

@@ -21,7 +21,6 @@
 #define Z80CPP_H
 
 #include "../hardconfig.h"
-#ifdef CPU_JLSANCHEZ
 
 #include <stdint.h>
 
@@ -537,7 +536,5 @@ private:
     // Decode EDXX opcodes
     static void decodeED(uint8_t opCode);
 };
-
-#endif // CPU_JLSANCHEZ
 
 #endif // Z80CPP_H

@@ -63,6 +63,11 @@ public:
 #define SPEC_W 256
 #define SPEC_H 192
 
+static unsigned int is169;
+
+static unsigned int flashing = 0;
+static unsigned int halfsec, sp_int_ctr;
+
 static unsigned int offBmp[SPEC_H];
 static unsigned int offAtt[SPEC_H];
 

@@ -68,9 +68,7 @@ public:
     static void reset();
 
     static VGA vga;
-    
     static uint8_t borderColor;
-    static byte flashing;
     static void processKeyboard();
    
 };
