@@ -56,6 +56,11 @@ public:
 
     // CPU Tstates elapsed since reset
     static uint64_t global_tstates;
+    
+    #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+    // Frames elapsed
+    static uint32_t framecnt;
+    #endif
 
 };
 

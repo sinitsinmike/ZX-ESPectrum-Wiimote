@@ -109,6 +109,11 @@ uint32_t CPU::microsPerFrame()
 uint32_t CPU::tstates = 0;
 uint64_t CPU::global_tstates = 0;
 
+
+#if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+uint32_t CPU::framecnt = 0;
+#endif
+
 void CPU::setup()
 {
 
@@ -199,8 +204,10 @@ void CPU::loop()
         #endif
 	}
     
-    //framecnt++;
-
+    #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+    framecnt++;
+    #endif
+    
     #ifdef CPU_PER_INSTRUCTION_TIMING
         delay_instruction(tstates);
     #endif

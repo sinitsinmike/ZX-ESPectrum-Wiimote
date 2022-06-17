@@ -394,7 +394,9 @@ void ESPectrum::processKeyboard() {
    +-------------+
  */
 
-//static double totalseconds=0;
+#if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+static double totalseconds=0;
+#endif
 
 void ESPectrum::loop() {
 
@@ -411,10 +413,11 @@ void ESPectrum::loop() {
     CPU::loop();
 
 #ifdef LOG_DEBUG_TIMING
-
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
-    // totalseconds += elapsed;
+    #ifdef SHOW_FPS
+        totalseconds += elapsed;
+    #endif
     uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;
 
@@ -431,10 +434,11 @@ void ESPectrum::loop() {
         if ((ctrcount & 0x000F) == 0) {
             Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
             Serial.printf("[CPUTask] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
-            // Serial.printf("[Framecnt] %u\n", framecnt);                 
-            // Serial.printf("[FPS] %f\n", framecnt / (totalseconds / 1000000));
-            // totalseconds = 0;
-            // framecnt = 0;
+            #ifdef SHOW_FPS
+                Serial.printf("[FPS] %f\n", CPU::framecnt / (totalseconds / 1000000));
+                totalseconds = 0;
+                CPU::framecnt = 0;
+            #endif
         }
     }
     else ctr--;
