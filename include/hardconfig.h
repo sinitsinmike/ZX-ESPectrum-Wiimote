@@ -240,7 +240,7 @@
 // This affects only to snapshots on "Load Snapshot to RAM",
 // not to persistent snapshots.
 
-// #define SNAPSHOT_LOAD_LAST
+#define SNAPSHOT_LOAD_LAST
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif // ESPectrum_config_h
