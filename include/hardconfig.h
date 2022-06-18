@@ -230,4 +230,17 @@
 #define SNAPSHOT_LOAD_FORCE_ARCH
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// Snapshot remember behaviour
+//
+// define SNAPSHOT_LOAD_LAST if you want the last snapshot name to be saved
+// to persistent config, thus remembering snapshot when powering off,
+// so that snapshot is loaded on next power on.
+//
+// This affects only to snapshots on "Load Snapshot to RAM",
+// not to persistent snapshots.
+
+// #define SNAPSHOT_LOAD_LAST
+///////////////////////////////////////////////////////////////////////////////
+
 #endif // ESPectrum_config_h

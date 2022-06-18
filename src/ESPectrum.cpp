@@ -251,9 +251,12 @@ void ESPectrum::setup()
     AySound::initialize();
 
     Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
+
+#ifdef SNAPSHOT_LOAD_LAST
     if ((String)Config::ram_file != (String)NO_RAM_FILE) {
         OSD::changeSnapshot(Config::ram_file);
     }
+#endif // SNAPSHOT_LOAD_LAST
 
 #ifdef ZX_KEYB_PRESENT
     Serial.println("Configuring ZX keyboard pins...");

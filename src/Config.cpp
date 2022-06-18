@@ -137,8 +137,10 @@ void Config::save() {
     Serial.printf("  + romset:%s\n", romSet.c_str());
     f.printf("romset:%s\n", romSet.c_str());
     // RAM SNA
+#ifdef SNAPSHOT_LOAD_LAST    
     Serial.printf("  + ram:%s\n", ram_file.c_str());
     f.printf("ram:%s\n", ram_file.c_str());
+#endif // SNAPSHOT_LOAD_LAST
     // Serial logging
     Serial.printf("  + slog:%s\n", (slog_on ? "true" : "false"));
     f.printf("slog:%s\n", (slog_on ? "true" : "false"));
