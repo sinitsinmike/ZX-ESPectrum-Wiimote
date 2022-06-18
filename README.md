@@ -172,7 +172,7 @@ I have written a detailed story, with photos, of the development process of this
 - PS/2 boot for some keyboards from [PS2KeyAdvanced](https://github.com/techpaul/PS2KeyAdvanced).
 - Wiimote library from [ESP32Wiimote by bigw00d](https://github.com/bigw00d/Arduino-ESP32Wiimote).
 - Z80 Emulation (precise) derived from [z80cpp](https://github.com/jsanchezv/z80cpp), authored by José Luis Sánchez.
-- Z80 Emulation (fast) derived from [z80emu](https://github.com/anotherlin/z80emu), authored by Lin Ke-Fong.
+- Z80 Emulation (formerly used, but not used anyore) derived from [z80emu](https://github.com/anotherlin/z80emu), authored by Lin Ke-Fong.
 - AY sound hardware emulation from [AVR-AY](https://www.avray.ru/).
 - [Amstrad PLC](http://www.amstrad.com) for the ZX-Spectrum ROM binaries [liberated for emulation purposes](http://www.worldofspectrum.org/permits/amstrad-roms.txt).
 - [Nine Tiles Networs Ltd](http://www.worldofspectrum.org/sinclairbasic/index.html) for Sinclair BASIC.

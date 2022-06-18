@@ -16,8 +16,6 @@
 //    quick & dirty conversion by dddddd (AKA deesix)
 
 #include "hardconfig.h"
-#ifdef CPU_JLSANCHEZ
-
 #include "Z80_JLS/z80.h"
 
 #pragma GCC optimize ("O3")
@@ -5489,4 +5487,3 @@ void Z80::copyToRegister(uint8_t opCode, uint8_t value)
     }
 }
 
-#endif // CPU_JLSANCHEZ

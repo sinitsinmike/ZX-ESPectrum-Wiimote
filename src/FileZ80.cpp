@@ -44,16 +44,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CPU_LINKEFONG
-#include "Z80_LKF/z80emu.h"
-extern Z80_STATE _zxCpu;
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef CPU_JLSANCHEZ
 #include "Z80_JLS/z80.h"
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -111,32 +102,6 @@ bool FileZ80::load(String sna_fn)
     uint8_t b12, b29;
 
     // begin loading registers
-#ifdef CPU_LINKEFONG
-    _zxCpu.registers.byte[Z80_A]  =        header[0];
-    _zxCpu.registers.byte[Z80_F]  =        header[1];
-    _zxCpu.registers.word[Z80_BC] = mkword(header[2], header[3]);
-    _zxCpu.registers.word[Z80_HL] = mkword(header[4], header[5]);
-    _zxCpu.pc                     = mkword(header[6], header[7]);
-    _zxCpu.registers.word[Z80_SP] = mkword(header[8], header[9]);
-    _zxCpu.i                      =        header[10];
-    _zxCpu.r                      =        header[11];
-    b12                           =        header[12];
-    _zxCpu.registers.word[Z80_DE] = mkword(header[13], header[14]);
-    _zxCpu.alternates    [Z80_BC] = mkword(header[15], header[16]);
-    _zxCpu.alternates    [Z80_DE] = mkword(header[17], header[18]);
-    _zxCpu.alternates    [Z80_HL] = mkword(header[19], header[20]);
-    _zxCpu.alternates    [Z80_AF] = mkword(header[22], header[21]); // watch out for order!!!
-    _zxCpu.registers.word[Z80_IY] = mkword(header[23], header[24]);
-    _zxCpu.registers.word[Z80_IX] = mkword(header[25], header[26]);
-    _zxCpu.iff1                   =        header[27];
-    _zxCpu.iff2                   =        header[28];
-    b29                           =        header[29];
-    _zxCpu.im                     = (b29 & 0x03);
-
-    uint16_t RegPC = _zxCpu.pc;
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
     Z80::setRegA  (       header[0]);
     Z80::setFlags (       header[1]);
     Z80::setRegBC (mkword(header[2], header[3]));
@@ -159,8 +124,6 @@ bool FileZ80::load(String sna_fn)
     Z80::setIM((Z80::IntMode)(b29 & 0x03));
 
     uint16_t RegPC = Z80::getRegPC();
-#endif // CPU_JLSANCHEZ
-
 
     ESPectrum::borderColor = (b12 >> 1) & 0x07;
 
@@ -237,13 +200,7 @@ bool FileZ80::load(String sna_fn)
 
         // program counter
         RegPC = mkword(header[32], header[33]);
-#ifdef CPU_LINKEFONG
-        _zxCpu.pc = RegPC;
-#endif // CPU_LINKEFONG
-
-#ifdef CPU_JLSANCHEZ
         Z80::setRegPC(RegPC);
-#endif // CPU_JLSANCHEZ
 
         // hardware mode
         uint8_t b34 = header[34];

@@ -44,22 +44,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CPU_LINKEFONG
-
-#include "Z80_LKF/z80emu.h"
-Z80_STATE _zxCpu;
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef CPU_JLSANCHEZ
-
 #include "Z80_JLS/z80.h"
 static bool createCalled = false;
 static bool interruptPending = false;
-
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -114,16 +101,11 @@ uint64_t CPU::global_tstates = 0;
 
 void CPU::setup()
 {
-    #ifdef CPU_LINKEFONG
-    #endif
-
-    #ifdef CPU_JLSANCHEZ
-        if (!createCalled)
-        {
-            Z80::create();
-            createCalled = true;
-        }
-    #endif
+    if (!createCalled)
+    {
+        Z80::create();
+        createCalled = true;
+    }
 
     ESPectrum::reset();
 }
@@ -131,15 +113,10 @@ void CPU::setup()
 ///////////////////////////////////////////////////////////////////////////////
 
 void CPU::reset() {
-    #ifdef CPU_LINKEFONG
-        Z80Reset(&_zxCpu);
-    #endif
-
-    #ifdef CPU_JLSANCHEZ
-        Z80::reset();
-    #endif
+    Z80::reset();
 
     global_tstates = 0;
+    tstates = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -147,20 +124,6 @@ void CPU::reset() {
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
-    tstates = 0;
-
-    #ifdef CPU_LINKEFONG
-        Z80_STATE *state;
-        state=&_zxCpu;
-        #define DO_Z80_INSTRUCTION (tstates = Z80ExecuteInstruction(&_zxCpu, tstates, NULL))
-        #define DO_Z80_INTERRUPT   (Z80Interrupt(&_zxCpu, 0xff, NULL))
-    #endif
-
-    #ifdef CPU_JLSANCHEZ
-        #define DO_Z80_INSTRUCTION (Z80::execute())
-        #define DO_Z80_INTERRUPT   (interruptPending = true)
-    #endif
-    //Z80ExecuteCycles(&_zxCpu, CalcTStates(), NULL);
 
     #ifdef CPU_PER_INSTRUCTION_TIMING
         uint32_t prevTstates = 0;
@@ -169,17 +132,9 @@ void CPU::loop()
         begin_timing(statesInFrame, microsPerFrame());
     #endif
 
-    tstates = 0;
-
 	while (tstates < statesInFrame)
 	{
-
-    #ifdef CPU_JLSANCHEZ        
         switch (Z80::getRegPC()) {
-    #endif
-    #ifdef CPU_LINKEFONG
-        switch (state->pc) {
-    #endif
         case 0x0556: // START LOAD        
             Tape::romLoading=true;
             if (Tape::tapeStatus!=TAPE_LOADING && Tape::tapeFileName!="none") Tape::TAP_Play();
@@ -194,33 +149,22 @@ void CPU::loop()
         case 0x053f: // END LOAD / SAVE
             Tape::romLoading=false;
             if (Tape::tapeStatus!=TAPE_STOPPED)
-                #ifdef CPU_JLSANCHEZ
                 if (Z80::isCarryFlag()) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
-                #endif
-                #ifdef CPU_LINKEFONG                
-                if (state->registers.byte[Z80_F] & 0x01) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
-                #endif
             Tape::SaveStatus=SAVE_STOPPED;
             
-            /*
-            Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
-            Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
-            #ifdef CPU_JLSANCHEZ
-            Serial.printf("Carry Flag: %u\n", Z80::isCarryFlag());            
-            #endif
-            #ifdef CPU_LINKEFONG
-            Serial.printf("Carry Flag: %u\n", state->registers.byte[Z80_F] & 0x01);            
-            #endif
-            Serial.printf("------\n");
-            */
+            // Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
+            // Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
+            // Serial.printf("Carry Flag: %u\n", Z80::isCarryFlag());            
+            // Serial.printf("------\n");
 
             break;
         }
 
         // frame Tstates before instruction
         uint32_t pre_tstates = tstates;
-       
-        DO_Z80_INSTRUCTION;
+        
+        // execute ONE instruction
+        Z80::execute();
 
         // frame Tstates after instruction
         //uint32_t post_tstates = tstates;
@@ -239,17 +183,18 @@ void CPU::loop()
             prevTstates = tstates;
         #endif
 	}
+
+    tstates -= statesInFrame;
     
     #ifdef CPU_PER_INSTRUCTION_TIMING
         delay_instruction(tstates);
     #endif
 
-    DO_Z80_INTERRUPT;
+    // end of cycle, mark interrupt as pending
+    interruptPending = true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-#ifdef CPU_JLSANCHEZ
 
 /* Read opcode from RAM */
 uint8_t Z80Ops::fetchOpcode(uint16_t address) {
@@ -331,7 +276,5 @@ bool Z80Ops::isActiveINT(void) {
     interruptPending = false;
     return true;
 }
-
-#endif  // CPU_JLSANCHEZ
 
 ///////////////////////////////////////////////////////////////////////////////

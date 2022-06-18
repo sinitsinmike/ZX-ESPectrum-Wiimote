@@ -41,17 +41,6 @@
 #define ESPectrum_hardconfig_h
 
 ///////////////////////////////////////////////////////////////////////////////
-// CPU core selection
-//
-// one of the following MUST be defined:
-// - CPU_LINKEFONG: use LinKeFong's core, faster but less precise 
-// - CPU_JLSANCHEZ: use JLSanchez's core, slower but more precise
-///////////////////////////////////////////////////////////////////////////////
-
-// #define CPU_LINKEFONG
-#define CPU_JLSANCHEZ
-
-///////////////////////////////////////////////////////////////////////////////
 // CPU timing configuration
 
 // #define CPU_PER_INSTRUCTION_TIMING for precise CPU timing, undefine it
