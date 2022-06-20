@@ -137,6 +137,10 @@ void CPU::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static char audbuffer[2048] = { 0 };
+static unsigned int audstates = 0;
+static unsigned int audbufcnt = 0;
+
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
@@ -150,6 +154,10 @@ void CPU::loop()
     #endif
     
     tstates = 0;
+
+    audstates = 0;
+
+    audbufcnt = 0;
 
 	while (tstates < statesInFrame)
 	{
@@ -334,8 +342,8 @@ void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
         #ifdef BORDER_EFFECTS
             ALU_video(3);
         #else
-            //ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-            CPU::tstates+=3;
+            ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+            //CPU::tstates+=3;
         #endif
 
     Mem::writebyte(address, value);
@@ -365,8 +373,8 @@ uint8_t IRAM_ATTR Z80Ops::inPort(uint16_t port) {
         AluContentLate( port );    // Contended I/O
     #else
         // 3 clocks for read byte from bus (4 according to https://worldofspectrum.org/faq/reference/48kreference.htm#IOContention)
-        //ALU_video(4); // No contended I/O
-        CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        ALU_video(4); // No contended I/O
+        //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     #endif
 
     uint8_t hiport = port >> 8;
@@ -381,8 +389,8 @@ void IRAM_ATTR Z80Ops::outPort(uint16_t port, uint8_t value) {
         ALUContentEarly( port );   // Contended I/O
     #else
         // 4 clocks for write byte to bus
-        //ALU_video(4); // No contended I/O
-        CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        ALU_video(4); // No contended I/O
+        //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
     #endif
 
     uint8_t hiport = port >> 8;
@@ -409,12 +417,12 @@ void IRAM_ATTR Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
         // Additional clocks to be added on some instructions
         if (ADDRESS_IN_LOW_RAM(address)) {
             for (int idx = 0; idx < wstates; idx++)
-                CPU::tstates += delayContention(CPU::tstates) + 1;
-                //ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+                //CPU::tstates += delayContention(CPU::tstates) + 1;
+                ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
         }
         else
-            //ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-            CPU::tstates+=wstates;
+            ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+            //CPU::tstates+=wstates;
     #endif
 }
 
@@ -424,8 +432,8 @@ void IRAM_ATTR Z80Ops::interruptHandlingTime(int32_t wstates) {
     #ifdef BORDER_EFFECTS
         ALU_video(wstates);
     #else
-        //ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-        CPU::tstates+=wstates;
+        ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        //CPU::tstates+=wstates;
     #endif
 
 }
@@ -574,6 +582,17 @@ static unsigned int brd;
 static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
     CPU::tstates += statestoadd;
+
+    audstates += statestoadd;
+
+    if (audstates>=73) {
+
+        audbuffer[audbufcnt]=Ports::base[0x20] & 0x10?255:0;
+        audbufcnt++;
+
+        audstates-=73;
+
+    }
     
 #ifndef NO_VIDEO
 

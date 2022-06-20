@@ -424,6 +424,8 @@ void ESPectrum::loop() {
     // if (idle < target)
     //     delayMicroseconds(idle);
 
+
+
     static int ctr = 0;
     static int ctrcount = 0;
     static uint32_t sumelapsed;
