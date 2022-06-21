@@ -481,8 +481,8 @@ void IRAM_ATTR Z80Ops::addTstates(int32_t tstatestoadd, bool dovideo) {
     // Fill audio buffer
     audstates += tstatestoadd;
     if (audstates>=ESP_AUDIO_TSTATES) { 
-        *audbufptr++ = CPU::audioBit ? 127 : 0;
         CPU::audbufcnt++;
+        *audbufptr++ = CPU::audioBit ? 127 : 0;
         audstates-=ESP_AUDIO_TSTATES;
     }
 

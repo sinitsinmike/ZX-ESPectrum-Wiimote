@@ -226,6 +226,12 @@ void OSD::do_OSD() {
                 pwm_audio_set_volume(ESPectrum::aud_volume);
         }
     }    
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F11)) {
+        ESPectrum::ESPoffset-=50;
+    }    
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F12)) {
+        ESPectrum::ESPoffset+=50;
+    }    
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
 

@@ -73,6 +73,7 @@ byte ESPectrum::borderColor = 7;
 // Audio variables
 char ESPectrum::audioBuffer[1024]={ 0 };
 signed char ESPectrum::aud_volume = 0;
+int ESPectrum::ESPoffset=0;
 size_t written;
 uint8_t *audbufptr;
 
@@ -432,12 +433,15 @@ void ESPectrum::loop() {
     
     OSD::do_OSD();
 
-#ifdef LOG_DEBUG_TIMING
+#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_start = micros();
+#endif
+
+#ifdef LOG_DEBUG_TIMING
     uint32_t ts_start_aud = ts_start;
 #endif
 
-    pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY); // ~ 
+pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
 
 #ifdef LOG_DEBUG_TIMING
     uint32_t ts_end_aud = micros();
@@ -445,18 +449,19 @@ void ESPectrum::loop() {
 
     CPU::loop();    
 
-#ifdef LOG_DEBUG_TIMING
+#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
+    uint32_t target = CPU::microsPerFrame();
+    uint32_t idle = target - elapsed;
+#endif
+#ifdef VIDEO_FRAME_TIMING
+    if (idle < target) delayMicroseconds(idle + ESPoffset);
+#endif
+#ifdef LOG_DEBUG_TIMING
     #ifdef SHOW_FPS
         totalseconds += elapsed;
     #endif
-    uint32_t target = CPU::microsPerFrame();
-    uint32_t idle = target - elapsed;
-
-    if (idle < target)
-        delayMicroseconds(idle);
-
     static int ctr = 0;
     static int ctrcount = 0;
     static uint32_t sumelapsed;
@@ -465,7 +470,7 @@ void ESPectrum::loop() {
         sumelapsed+=elapsed;
         ctrcount++;
         if ((ctrcount & 0x000F) == 0) {
-            Serial.printf("[CPU] elapsed: %u; idle: %u\n", elapsed, idle);
+            Serial.printf("[CPU] elapsed: %u; idle: %u; offset: %d\n", elapsed, idle, ESPoffset);
             Serial.printf("[Audio] elapsed: %u; Volume: %d\n", ts_end_aud - ts_start_aud, aud_volume);            
             Serial.printf("[CPU] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
             Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  

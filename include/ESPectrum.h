@@ -61,6 +61,10 @@
 #define ESP_AUDIO_SAMPLES 624
 #define ESP_AUDIO_TSTATES 112
 
+// #define ESP_AUDIO_FREQ 11200
+// #define ESP_AUDIO_SAMPLES 224
+// #define ESP_AUDIO_TSTATES 312
+
 class ESPectrum
 {
 public:
@@ -77,6 +81,8 @@ public:
 
     static char audioBuffer[1024];
     static signed char aud_volume;
+
+    static int ESPoffset;
    
 };
 
