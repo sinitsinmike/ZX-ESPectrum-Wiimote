@@ -214,8 +214,8 @@ void ESPectrum::setup()
     Tape::Init();
 
 #ifdef SPEAKER_PRESENT
-    pinMode(SPEAKER_PIN, OUTPUT);
-    digitalWrite(SPEAKER_PIN, LOW);
+//    pinMode(SPEAKER_PIN, OUTPUT);
+//    digitalWrite(SPEAKER_PIN, LOW);
 #endif
 #ifdef EAR_PRESENT
     pinMode(EAR_PIN, INPUT);
@@ -441,7 +441,7 @@ void ESPectrum::loop() {
     uint32_t ts_start_aud = ts_start;
 #endif
 
-pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
+    pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
 
 #ifdef LOG_DEBUG_TIMING
     uint32_t ts_end_aud = micros();
@@ -453,10 +453,10 @@ pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
     uint32_t target = CPU::microsPerFrame();
-    uint32_t idle = target - elapsed;
+    int32_t idle = target - elapsed;
 #endif
 #ifdef VIDEO_FRAME_TIMING
-    if (idle < target) delayMicroseconds(idle + ESPoffset);
+    if (idle > 0) delayMicroseconds(idle + ESPoffset);
 #endif
 #ifdef LOG_DEBUG_TIMING
     #ifdef SHOW_FPS
@@ -470,10 +470,11 @@ pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
         sumelapsed+=elapsed;
         ctrcount++;
         if ((ctrcount & 0x000F) == 0) {
-            Serial.printf("[CPU] elapsed: %u; idle: %u; offset: %d\n", elapsed, idle, ESPoffset);
+            Serial.printf("========================================\n");
+            Serial.printf("[CPU] elapsed: %u; idle: %d; offset: %d\n", elapsed, idle, ESPoffset);
             Serial.printf("[Audio] elapsed: %u; Volume: %d\n", ts_end_aud - ts_start_aud, aud_volume);            
             Serial.printf("[CPU] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
-            Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
+            //Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
             #ifdef SHOW_FPS
                 Serial.printf("[FPS] %f\n", CPU::framecnt / (totalseconds / 1000000));
                 totalseconds = 0;
