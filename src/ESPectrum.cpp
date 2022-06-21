@@ -456,7 +456,7 @@ void ESPectrum::loop() {
     int32_t idle = target - elapsed;
 #endif
 #ifdef VIDEO_FRAME_TIMING
-    if (idle > 0) delayMicroseconds(idle + ESPoffset);
+    if (idle + ESPoffset > 0) delayMicroseconds(idle + ESPoffset);
 #endif
 #ifdef LOG_DEBUG_TIMING
     #ifdef SHOW_FPS
