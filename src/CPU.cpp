@@ -137,9 +137,10 @@ void CPU::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static char audbuffer[2048] = { 0 };
 static unsigned int audstates = 0;
-static unsigned int audbufcnt = 0;
+unsigned int CPU::audbufcnt = 0;
+static uint8_t *audbufptr;
+unsigned int CPU::audioBit = 0;
 
 void CPU::loop()
 {
@@ -156,8 +157,8 @@ void CPU::loop()
     tstates = 0;
 
     audstates = 0;
-
     audbufcnt = 0;
+    audbufptr = (uint8_t *) ESPectrum::audioBuffer;
 
 	while (tstates < statesInFrame)
 	{
@@ -301,9 +302,11 @@ void AluContentLate( uint16_t port )
 uint8_t IRAM_ATTR Z80Ops::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock
     if (ADDRESS_IN_LOW_RAM(address))
-        ALU_video(delayContention(CPU::tstates) + 4);
+//        ALU_video(delayContention(CPU::tstates) + 4);
+        addTstates(delayContention(CPU::tstates) + 4,true);
     else
-        ALU_video(4);
+        addTstates(4,true);
+//        ALU_video(4);
 
     return Mem::readbyte(address);
 }
@@ -312,9 +315,11 @@ uint8_t IRAM_ATTR Z80Ops::fetchOpcode(uint16_t address) {
 uint8_t IRAM_ATTR Z80Ops::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     if (ADDRESS_IN_LOW_RAM(address))
-        ALU_video(delayContention(CPU::tstates) + 3);
+//        ALU_video(delayContention(CPU::tstates) + 3);
+        addTstates(delayContention(CPU::tstates) + 3,true);
     else
-        ALU_video(3);
+        //ALU_video(3);
+        addTstates(3,true);
 
     return Mem::readbyte(address);
 }
@@ -322,8 +327,10 @@ uint8_t IRAM_ATTR Z80Ops::peek8(uint16_t address) {
 void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
     if (ADDRESS_IN_LOW_RAM(address)) {
        
-        ALU_video(delayContention(CPU::tstates) + 3);
+        //ALU_video(delayContention(CPU::tstates) + 3);
         
+        addTstates(delayContention(CPU::tstates) + 3,true);
+
         // #ifndef NO_VIDEO
         // if (address < 0x5800) { // Bitmap
         //     lineChanged[address & 0x3fff] |= 0x01;
@@ -342,8 +349,11 @@ void IRAM_ATTR Z80Ops::poke8(uint16_t address, uint8_t value) {
         #ifdef BORDER_EFFECTS
             ALU_video(3);
         #else
-            ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-            //CPU::tstates+=3;
+            // ALU_video(3); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+            // //CPU::tstates+=3;
+
+            addTstates(3,false);
+
         #endif
 
     Mem::writebyte(address, value);
@@ -373,8 +383,11 @@ uint8_t IRAM_ATTR Z80Ops::inPort(uint16_t port) {
         AluContentLate( port );    // Contended I/O
     #else
         // 3 clocks for read byte from bus (4 according to https://worldofspectrum.org/faq/reference/48kreference.htm#IOContention)
-        ALU_video(4); // No contended I/O
-        //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        // ALU_video(4); // No contended I/O
+        // //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+
+        addTstates(4,false);
+
     #endif
 
     uint8_t hiport = port >> 8;
@@ -389,8 +402,11 @@ void IRAM_ATTR Z80Ops::outPort(uint16_t port, uint8_t value) {
         ALUContentEarly( port );   // Contended I/O
     #else
         // 4 clocks for write byte to bus
-        ALU_video(4); // No contended I/O
-        //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        // ALU_video(4); // No contended I/O
+        // //CPU::tstates+=4; // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+
+        addTstates(4,false);
+
     #endif
 
     uint8_t hiport = port >> 8;
@@ -417,12 +433,18 @@ void IRAM_ATTR Z80Ops::addressOnBus(uint16_t address, int32_t wstates){
         // Additional clocks to be added on some instructions
         if (ADDRESS_IN_LOW_RAM(address)) {
             for (int idx = 0; idx < wstates; idx++)
-                //CPU::tstates += delayContention(CPU::tstates) + 1;
-                ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+                // //CPU::tstates += delayContention(CPU::tstates) + 1;
+                // ALU_video(delayContention(CPU::tstates) + 1); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+                
+                addTstates(delayContention(CPU::tstates) + 1,false);
         }
         else
-            ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-            //CPU::tstates+=wstates;
+
+            // ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+            // //CPU::tstates+=wstates;
+
+            addTstates(wstates,false);
+
     #endif
 }
 
@@ -432,8 +454,12 @@ void IRAM_ATTR Z80Ops::interruptHandlingTime(int32_t wstates) {
     #ifdef BORDER_EFFECTS
         ALU_video(wstates);
     #else
-        ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
-        //CPU::tstates+=wstates;
+
+        // ALU_video(wstates); // I've changed this to CPU::tstates direct increment. All seems working OK. Investigate.
+        // //CPU::tstates+=wstates;
+
+        addTstates(wstates,false);
+
     #endif
 
 }
@@ -443,6 +469,23 @@ bool IRAM_ATTR Z80Ops::isActiveINT(void) {
     if (!interruptPending) return false;
     interruptPending = false;
     return true;
+}
+
+void IRAM_ATTR Z80Ops::addTstates(int32_t tstatestoadd, bool dovideo) {
+
+    if (dovideo)
+        ALU_video(tstatestoadd);
+    else
+        CPU::tstates+=tstatestoadd;
+
+    // Fill audio buffer
+    audstates += tstatestoadd;
+    if (audstates>=ESP_AUDIO_TSTATES) { 
+        *audbufptr++ = CPU::audioBit ? 127 : 0;
+        CPU::audbufcnt++;
+        audstates-=ESP_AUDIO_TSTATES;
+    }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -583,17 +626,6 @@ static void IRAM_ATTR ALU_video(unsigned int statestoadd) {
 
     CPU::tstates += statestoadd;
 
-    audstates += statestoadd;
-
-    if (audstates>=73) {
-
-        audbuffer[audbufcnt]=Ports::base[0x20] & 0x10?255:0;
-        audbufcnt++;
-
-        audstates-=73;
-
-    }
-    
 #ifndef NO_VIDEO
 
     // if (DrawStatus==FRAMESKIP) {

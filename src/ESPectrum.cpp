@@ -54,6 +54,8 @@
 
 #include "Z80_JLS/z80.h"
 
+#include "pwm_audio.h"
+
 // works, but not needed for now
 #pragma GCC optimize ("O3")
 
@@ -67,6 +69,12 @@ void setup_cpuspeed();
 // ESPectrum graphics variables
 VGA ESPectrum::vga;
 byte ESPectrum::borderColor = 7;
+
+// Audio variables
+char ESPectrum::audioBuffer[1024]={ 0 };
+signed char ESPectrum::aud_volume = 0;
+size_t written;
+uint8_t *audbufptr;
 
 bool isLittleEndian()
 {
@@ -249,6 +257,24 @@ void ESPectrum::setup()
         pinMode(psKC[t], INPUT);
     }
 #endif // ZX_KEYB_PRESENT
+   
+    pwm_audio_config_t pac;
+    pac.duty_resolution    = LEDC_TIMER_8_BIT;
+    pac.gpio_num_left      = 25;
+    pac.ledc_channel_left  = LEDC_CHANNEL_0;
+    pac.gpio_num_right     = -1;
+    pac.ledc_channel_right = LEDC_CHANNEL_1;
+    pac.ledc_timer_sel     = LEDC_TIMER_0;
+    pac.tg_num             = TIMER_GROUP_0;
+    pac.timer_num          = TIMER_0;
+    pac.ringbuf_len        = 1024 * 8;
+
+    pwm_audio_init(&pac);             /**< Initialize pwm audio */
+    pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
+    pwm_audio_start();                 /**< Start to run */
+    pwm_audio_set_volume(aud_volume);
+
+    audbufptr = (uint8_t *) audioBuffer;
 
     Serial.printf("Free heap at end of setup: %d\n", ESP.getFreeHeap());
 }
@@ -408,9 +434,16 @@ void ESPectrum::loop() {
 
 #ifdef LOG_DEBUG_TIMING
     uint32_t ts_start = micros();
+    uint32_t ts_start_aud = ts_start;
 #endif
 
-    CPU::loop();
+    pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY); // ~ 
+
+#ifdef LOG_DEBUG_TIMING
+    uint32_t ts_end_aud = micros();
+#endif
+
+    CPU::loop();    
 
 #ifdef LOG_DEBUG_TIMING
     uint32_t ts_end = micros();
@@ -421,10 +454,8 @@ void ESPectrum::loop() {
     uint32_t target = CPU::microsPerFrame();
     uint32_t idle = target - elapsed;
 
-    // if (idle < target)
-    //     delayMicroseconds(idle);
-
-
+    if (idle < target)
+        delayMicroseconds(idle);
 
     static int ctr = 0;
     static int ctrcount = 0;
@@ -434,8 +465,10 @@ void ESPectrum::loop() {
         sumelapsed+=elapsed;
         ctrcount++;
         if ((ctrcount & 0x000F) == 0) {
-            Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
-            Serial.printf("[CPUTask] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
+            Serial.printf("[CPU] elapsed: %u; idle: %u\n", elapsed, idle);
+            Serial.printf("[Audio] elapsed: %u; Volume: %d\n", ts_end_aud - ts_start_aud, aud_volume);            
+            Serial.printf("[CPU] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
+            Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
             #ifdef SHOW_FPS
                 Serial.printf("[FPS] %f\n", CPU::framecnt / (totalseconds / 1000000));
                 totalseconds = 0;
@@ -449,3 +482,4 @@ void ESPectrum::loop() {
     AySound::update();
 
 }
+

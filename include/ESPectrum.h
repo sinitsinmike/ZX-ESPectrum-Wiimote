@@ -57,6 +57,10 @@
 #define VGA VGA14Bit
 #endif
 
+#define ESP_AUDIO_FREQ 31200
+#define ESP_AUDIO_SAMPLES 624
+#define ESP_AUDIO_TSTATES 112
+
 class ESPectrum
 {
 public:
@@ -70,6 +74,9 @@ public:
     static VGA vga;
     static uint8_t borderColor;
     static void processKeyboard();
+
+    static char audioBuffer[1024];
+    static signed char aud_volume;
    
 };
 

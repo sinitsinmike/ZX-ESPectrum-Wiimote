@@ -44,6 +44,10 @@ public:
 
     /* Callback to know when the INT signal is active */
     static bool isActiveINT(void);
+
+    /* Add tStates and do ALU_video and audio buffer capture */
+    static void addTstates(int32_t tstatestoadd, bool dovideo);
+
 };
 
 #endif // Z80OPERATIONS_H

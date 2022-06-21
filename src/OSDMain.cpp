@@ -40,6 +40,7 @@
 #include "AySound.h"
 #include "Mem.h"
 #include "Tape.h"
+#include "pwm_audio.h"
 
 #define MENU_REDRAW true
 #define MENU_UPDATE false
@@ -213,6 +214,18 @@ void OSD::do_OSD() {
         // Stop .tap reproduction
         Tape::tapeStatus=TAPE_STOPPED;
     }
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F9)) {
+        if (ESPectrum::aud_volume>-16) {
+                ESPectrum::aud_volume--;
+                pwm_audio_set_volume(ESPectrum::aud_volume);
+        }
+    }
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F10)) {
+        if (ESPectrum::aud_volume<16) {
+                ESPectrum::aud_volume++;
+                pwm_audio_set_volume(ESPectrum::aud_volume);
+        }
+    }    
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
 
