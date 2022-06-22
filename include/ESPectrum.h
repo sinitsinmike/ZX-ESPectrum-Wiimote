@@ -60,18 +60,22 @@
 // #define ESP_AUDIO_FREQ 44800
 // #define ESP_AUDIO_SAMPLES 896
 // #define ESP_AUDIO_TSTATES 78
+// #define ESP_DELAY_OFFSET -100 // Little adjustment to frame delay in order to get perfect sound
 
-// #define ESP_AUDIO_FREQ 31200
-// #define ESP_AUDIO_SAMPLES 624
-// #define ESP_AUDIO_TSTATES 112
+#define ESP_AUDIO_FREQ 31200
+#define ESP_AUDIO_SAMPLES 624
+#define ESP_AUDIO_TSTATES 112
+#define ESP_DELAY_OFFSET 0
 
 // #define ESP_AUDIO_FREQ 22400
 // #define ESP_AUDIO_SAMPLES 448
 // #define ESP_AUDIO_TSTATES 156
+// #define ESP_DELAY_OFFSET 0
 
-#define ESP_AUDIO_FREQ 11200
-#define ESP_AUDIO_SAMPLES 224
-#define ESP_AUDIO_TSTATES 312
+// #define ESP_AUDIO_FREQ 11200
+// #define ESP_AUDIO_SAMPLES 224
+// #define ESP_AUDIO_TSTATES 312
+// #define ESP_DELAY_OFFSET 0
 
 class ESPectrum
 {
@@ -87,11 +91,17 @@ public:
     static uint8_t borderColor;
     static void processKeyboard();
 
-    static char audioBuffer[1024];
+    static char audioBuffer[2][1024];
     static signed char aud_volume;
 
     static int ESPoffset;
+
+    static int buffertofill;
+    static int buffertoplay;
    
+private:
+    static void secondTask(void* unused);
+
 };
 
 #endif

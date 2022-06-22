@@ -71,11 +71,17 @@ VGA ESPectrum::vga;
 byte ESPectrum::borderColor = 7;
 
 // Audio variables
-char ESPectrum::audioBuffer[1024]={ 0 };
+char ESPectrum::audioBuffer[2][1024];
 signed char ESPectrum::aud_volume = 0;
-int ESPectrum::ESPoffset=0;
+int ESPectrum::ESPoffset=ESP_DELAY_OFFSET;
+int ESPectrum::buffertofill=1;
+int ESPectrum::buffertoplay=0;
 size_t written;
 uint8_t *audbufptr;
+
+static QueueHandle_t secondTaskQueue;
+static TaskHandle_t secondTaskHandle;
+static uint8_t *param;
 
 bool isLittleEndian()
 {
@@ -239,6 +245,9 @@ void ESPectrum::setup()
 
     Serial.printf("%s %u\n", MSG_EXEC_ON_CORE, xPortGetCoreID());
 
+    secondTaskQueue = xQueueCreate(1, sizeof(uint8_t *));
+    xTaskCreatePinnedToCore(&ESPectrum::secondTask, "secondTask", 4096, NULL, 5, &secondTaskHandle, 0);
+
     AySound::initialize();
 
     Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
@@ -259,23 +268,23 @@ void ESPectrum::setup()
     }
 #endif // ZX_KEYB_PRESENT
    
-    pwm_audio_config_t pac;
-    pac.duty_resolution    = LEDC_TIMER_8_BIT;
-    pac.gpio_num_left      = 25;
-    pac.ledc_channel_left  = LEDC_CHANNEL_0;
-    pac.gpio_num_right     = -1;
-    pac.ledc_channel_right = LEDC_CHANNEL_1;
-    pac.ledc_timer_sel     = LEDC_TIMER_0;
-    pac.tg_num             = TIMER_GROUP_0;
-    pac.timer_num          = TIMER_0;
-    pac.ringbuf_len        = 1024 * 8;
+    // pwm_audio_config_t pac;
+    // pac.duty_resolution    = LEDC_TIMER_8_BIT;
+    // pac.gpio_num_left      = 25;
+    // pac.ledc_channel_left  = LEDC_CHANNEL_0;
+    // pac.gpio_num_right     = -1;
+    // pac.ledc_channel_right = LEDC_CHANNEL_1;
+    // pac.ledc_timer_sel     = LEDC_TIMER_0;
+    // pac.tg_num             = TIMER_GROUP_0;
+    // pac.timer_num          = TIMER_0;
+    // pac.ringbuf_len        = 1024 * 8;
 
-    pwm_audio_init(&pac);             /**< Initialize pwm audio */
-    pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
-    pwm_audio_start();                 /**< Start to run */
-    pwm_audio_set_volume(aud_volume);
+    // pwm_audio_init(&pac);             /**< Initialize pwm audio */
+    // pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
+    // pwm_audio_start();                 /**< Start to run */
+    // pwm_audio_set_volume(aud_volume);
 
-    audbufptr = (uint8_t *) audioBuffer;
+//    audbufptr = (uint8_t *) audioBuffer[buffertoplay];
 
     Serial.printf("Free heap at end of setup: %d\n", ESP.getFreeHeap());
 }
@@ -416,6 +425,32 @@ void ESPectrum::processKeyboard() {
 #endif // PS2_CONVENIENCE_KEYS_ES
 }
 
+void IRAM_ATTR ESPectrum::secondTask(void *unused) {
+
+    pwm_audio_config_t pac;
+    pac.duty_resolution    = LEDC_TIMER_8_BIT;
+    pac.gpio_num_left      = 25;
+    pac.ledc_channel_left  = LEDC_CHANNEL_0;
+    pac.gpio_num_right     = -1;
+    pac.ledc_channel_right = LEDC_CHANNEL_1;
+    pac.ledc_timer_sel     = LEDC_TIMER_1;
+    pac.tg_num             = TIMER_GROUP_1;
+    pac.timer_num          = TIMER_1;
+    pac.ringbuf_len        = 1024 * 8;
+
+    pwm_audio_init(&pac);             /**< Initialize pwm audio */
+    pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
+    pwm_audio_start();                 /**< Start to run */
+    pwm_audio_set_volume(aud_volume);
+
+    for (;;) {
+        xQueueReceive(secondTaskQueue, &param, portMAX_DELAY);
+        pwm_audio_write(param /*audbufptr*/, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
+    }
+
+}
+
+
 /* +-------------+
    | LOOP core 1 |
    +-------------+
@@ -433,18 +468,11 @@ void ESPectrum::loop() {
     
     OSD::do_OSD();
 
+    param = (uint8_t *) audioBuffer[buffertoplay];
+    xQueueSend(secondTaskQueue, &param, portMAX_DELAY);
+
 #if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_start = micros();
-#endif
-
-#ifdef LOG_DEBUG_TIMING
-    uint32_t ts_start_aud = ts_start;
-#endif
-
-    pwm_audio_write(audbufptr, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
-
-#ifdef LOG_DEBUG_TIMING
-    uint32_t ts_end_aud = micros();
 #endif
 
     CPU::loop();    
@@ -472,9 +500,9 @@ void ESPectrum::loop() {
         if ((ctrcount & 0x000F) == 0) {
             Serial.printf("========================================\n");
             Serial.printf("[CPU] elapsed: %u; idle: %d; offset: %d\n", elapsed, idle, ESPoffset);
-            Serial.printf("[Audio] elapsed: %u; Volume: %d\n", ts_end_aud - ts_start_aud, aud_volume);            
+            Serial.printf("[Audio] Volume: %d\n", aud_volume);
             Serial.printf("[CPU] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
-            //Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
+//            Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
             #ifdef SHOW_FPS
                 Serial.printf("[FPS] %f\n", CPU::framecnt / (totalseconds / 1000000));
                 totalseconds = 0;
@@ -485,7 +513,13 @@ void ESPectrum::loop() {
     else ctr--;
 #endif
 
+    // Swap audio buffers
+    buffertofill ^= 1;
+    buffertoplay ^= 1;
+
     AySound::update();
+
+    vTaskDelay(0); // important to avoid task watchdog timeouts - change this to slow down emu
 
 }
 

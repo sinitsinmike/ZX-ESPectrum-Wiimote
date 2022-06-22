@@ -207,11 +207,11 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
         
         #ifdef SPEAKER_PRESENT
-        // if (Tape::SaveStatus==TAPE_SAVING) {
-        //     CPU::audioBit=bitRead(data,3);
-        // } else {
+        if (Tape::SaveStatus==TAPE_SAVING) {
+            CPU::audioBit=bitRead(data,3);
+        } else {
             CPU::audioBit=bitRead(data,4);
-        // }
+        }
         #endif
 
         #ifdef MIC_PRESENT
