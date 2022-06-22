@@ -433,9 +433,9 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
     pac.ledc_channel_left  = LEDC_CHANNEL_0;
     pac.gpio_num_right     = -1;
     pac.ledc_channel_right = LEDC_CHANNEL_1;
-    pac.ledc_timer_sel     = LEDC_TIMER_1;
-    pac.tg_num             = TIMER_GROUP_1;
-    pac.timer_num          = TIMER_1;
+    pac.ledc_timer_sel     = LEDC_TIMER_0;
+    pac.tg_num             = TIMER_GROUP_0;
+    pac.timer_num          = TIMER_0;
     pac.ringbuf_len        = 1024 * 8;
 
     pwm_audio_init(&pac);             /**< Initialize pwm audio */
@@ -445,7 +445,7 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
 
     for (;;) {
         xQueueReceive(secondTaskQueue, &param, portMAX_DELAY);
-        pwm_audio_write(param /*audbufptr*/, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
+        pwm_audio_write(param, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
     }
 
 }
