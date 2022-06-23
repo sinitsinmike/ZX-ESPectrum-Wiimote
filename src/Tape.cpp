@@ -146,8 +146,8 @@ uint8_t Tape::TAP_Read()
     
 #ifdef SPEAKER_PRESENT
 
-    CPU::audioBit=tapeEarBit;
-
+    // TODO: Send tapeEarBit to new audio buffer creation implementation
+    //CPU::audioBit=tapeEarBit;
     //digitalWrite(SPEAKER_PIN, tapeEarBit); // Send tape load sound to speaker
 
 #endif

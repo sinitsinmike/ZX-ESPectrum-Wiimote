@@ -60,12 +60,22 @@
 // #define ESP_AUDIO_FREQ 44800
 // #define ESP_AUDIO_SAMPLES 896
 // #define ESP_AUDIO_TSTATES 78
-// #define ESP_DELAY_OFFSET -100 // Little adjustment to frame delay in order to get perfect sound
+// #define ESP_DELAY_OFFSET -100
 
-#define ESP_AUDIO_FREQ 31200
-#define ESP_AUDIO_SAMPLES 624
-#define ESP_AUDIO_TSTATES 112
+// #define ESP_AUDIO_FREQ 31200
+// #define ESP_AUDIO_SAMPLES 624
+// #define ESP_AUDIO_TSTATES 112
+// #define ESP_DELAY_OFFSET 0
+
+#define ESP_AUDIO_FREQ 27300
+#define ESP_AUDIO_SAMPLES 546
+#define ESP_AUDIO_TSTATES 128
 #define ESP_DELAY_OFFSET 0
+
+// #define ESP_AUDIO_FREQ 13650
+// #define ESP_AUDIO_SAMPLES 273
+// #define ESP_AUDIO_TSTATES 256
+// #define ESP_DELAY_OFFSET 0
 
 // #define ESP_AUDIO_FREQ 22400
 // #define ESP_AUDIO_SAMPLES 448
@@ -92,6 +102,7 @@ public:
     static void processKeyboard();
 
     static char audioBuffer[2][1024];
+    static char overSamplebuf[2184];    
     static signed char aud_volume;
 
     static int ESPoffset;

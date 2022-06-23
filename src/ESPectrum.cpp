@@ -72,12 +72,13 @@ byte ESPectrum::borderColor = 7;
 
 // Audio variables
 char ESPectrum::audioBuffer[2][1024];
-signed char ESPectrum::aud_volume = 0;
+char ESPectrum::overSamplebuf[2184];
+signed char ESPectrum::aud_volume = -8;
 int ESPectrum::ESPoffset=ESP_DELAY_OFFSET;
 int ESPectrum::buffertofill=1;
 int ESPectrum::buffertoplay=0;
 size_t written;
-uint8_t *audbufptr;
+//uint8_t *audbufptr;
 
 static QueueHandle_t secondTaskQueue;
 static TaskHandle_t secondTaskHandle;
@@ -460,6 +461,8 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
 static double totalseconds=0;
 #endif
 
+static int audiooutput = 0;
+
 void ESPectrum::loop() {
 
     processKeyboard();
@@ -483,16 +486,60 @@ void ESPectrum::loop() {
     uint32_t target = CPU::microsPerFrame();
     int32_t idle = target - elapsed;
 #endif
+
+    // // Finish fill of oversampled audio buffer
+    if (CPU::audbufcnt < 2184) {
+        int signal = CPU::lastaudioBit ? 255: 0;
+        for (int i=CPU::audbufcnt; i < 2184;i++) overSamplebuf[i] = signal;
+    }
+
+    // Here oversampled buffer must be low filtered when I know how to do it
+    ////////////////////////////////////////////////////////////////////////
+
+    // Downsample
+    for (int i=0;i<ESP_AUDIO_SAMPLES;i++) {
+        audioBuffer[buffertofill][i] = overSamplebuf[i << 2];
+    }
+
+    // // Downsample
+    // int n = 0;
+    // for (int i=0;i<2184;i++) {
+    //     audiooutput -= (audiooutput / 8);
+    //     audiooutput += (overSamplebuf[i] / 8);
+    //     if ((i % 4) == 0) {
+    //         audioBuffer[buffertofill][n] = audiooutput;
+    //         n++;
+    //     }
+    // }
+
+    // // Downsample
+    // int i,n, signal = 0;
+    // CPU::audbufcnt = 0;
+    // for (i=0;i<2184;i++) {
+    //     signal += overSamplebuf[i] ? 31 : 0;
+    //     if ((i % 8) == 0) {
+    //         audioBuffer[buffertofill][CPU::audbufcnt] = signal;
+    //         CPU::audbufcnt++;
+    //         signal=0;
+    //     }
+    // }
+
+    // // // Finish fill of audio buffer (no oversample)
+    // if (CPU::audbufcnt < ESP_AUDIO_SAMPLES) {
+    //     int signal = audioBuffer[buffertofill][CPU::audbufcnt];
+    //     for (int i=CPU::audbufcnt; i< ESP_AUDIO_SAMPLES;i++) audioBuffer[buffertofill][i] = signal;
+    // }
+
 #ifdef VIDEO_FRAME_TIMING
     if (idle + ESPoffset > 0) delayMicroseconds(idle + ESPoffset);
 #endif
 #ifdef LOG_DEBUG_TIMING
-    #ifdef SHOW_FPS
-        totalseconds += elapsed;
-    #endif
     static int ctr = 0;
     static int ctrcount = 0;
     static uint32_t sumelapsed;
+    #ifdef SHOW_FPS
+        totalseconds += elapsed;
+    #endif
     if (ctr == 0) {
         ctr = 10;
         sumelapsed+=elapsed;
@@ -502,9 +549,9 @@ void ESPectrum::loop() {
             Serial.printf("[CPU] elapsed: %u; idle: %d; offset: %d\n", elapsed, idle, ESPoffset);
             Serial.printf("[Audio] Volume: %d\n", aud_volume);
             Serial.printf("[CPU] average: %u; samples: %u\n", sumelapsed / ctrcount, ctrcount);     
-//            Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
+            Serial.printf("[Beeper samples taken] %u\n", CPU::audbufcnt);  
             #ifdef SHOW_FPS
-                Serial.printf("[FPS] %f\n", CPU::framecnt / (totalseconds / 1000000));
+                Serial.printf("[Framecnt] %u; [Seconds] %f; [FPS] %f\n", CPU::framecnt, totalseconds / 1000000, CPU::framecnt / (totalseconds / 1000000));
                 totalseconds = 0;
                 CPU::framecnt = 0;
             #endif

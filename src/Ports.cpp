@@ -198,6 +198,14 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
     return data;
 }
 
+static int Audiobit;
+static int AudioSignal = 0;
+static int lastSignal = 0;
+static int signaltostore = 0;
+static uint8_t *audbufptr;
+static uint32_t lastAudTstates;
+static int signal = 0;
+
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
 
@@ -207,11 +215,35 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
         
         #ifdef SPEAKER_PRESENT
-        if (Tape::SaveStatus==TAPE_SAVING) {
-            CPU::audioBit=bitRead(data,3);
-        } else {
-            CPU::audioBit=bitRead(data,4);
+        // if (Tape::SaveStatus==TAPE_SAVING)
+        //     Audiobit=bitRead(data,3);
+        // else {
+            Audiobit = bitRead(data,4);
+        // }
+
+        // Audio buffer generation (oversample)
+        if (Audiobit != CPU::lastaudioBit) {
+            uint32_t audbufpos = CPU::tstates >> 5;
+            for (int i=CPU::audbufcnt;i<audbufpos;i++) {
+                ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
+            }
+            ESPectrum::overSamplebuf[audbufpos] = Audiobit ? 255: 0;
+            CPU::audbufcnt = audbufpos;
+            CPU::lastaudioBit = Audiobit;
         }
+
+        // // Audio buffer generation
+        // if (Audiobit != CPU::lastaudioBit) {
+        //     audbufptr = (uint8_t *) ESPectrum::audioBuffer[ESPectrum::buffertofill];
+        //     audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
+        //     for (int i=CPU::audbufcnt;i<(audbufpos-1);i++) {
+        //         audbufptr[i] = CPU::lastaudioBit ? 255: 0;
+        //     }
+        //     audbufptr[audbufpos] = Audiobit ? 255: 0;
+        //     CPU::audbufcnt = audbufpos;
+        //     CPU::lastaudioBit = Audiobit;
+        // }
+
         #endif
 
         #ifdef MIC_PRESENT

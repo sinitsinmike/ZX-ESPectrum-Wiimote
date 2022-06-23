@@ -62,8 +62,8 @@ public:
     static uint32_t framecnt;
     #endif
 
-//    static unsigned int audbufcnt;
-    static unsigned int audioBit;
+    static uint32_t audbufcnt;
+    static unsigned int lastaudioBit;
 
 };
 

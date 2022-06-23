@@ -138,9 +138,9 @@ void CPU::reset() {
 ///////////////////////////////////////////////////////////////////////////////
 
 static unsigned int audstates = 0;
-//unsigned int CPU::audbufcnt = 0;
+uint32_t CPU::audbufcnt = 0;
+unsigned int CPU::lastaudioBit = 0;
 static uint8_t *audbufptr;
-unsigned int CPU::audioBit = 0;
 
 void CPU::loop()
 {
@@ -157,7 +157,7 @@ void CPU::loop()
     tstates = 0;
 
     audstates = 0;
-//    audbufcnt = 0;
+    audbufcnt = 0;
     audbufptr = (uint8_t *) ESPectrum::audioBuffer[ESPectrum::buffertofill];
 
 	while (tstates < statesInFrame)
@@ -212,11 +212,11 @@ void CPU::loop()
             prevTstates = tstates;
         #endif
 	}
-    
+
     #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
     framecnt++;
     #endif
-    
+
     #ifdef CPU_PER_INSTRUCTION_TIMING
         delay_instruction(tstates);
     #endif
@@ -447,14 +447,6 @@ void IRAM_ATTR Z80Ops::addTstates(int32_t tstatestoadd, bool dovideo) {
         ALU_video(tstatestoadd);
     else
         CPU::tstates+=tstatestoadd;
-
-    // Fill audio buffer
-    audstates += tstatestoadd;
-    if (audstates >= ESP_AUDIO_TSTATES) { 
-        *audbufptr++ = CPU::audioBit ? 127 : 0;
-        audstates-= ESP_AUDIO_TSTATES;
-//        CPU::audbufcnt++;
-    }
 
 }
 

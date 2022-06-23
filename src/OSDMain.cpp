@@ -221,7 +221,7 @@ void OSD::do_OSD() {
         }
     }
     else if (PS2Keyboard::checkAndCleanKey(KEY_F10)) {
-        if (ESPectrum::aud_volume<16) {
+        if (ESPectrum::aud_volume<0) {
                 ESPectrum::aud_volume++;
                 pwm_audio_set_volume(ESPectrum::aud_volume);
         }
