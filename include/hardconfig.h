@@ -82,7 +82,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 // LOG_DEBUG_TIMING generates simple timing log messages to console every second.
-#define LOG_DEBUG_TIMING
+//#define LOG_DEBUG_TIMING
 
 // SHOW_FPS Shows FPS :o) (Needs LOG_DEBUG_TIMING)
 #define SHOW_FPS
