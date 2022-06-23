@@ -235,14 +235,26 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         // // Audio buffer generation
         // if (Audiobit != CPU::lastaudioBit) {
         //     audbufptr = (uint8_t *) ESPectrum::audioBuffer[ESPectrum::buffertofill];
-        //     audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
-        //     for (int i=CPU::audbufcnt;i<(audbufpos-1);i++) {
+        //     uint32_t audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
+        //     for (int i=CPU::audbufcnt;i<audbufpos;i++) {
         //         audbufptr[i] = CPU::lastaudioBit ? 255: 0;
         //     }
         //     audbufptr[audbufpos] = Audiobit ? 255: 0;
         //     CPU::audbufcnt = audbufpos;
         //     CPU::lastaudioBit = Audiobit;
         // }
+
+        // // Audio buffer generation
+        // if (Audiobit != CPU::lastaudioBit) {
+        //     uint32_t audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
+        //     for (int i=CPU::audbufcnt;i<audbufpos;i++) {
+        //         ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
+        //     }
+        //     ESPectrum::overSamplebuf[audbufpos] = Audiobit ? 255: 0;
+        //     CPU::audbufcnt = audbufpos;
+        //     CPU::lastaudioBit = Audiobit;
+        // }
+
 
         #endif
 

@@ -63,7 +63,7 @@ public:
     #endif
 
     static uint32_t audbufcnt;
-    static unsigned int lastaudioBit;
+    static int lastaudioBit;
 
 };
 

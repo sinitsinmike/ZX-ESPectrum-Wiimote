@@ -139,7 +139,7 @@ void CPU::reset() {
 
 static unsigned int audstates = 0;
 uint32_t CPU::audbufcnt = 0;
-unsigned int CPU::lastaudioBit = 0;
+int CPU::lastaudioBit = 0;
 static uint8_t *audbufptr;
 
 void CPU::loop()
