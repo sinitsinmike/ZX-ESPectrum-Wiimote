@@ -214,19 +214,21 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
 
         int Audiobit = bitRead(data,4);
 
-        if (Audiobit != CPU::lastaudioBit) {
+        ESPectrum::audioTakeSample(Audiobit);
 
-            // TODO: MOVE THIS TO A FUNCTION IN ESPECTRUM.CPP
+        // if (Audiobit != ESPectrum::lastaudioBit) {
 
-            // Audio buffer generation (oversample)
-            uint32_t audbufpos = CPU::tstates >> 4;
-            for (int i=CPU::audbufcnt;i<audbufpos;i++) {
-                ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
-            }
-            CPU::audbufcnt = audbufpos;
+        //     // TODO: MOVE THIS TO A FUNCTION IN ESPECTRUM.CPP
 
-            CPU::lastaudioBit = Audiobit;
-        }
+        //     // Audio buffer generation (oversample)
+        //     uint32_t audbufpos = CPU::tstates >> 4;
+        //     for (int i=ESPectrum::audbufcnt;i<audbufpos;i++) {
+        //         ESPectrum::overSamplebuf[i] = ESPectrum::lastaudioBit ? 255: 0;
+        //     }
+        //     ESPectrum::audbufcnt = audbufpos;
+
+        //     ESPectrum::lastaudioBit = Audiobit;
+        // }
 
         #endif
 

@@ -62,9 +62,6 @@ public:
     static uint32_t framecnt;
     #endif
 
-    static uint32_t audbufcnt;
-    static int lastaudioBit;
-
 };
 
 // Video / ALU

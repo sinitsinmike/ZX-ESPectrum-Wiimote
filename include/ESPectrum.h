@@ -88,6 +88,11 @@ public:
     static signed char aud_volume;
     static int buffertofill;
     static int buffertoplay;
+    static uint32_t audbufcnt;
+    static int lastaudioBit;
+    static void audioFrameInit();
+    static void audioTakeSample(int Audiobit);
+    static void audioFrameEnd();
    
 private:
     static void secondTask(void* unused);

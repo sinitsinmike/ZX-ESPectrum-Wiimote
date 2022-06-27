@@ -106,13 +106,12 @@ uint32_t CPU::microsPerFrame()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t CPU::tstates = 0;
-uint64_t CPU::global_tstates = 0;
-
-
 #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
 uint32_t CPU::framecnt = 0;
 #endif
+
+uint32_t CPU::tstates = 0;
+uint64_t CPU::global_tstates = 0;
 
 void CPU::setup()
 {
@@ -137,13 +136,9 @@ void CPU::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t CPU::audbufcnt = 0;
-int CPU::lastaudioBit = 0;
-
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
-    tstates = 0;
 
     #ifdef CPU_PER_INSTRUCTION_TIMING
         uint32_t prevTstates = 0;
@@ -153,8 +148,6 @@ void CPU::loop()
     #endif
     
     tstates = 0;
-
-    audbufcnt = 0;
 
 	while (tstates < statesInFrame)
 	{

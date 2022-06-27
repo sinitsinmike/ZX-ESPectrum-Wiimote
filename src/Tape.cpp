@@ -144,19 +144,9 @@ uint8_t Tape::TAP_Read()
         return LOW;
     } 
     
-#ifdef SPEAKER_PRESENT
-
-    // TODO: MOVE THIS TO A FUNCTION IN ESPECTRUM.CPP
-
-    // Audio buffer generation (oversample) 
-    uint32_t audbufpos = CPU::tstates >> 4;
-    for (int i=CPU::audbufcnt;i<audbufpos;i++) {
-        ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 191: 0;
-    }
-    CPU::audbufcnt = audbufpos;
-    CPU::lastaudioBit = tapeEarBit;
-
-#endif
+    #ifdef SPEAKER_PRESENT
+    ESPectrum::audioTakeSample(tapeEarBit);
+    #endif
     
     return tapeEarBit;
 }
