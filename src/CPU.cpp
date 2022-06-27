@@ -137,10 +137,8 @@ void CPU::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static unsigned int audstates = 0;
 uint32_t CPU::audbufcnt = 0;
 int CPU::lastaudioBit = 0;
-static uint8_t *audbufptr;
 
 void CPU::loop()
 {
@@ -156,9 +154,7 @@ void CPU::loop()
     
     tstates = 0;
 
-    audstates = 0;
     audbufcnt = 0;
-    audbufptr = (uint8_t *) ESPectrum::audioBuffer[ESPectrum::buffertofill];
 
 	while (tstates < statesInFrame)
 	{

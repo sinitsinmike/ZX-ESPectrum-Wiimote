@@ -72,9 +72,8 @@ VGA ESPectrum::vga;
 byte ESPectrum::borderColor = 7;
 
 // Audio variables
-//char ESPectrum::audioBuffer[2][1024];
-char ESPectrum::audioBuffer[2][2184];
-char ESPectrum::overSamplebuf[2184];
+unsigned char ESPectrum::audioBuffer[2][2184];
+unsigned char ESPectrum::overSamplebuf[2184*2];
 signed char ESPectrum::aud_volume = -8;
 int ESPectrum::ESPoffset=ESP_DELAY_OFFSET;
 int ESPectrum::buffertofill=1;
@@ -461,58 +460,9 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
    +-------------+
  */
 
-
-//Low pass butterworth filter order=1 alpha1=0.073260073260073 
-class filter
-{
-	public:
-		filter()
-		{
-			v[0]=0;
-			v[1]=0;
-		}
-	private:
-		short v[2];
-	public:
-		short step(short x)
-		{
-			v[0] = v[1];
-			long tmp = ((((x * 12739110L) >>  3)	//= (   1.8982752688e-1 * x)
-				+ ((v[0] * 10407661L) >> 1)	//+(  0.6203449462*v[0])
-				)+4194304) >> 23; // round and downshift fixed point /8388608
-
-			v[1]= (short)tmp;
-			return (short)((
-				 (v[0] + v[1]))); // 2^
-		}
-};
-
-#define CUTOFF 8000
-#define SAMPLE_RATE 44800
-
-void lowPassFrequency(double* input, double* output, int points) 
-{ 
-    double RC = 1.0/(CUTOFF*2*3.14);  
-    double dt = 1.0/SAMPLE_RATE;  
-    double alpha = dt/(RC+dt); 
-    output[0] = input[0];
-    for(int i = 1; i < points; ++i) 
-    {  
-        output[i] = output[i-1] + (alpha*(input[i] - output[i-1])); 
-    } 
-}     
-
 #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
 static double totalseconds=0;
 #endif
-
-static int audiooutput = 0;
-
-filter Filtro;
-
-LPF AnalogValueLPF(1);			//Create a LPF will a time constant of 1second
-double PostFilteredAnalogValue;	//The final filtered value used in your program
-double ScaledValue;
 
 void ESPectrum::loop() {
 
@@ -532,85 +482,24 @@ void ESPectrum::loop() {
     CPU::loop();    
 
     // // Finish fill of oversampled audio buffer
-    if (CPU::audbufcnt < 2184) {
+    if (CPU::audbufcnt < ESP_AUDIO_OVERSAMPLES) {
         int signal = CPU::lastaudioBit ? 255: 0;
-        for (int i=CPU::audbufcnt; i < 2184;i++) overSamplebuf[i] = signal;
+        for (int i=CPU::audbufcnt; i < ESP_AUDIO_OVERSAMPLES;i++) overSamplebuf[i] = signal;
     }
 
-    // // Here oversampled buffer must be low filtered when I know how to do it
-    // ////////////////////////////////////////////////////////////////////////
-
-    // // Downsample
-    // for (int i=0;i<ESP_AUDIO_SAMPLES;i++) {
-    //     audioBuffer[buffertofill][i] = overSamplebuf[i << 2];
-    // }
-
-    // // Downsample
-    // int n = 0;
-    // for (int i=0;i<2184;i++) {
-    //     audiooutput -= (audiooutput / 8);
-    //     audiooutput += (overSamplebuf[i] / 8);
-    //     if ((i % 4) == 0) {
-    //         audioBuffer[buffertofill][n] = audiooutput;
-    //         n++;
-    //     }
-    // }
-
-    // // Downsample
-    // int i,n, signal = 0;
-    // CPU::audbufcnt = 0;
-    // for (i=0;i<2184;i++) {
-    //     signal += overSamplebuf[i] ? 31 : 0;
-    //     if ((i % 8) == 0) {
-    //         audioBuffer[buffertofill][CPU::audbufcnt] = signal;
-    //         CPU::audbufcnt++;
-    //         signal=0;
-    //     }
-    // }
-
-    // // // Finish fill of audio buffer (no oversample)
-    // if (CPU::audbufcnt < ESP_AUDIO_SAMPLES) {
-    //     int signal = CPU::lastaudioBit ? 255: 0;
-    //     for (int i=CPU::audbufcnt; i< ESP_AUDIO_SAMPLES;i++) overSamplebuf[i] = signal;
-    // }
-
-    for (int i=0;i<2184;i++) {
-
-        overSamplebuf[i] = Filtro.step(overSamplebuf[i] - 128);
-
+    //Downsample (median)
+    int fval;
+    for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
+        fval  =  overSamplebuf[i];
+        fval +=  overSamplebuf[i+1];
+        fval +=  overSamplebuf[i+2];
+        fval +=  overSamplebuf[i+3];
+        fval +=  overSamplebuf[i+4];
+        fval +=  overSamplebuf[i+5];
+        fval +=  overSamplebuf[i+6];
+        fval +=  overSamplebuf[i+7];
+        audioBuffer[buffertofill][i>>3] = fval >> 3;
     }
-
-    // Downsample
-    for (int i=0;i<ESP_AUDIO_SAMPLES;i++) {
-        audioBuffer[buffertofill][i] = overSamplebuf[i << 2] + 128;
-    }
-    
-//     // Dump and process to out buffer
-//     if (CPU::audbufcnt < ESP_AUDIO_SAMPLES) {
-//         int signal = CPU::lastaudioBit ? 255: 0;
-
-//         //Library internal variables are all 'double', you will save some time in method calls if you convert to double right away and return to a double
-//         //Get Raw analog value and convert it to a double right away (the library is just going to do this anyway)
-//         double PreFilteredAnalogValue = double(signal);
-
-//         //Perform Low Pass Filter
-//         PostFilteredAnalogValue = AnalogValueLPF.Step(PreFilteredAnalogValue);
-
-//         //Error Checking
-//         if (PostFilteredAnalogValue == NAN) {//Something Went Wrong, handle it, you don't want the rest of your code working with a bad number
-//             //Do something to handle that its a bad number, such as go to scale high.
-//             ScaledValue = 255.0;
-//         } 
-//         else {
-//             //PostFilteredAnalogValue is good!  Scale it or something.  Example below scales a 12bit analog between 0-100.0
-//             ScaledValue = PostFilteredAnalogValue / 256.0 * 255.0;
-//         }
-
-//         for (int i=CPU::audbufcnt; i< ESP_AUDIO_SAMPLES;i++) audioBuffer[buffertofill][i] = ScaledValue;
-
-// //        for (int i=CPU::audbufcnt; i< ESP_AUDIO_SAMPLES;i++) audioBuffer[buffertofill][i] = signal;
-
-//     }
 
 #if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_end = micros();
@@ -619,9 +508,9 @@ void ESPectrum::loop() {
     int32_t idle = target - elapsed;
 #endif
 
-
 #ifdef VIDEO_FRAME_TIMING
-    if (idle + ESPoffset > 0) delayMicroseconds(idle + ESPoffset);
+    //if (idle + ESPoffset > 0) delayMicroseconds(idle + ESPoffset); // FOR TESTING PURPOSE ONLY
+    if (idle > 0) delayMicroseconds(idle);   
 #endif
 #ifdef LOG_DEBUG_TIMING
     static int ctr = 0;

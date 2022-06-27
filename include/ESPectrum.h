@@ -57,20 +57,7 @@
 #define VGA VGA14Bit
 #endif
 
-// #define ESP_AUDIO_FREQ 54600
-// #define ESP_AUDIO_SAMPLES 1092
-// #define ESP_AUDIO_TSTATES 64
-// #define ESP_DELAY_OFFSET 0
-
-// #define ESP_AUDIO_FREQ 44800
-// #define ESP_AUDIO_SAMPLES 896
-// #define ESP_AUDIO_TSTATES 78
-// #define ESP_DELAY_OFFSET -100
-
-// #define ESP_AUDIO_FREQ 31200
-// #define ESP_AUDIO_SAMPLES 624
-// #define ESP_AUDIO_TSTATES 112
-// #define ESP_DELAY_OFFSET 0
+#define ESP_AUDIO_OVERSAMPLES 4368
 
 #define ESP_AUDIO_FREQ 27300
 #define ESP_AUDIO_SAMPLES 546
@@ -80,16 +67,6 @@
 // #define ESP_AUDIO_FREQ 13650
 // #define ESP_AUDIO_SAMPLES 273
 // #define ESP_AUDIO_TSTATES 256
-// #define ESP_DELAY_OFFSET 0
-
-// #define ESP_AUDIO_FREQ 22400
-// #define ESP_AUDIO_SAMPLES 448
-// #define ESP_AUDIO_TSTATES 156
-// #define ESP_DELAY_OFFSET 0
-
-// #define ESP_AUDIO_FREQ 11200
-// #define ESP_AUDIO_SAMPLES 224
-// #define ESP_AUDIO_TSTATES 312
 // #define ESP_DELAY_OFFSET 0
 
 class ESPectrum
@@ -106,10 +83,8 @@ public:
     static uint8_t borderColor;
     static void processKeyboard();
 
-//    static char audioBuffer[2][1024];
-
-    static char audioBuffer[2][2184];
-    static char overSamplebuf[2184];
+    static unsigned char audioBuffer[2][2184];
+    static unsigned char overSamplebuf[2184*2];
     static signed char aud_volume;
 
     static int ESPoffset;

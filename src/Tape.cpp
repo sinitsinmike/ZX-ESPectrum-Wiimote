@@ -146,9 +146,15 @@ uint8_t Tape::TAP_Read()
     
 #ifdef SPEAKER_PRESENT
 
-    // TODO: Send tapeEarBit to new audio buffer creation implementation
-    //CPU::audioBit=tapeEarBit;
-    //digitalWrite(SPEAKER_PIN, tapeEarBit); // Send tape load sound to speaker
+    // TODO: MOVE THIS TO A FUNCTION IN ESPECTRUM.CPP
+
+    // Audio buffer generation (oversample) 
+    uint32_t audbufpos = CPU::tstates >> 4;
+    for (int i=CPU::audbufcnt;i<audbufpos;i++) {
+        ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
+    }
+    CPU::audbufcnt = audbufpos;
+    CPU::lastaudioBit = tapeEarBit;
 
 #endif
     

@@ -199,12 +199,8 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
 }
 
 static int Audiobit;
-static int AudioSignal = 0;
-static int lastSignal = 0;
-static int signaltostore = 0;
+static int Tapebit;
 static uint8_t *audbufptr;
-static uint32_t lastAudTstates;
-static int signal = 0;
 
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
@@ -216,45 +212,25 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         
         #ifdef SPEAKER_PRESENT
         // if (Tape::SaveStatus==TAPE_SAVING)
-        //     Audiobit=bitRead(data,3);
-        // else {
-            Audiobit = bitRead(data,4);
-        // }
+        //     Tapebit = bitRead(data,3);
+        // else
+        //     Audiobit = bitRead(data,4) | Tapebit;
 
-        // Audio buffer generation (oversample)
+        Audiobit = bitRead(data,4);
+
         if (Audiobit != CPU::lastaudioBit) {
-            uint32_t audbufpos = CPU::tstates >> 5;
+
+            // TODO: MOVE THIS TO A FUNCTION IN ESPECTRUM.CPP
+
+            // Audio buffer generation (oversample)
+            uint32_t audbufpos = CPU::tstates >> 4;
             for (int i=CPU::audbufcnt;i<audbufpos;i++) {
                 ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
             }
-            ESPectrum::overSamplebuf[audbufpos] = Audiobit ? 255: 0;
             CPU::audbufcnt = audbufpos;
+
             CPU::lastaudioBit = Audiobit;
         }
-
-        // // Audio buffer generation
-        // if (Audiobit != CPU::lastaudioBit) {
-        //     audbufptr = (uint8_t *) ESPectrum::audioBuffer[ESPectrum::buffertofill];
-        //     uint32_t audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
-        //     for (int i=CPU::audbufcnt;i<audbufpos;i++) {
-        //         audbufptr[i] = CPU::lastaudioBit ? 255: 0;
-        //     }
-        //     audbufptr[audbufpos] = Audiobit ? 255: 0;
-        //     CPU::audbufcnt = audbufpos;
-        //     CPU::lastaudioBit = Audiobit;
-        // }
-
-        // // Audio buffer generation
-        // if (Audiobit != CPU::lastaudioBit) {
-        //     uint32_t audbufpos = CPU::tstates / ESP_AUDIO_TSTATES;
-        //     for (int i=CPU::audbufcnt;i<audbufpos;i++) {
-        //         ESPectrum::overSamplebuf[i] = CPU::lastaudioBit ? 255: 0;
-        //     }
-        //     ESPectrum::overSamplebuf[audbufpos] = Audiobit ? 255: 0;
-        //     CPU::audbufcnt = audbufpos;
-        //     CPU::lastaudioBit = Audiobit;
-        // }
-
 
         #endif
 
