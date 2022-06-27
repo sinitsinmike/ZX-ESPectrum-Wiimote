@@ -55,7 +55,6 @@
 #include "Z80_JLS/z80.h"
 
 #include "pwm_audio.h"
-#include "LPF.h"
 
 // works, but not needed for now
 #pragma GCC optimize ("O3")
@@ -63,23 +62,17 @@
 // EXTERN METHODS
 void setup_cpuspeed();
 
-//const int SAMPLING_RATE = 44100;
-//const int BUFFER_SIZE = 2000;
-
 // SETUP *************************************
 // ESPectrum graphics variables
 VGA ESPectrum::vga;
 byte ESPectrum::borderColor = 7;
 
 // Audio variables
-unsigned char ESPectrum::audioBuffer[2][2184];
-unsigned char ESPectrum::overSamplebuf[2184*2];
+unsigned char ESPectrum::audioBuffer[2][ESP_AUDIO_SAMPLES];
+unsigned char ESPectrum::overSamplebuf[ESP_AUDIO_OVERSAMPLES];
 signed char ESPectrum::aud_volume = -8;
-int ESPectrum::ESPoffset=ESP_DELAY_OFFSET;
 int ESPectrum::buffertofill=1;
 int ESPectrum::buffertoplay=0;
-size_t written;
-//uint8_t *audbufptr;
 
 static QueueHandle_t secondTaskQueue;
 static TaskHandle_t secondTaskHandle;
@@ -431,6 +424,8 @@ void ESPectrum::processKeyboard() {
 
 void IRAM_ATTR ESPectrum::secondTask(void *unused) {
 
+    size_t written;
+
     pwm_audio_config_t pac;
     pac.duty_resolution    = LEDC_TIMER_8_BIT;
     pac.gpio_num_left      = 25;
@@ -453,7 +448,6 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
     }
 
 }
-
 
 /* +-------------+
    | LOOP core 1 |
@@ -500,7 +494,7 @@ void ESPectrum::loop() {
         fval +=  overSamplebuf[i+7];
         audioBuffer[buffertofill][i>>3] = fval >> 3;
     }
-
+ 
 #if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
@@ -509,7 +503,6 @@ void ESPectrum::loop() {
 #endif
 
 #ifdef VIDEO_FRAME_TIMING
-    //if (idle + ESPoffset > 0) delayMicroseconds(idle + ESPoffset); // FOR TESTING PURPOSE ONLY
     if (idle > 0) delayMicroseconds(idle);   
 #endif
 #ifdef LOG_DEBUG_TIMING

@@ -62,12 +62,10 @@
 #define ESP_AUDIO_FREQ 27300
 #define ESP_AUDIO_SAMPLES 546
 #define ESP_AUDIO_TSTATES 128
-#define ESP_DELAY_OFFSET 0
 
 // #define ESP_AUDIO_FREQ 13650
 // #define ESP_AUDIO_SAMPLES 273
 // #define ESP_AUDIO_TSTATES 256
-// #define ESP_DELAY_OFFSET 0
 
 class ESPectrum
 {
@@ -79,16 +77,15 @@ public:
     // reset machine
     static void reset();
 
+    // Video
     static VGA vga;
     static uint8_t borderColor;
     static void processKeyboard();
 
-    static unsigned char audioBuffer[2][2184];
-    static unsigned char overSamplebuf[2184*2];
+    // Audio
+    static unsigned char audioBuffer[2][ESP_AUDIO_SAMPLES];
+    static unsigned char overSamplebuf[ESP_AUDIO_OVERSAMPLES];
     static signed char aud_volume;
-
-    static int ESPoffset;
-
     static int buffertofill;
     static int buffertoplay;
    
