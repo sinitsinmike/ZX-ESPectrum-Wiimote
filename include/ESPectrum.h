@@ -70,6 +70,7 @@
 class ESPectrum
 {
 public:
+
     // arduino setup/loop
     static void setup();
     static void loop();
@@ -90,12 +91,13 @@ public:
     static int buffertoplay;
     static uint32_t audbufcnt;
     static int lastaudioBit;
-    static void audioFrameInit();
-    static void audioTakeSample(int Audiobit);
+    static void audioFrameStart();
+    static void audioGetSample(int Audiobit);
     static void audioFrameEnd();
    
 private:
-    static void secondTask(void* unused);
+
+    static void audioTask(void* unused);
 
 };
 

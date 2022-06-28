@@ -56,6 +56,8 @@
 
 #include "pwm_audio.h"
 
+//#include "SD.h"
+
 // works, but not needed for now
 #pragma GCC optimize ("O3")
 
@@ -75,8 +77,8 @@ int ESPectrum::buffertofill=1;
 int ESPectrum::buffertoplay=0;
 uint32_t ESPectrum::audbufcnt = 0;
 int ESPectrum::lastaudioBit = 0;
-static QueueHandle_t secondTaskQueue;
-static TaskHandle_t secondTaskHandle;
+static QueueHandle_t audioTaskQueue;
+static TaskHandle_t audioTaskHandle;
 static uint8_t *param;
 
 bool isLittleEndian()
@@ -241,8 +243,8 @@ void ESPectrum::setup()
 
     Serial.printf("%s %u\n", MSG_EXEC_ON_CORE, xPortGetCoreID());
 
-    secondTaskQueue = xQueueCreate(1, sizeof(uint8_t *));
-    xTaskCreatePinnedToCore(&ESPectrum::secondTask, "secondTask", 4096, NULL, 5, &secondTaskHandle, 0);
+    audioTaskQueue = xQueueCreate(1, sizeof(uint8_t *));
+    xTaskCreatePinnedToCore(&ESPectrum::audioTask, "audioTask", 4096, NULL, 5, &audioTaskHandle, 0);
 
     AySound::initialize();
 
@@ -414,7 +416,7 @@ void ESPectrum::processKeyboard() {
 #endif // PS2_CONVENIENCE_KEYS_ES
 }
 
-void IRAM_ATTR ESPectrum::secondTask(void *unused) {
+void IRAM_ATTR ESPectrum::audioTask(void *unused) {
 
     size_t written;
 
@@ -434,20 +436,30 @@ void IRAM_ATTR ESPectrum::secondTask(void *unused) {
     pwm_audio_start();                 /**< Start to run */
     pwm_audio_set_volume(aud_volume);
 
+    // File file = SD.open("/persist/audioout", FILE_WRITE);
+    // int filebufs=0;
+
     for (;;) {
-        xQueueReceive(secondTaskQueue, &param, portMAX_DELAY);
+        xQueueReceive(audioTaskQueue, &param, portMAX_DELAY);
         pwm_audio_write(param, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
+
+        // if (filebufs<1000) {
+        //     uint16_t bytesWritten = file.write(param, ESP_AUDIO_SAMPLES);
+        //     filebufs++;
+        //     if (filebufs==1000) file.close();
+        // }
+
     }
 
 }
 
-void ESPectrum::audioFrameInit() {
+void ESPectrum::audioFrameStart() {
 
     audbufcnt = 0;
 
 }
 
-void ESPectrum::audioTakeSample(int Audiobit) {
+void ESPectrum::audioGetSample(int Audiobit) {
 
     if (Audiobit != lastaudioBit) {
 
@@ -505,13 +517,13 @@ void ESPectrum::loop() {
     OSD::do_OSD();
 
     param = (uint8_t *) audioBuffer[buffertoplay];
-    xQueueSend(secondTaskQueue, &param, portMAX_DELAY);
+    xQueueSend(audioTaskQueue, &param, portMAX_DELAY);
 
 #if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_start = micros();
 #endif
 
-    audioFrameInit();
+    audioFrameStart();
 
     CPU::loop();    
 

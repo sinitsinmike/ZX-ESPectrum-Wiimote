@@ -145,7 +145,7 @@ uint8_t Tape::TAP_Read()
     } 
     
     #ifdef SPEAKER_PRESENT
-    ESPectrum::audioTakeSample(tapeEarBit);
+    ESPectrum::audioGetSample(tapeEarBit);
     #endif
     
     return tapeEarBit;
