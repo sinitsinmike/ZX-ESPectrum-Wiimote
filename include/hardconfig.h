@@ -41,24 +41,14 @@
 #define ESPectrum_hardconfig_h
 
 ///////////////////////////////////////////////////////////////////////////////
-// CPU timing configuration
-
-// #define CPU_PER_INSTRUCTION_TIMING for precise CPU timing, undefine it
-// to let the emulator run free (and too fast :). If #defined,
-// delayMicros() will be called after few instructions so CPU runs almost realtime.
+// Frame timing switch
+//
+// #define VIDEO_FRAME_TIMING to let the emu add a delay at the end of
+// every frame in order to get the right duration in microsecs/frame
 ///////////////////////////////////////////////////////////////////////////////
 
-//#define CPU_PER_INSTRUCTION_TIMING
-
-// CPU_PIT_PERIOD controls every how many cycles (approx) delayMicros() is called.
-// The lowest the value, the highest the precision, but there is a small performance
-// penalty when calling delayMicros() which may lead to worse timing in some games.
-// I recommend NOT changing the default value of 50, except for better PWM sound.
-#define CPU_PIT_PERIOD 50
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
 #define VIDEO_FRAME_TIMING
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -218,7 +208,7 @@
 // define USE_AY_SOUND if you want to use AY-3-891X emulation thru FabGL.
 // 
 
-//#define USE_AY_SOUND
+// #define USE_AY_SOUND
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -94,6 +94,8 @@ public:
     static void audioFrameStart();
     static void audioGetSample(int Audiobit);
     static void audioFrameEnd();
+
+    // static int ESPoffset; // Testing
    
 private:
 

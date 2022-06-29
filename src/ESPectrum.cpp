@@ -37,6 +37,8 @@
 #include "driver/timer.h"
 #include "soc/timer_group_struct.h"
 #include <esp_bt.h>
+#include <esp_wifi.h>
+#include "WiFi.h"
 
 #include "Wiimote2Keys.h"
 
@@ -50,11 +52,10 @@
 #include "Mem.h"
 #include "CPU.h"
 #include "AySound.h"
+#include "pwm_audio.h"
 #include "Tape.h"
 
 #include "Z80_JLS/z80.h"
-
-#include "pwm_audio.h"
 
 //#include "SD.h"
 
@@ -80,6 +81,7 @@ int ESPectrum::lastaudioBit = 0;
 static QueueHandle_t audioTaskQueue;
 static TaskHandle_t audioTaskHandle;
 static uint8_t *param;
+// int ESPectrum::ESPoffset = 0; // Testing
 
 bool isLittleEndian()
 {
@@ -113,9 +115,14 @@ void ESPectrum::setup()
 {
 #ifndef WIIMOTE_PRESENT
     // if no wiimote, turn off peripherals to recover some memory
+    btStop();
     esp_bt_controller_deinit();
     esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
 #endif
+
+    // Don't need wifi, free resources
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_deinit();
 
     Serial.begin(115200);
 
@@ -218,8 +225,8 @@ void ESPectrum::setup()
     Tape::Init();
 
 #ifdef SPEAKER_PRESENT
-    pinMode(SPEAKER_PIN, OUTPUT);
-    digitalWrite(SPEAKER_PIN, LOW);
+//    pinMode(SPEAKER_PIN, OUTPUT);
+//    digitalWrite(SPEAKER_PIN, LOW);
 #endif
 #ifdef EAR_PRESENT
     pinMode(EAR_PIN, INPUT);
@@ -431,16 +438,18 @@ void IRAM_ATTR ESPectrum::audioTask(void *unused) {
     pac.timer_num          = TIMER_0;
     pac.ringbuf_len        = 1024 * 8;
 
-    pwm_audio_init(&pac);             /**< Initialize pwm audio */
+    pwm_audio_init(&pac);
     pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
-    pwm_audio_start();                 /**< Start to run */
+    pwm_audio_start();
     pwm_audio_set_volume(aud_volume);
 
     // File file = SD.open("/persist/audioout", FILE_WRITE);
     // int filebufs=0;
-
+    
     for (;;) {
+
         xQueueReceive(audioTaskQueue, &param, portMAX_DELAY);
+
         pwm_audio_write(param, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
 
         // if (filebufs<1000) {
@@ -465,8 +474,9 @@ void ESPectrum::audioGetSample(int Audiobit) {
 
         // Audio buffer generation (oversample)
         uint32_t audbufpos = CPU::tstates >> 4;
+        int signal = lastaudioBit ? 255: 0;
         for (int i=audbufcnt;i<audbufpos;i++) {
-            overSamplebuf[i] = lastaudioBit ? 255: 0;
+            overSamplebuf[i] = signal;
         }
         audbufcnt = audbufpos;
 
@@ -510,6 +520,10 @@ static double totalseconds=0;
 
 void ESPectrum::loop() {
 
+#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
+    uint32_t ts_start = micros();
+#endif
+
     processKeyboard();
     
     updateWiimote2Keys();
@@ -519,15 +533,17 @@ void ESPectrum::loop() {
     param = (uint8_t *) audioBuffer[buffertoplay];
     xQueueSend(audioTaskQueue, &param, portMAX_DELAY);
 
-#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
-    uint32_t ts_start = micros();
-#endif
-
     audioFrameStart();
 
     CPU::loop();    
 
     audioFrameEnd();
+
+    // Swap audio buffers
+    buffertofill ^= 1;
+    buffertoplay ^= 1;
+
+    AySound::update();
  
 #if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_end = micros();
@@ -537,7 +553,8 @@ void ESPectrum::loop() {
 #endif
 
 #ifdef VIDEO_FRAME_TIMING
-    if (idle > 0) delayMicroseconds(idle);   
+  if (idle > 0) delayMicroseconds(idle);
+  // if ((idle + ESPoffset) > 0) delayMicroseconds(idle + ESPoffset); // Testing
 #endif
 #ifdef LOG_DEBUG_TIMING
     static int ctr = 0;
@@ -555,6 +572,7 @@ void ESPectrum::loop() {
             Serial.printf("[CPU] elapsed: %u; idle: %d\n", elapsed, idle);
             Serial.printf("[Audio] Volume: %d\n", aud_volume);
             Serial.printf("[CPU] average: %u; Samples taken: %u\n", sumelapsed / ctrcount, ctrcount);
+            // Serial.printf("[Delay offset] %d\n", ESPoffset);  // For testing
             //Serial.printf("[Beeper samples taken] %u\n", audbufcnt);  
             #ifdef SHOW_FPS
                 Serial.printf("[Framecnt] %u; [Seconds] %f; [FPS] %f\n", CPU::framecnt, totalseconds / 1000000, CPU::framecnt / (totalseconds / 1000000));
@@ -565,12 +583,6 @@ void ESPectrum::loop() {
     }
     else ctr--;
 #endif
-
-    // Swap audio buffers
-    buffertofill ^= 1;
-    buffertoplay ^= 1;
-
-    AySound::update();
 
     vTaskDelay(0); // important to avoid task watchdog timeouts - change this to slow down emu
 

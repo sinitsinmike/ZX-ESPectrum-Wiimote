@@ -50,44 +50,6 @@ static bool interruptPending = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CPU_PER_INSTRUCTION_TIMING
-
-static uint32_t ts_start;
-static uint32_t target_frame_micros;
-static uint32_t target_frame_cycles;
-
-static inline void begin_timing(uint32_t _target_frame_cycles, uint32_t _target_frame_micros)
-{
-    target_frame_micros = _target_frame_micros;
-    target_frame_cycles = _target_frame_cycles;
-    ts_start = micros();
-}
-
-static inline void delay_instruction(uint32_t elapsed_cycles)
-{
-    uint32_t ts_current = micros() - ts_start;
-    uint32_t ts_target = target_frame_micros * elapsed_cycles / target_frame_cycles;
-    if (ts_target > ts_current) {
-        uint32_t us_to_wait = ts_target - ts_current;
-        if (us_to_wait < target_frame_micros) {
-            uint32_t m = micros();
-            uint32_t e = (m + us_to_wait);
-            if(m > e){ //overflow
-                while(micros() > e){
-                    NOP();
-                }
-            }
-            while(micros() < e){
-                NOP();
-            }
-        }
-    }
-}
-
-#endif  // CPU_PER_INSTRUCTION_TIMING
-
-///////////////////////////////////////////////////////////////////////////////
-
 // machine tstates  f[MHz]   micros
 //   48K:   69888 / 3.5    = 19968
 //  128K:   70908 / 3.5469 = 19992
@@ -139,14 +101,6 @@ void CPU::reset() {
 void CPU::loop()
 {
     uint32_t statesInFrame = statesPerFrame();
-
-    #ifdef CPU_PER_INSTRUCTION_TIMING
-        uint32_t prevTstates = 0;
-        uint32_t partTstates = 0;
-        #define PIT_PERIOD 50
-        begin_timing(statesInFrame, microsPerFrame());
-    #endif
-    
     tstates = 0;
 
 	while (tstates < statesInFrame)
@@ -190,24 +144,10 @@ void CPU::loop()
             // increase global Tstates
             global_tstates += (tstates - pre_tstates);
 
-        #ifdef CPU_PER_INSTRUCTION_TIMING
-            if (partTstates > PIT_PERIOD) {
-                delay_instruction(tstates);
-                partTstates -= PIT_PERIOD;
-            } 
-            else {
-                partTstates += (tstates - prevTstates);
-            }
-            prevTstates = tstates;
-        #endif
 	}
 
     #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
     framecnt++;
-    #endif
-
-    #ifdef CPU_PER_INSTRUCTION_TIMING
-        delay_instruction(tstates);
     #endif
 
     interruptPending = true;
