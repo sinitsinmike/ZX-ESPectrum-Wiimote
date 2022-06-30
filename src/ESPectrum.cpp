@@ -57,6 +57,9 @@
 
 #include "Z80_JLS/z80.h"
 
+#include "fabgl.h"
+
+
 //#include "SD.h"
 
 // works, but not needed for now
@@ -123,6 +126,16 @@ void ESPectrum::setup()
     // Don't need wifi, free resources
     WiFi.mode(WIFI_OFF);
     esp_wifi_deinit();
+
+    // _channel.setDuration(-1);
+    // _channel.setSampleRate(27300);
+    // _channel.setVolume(127);
+    // _channel.enable(true);
+    // _channel.setFrequency(300);
+
+    AySound::_channel[0].setSampleRate(27300);
+    AySound::_channel[1].setSampleRate(27300);
+    AySound::_channel[2].setSampleRate(27300);
 
     Serial.begin(115200);
 
@@ -493,9 +506,10 @@ void ESPectrum::audioFrameEnd() {
         for (int i=audbufcnt; i < ESP_AUDIO_OVERSAMPLES;i++) overSamplebuf[i] = signal;
     }
 
-    //Downsample (median)
-    int fval;
+    //Downsample beeper (median) and mix AY channels to output buffer
+    int fval,aymix;
     for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
+        // Downsample (median)
         fval  =  overSamplebuf[i];
         fval +=  overSamplebuf[i+1];
         fval +=  overSamplebuf[i+2];
@@ -504,7 +518,13 @@ void ESPectrum::audioFrameEnd() {
         fval +=  overSamplebuf[i+5];
         fval +=  overSamplebuf[i+6];
         fval +=  overSamplebuf[i+7];
-        audioBuffer[buffertofill][i>>3] = fval >> 3;
+        // Mix AY Channels
+        aymix = (fval >> 3);
+        aymix += AySound::_channel[0].getSample() + 127;
+        aymix += AySound::_channel[1].getSample() + 127;
+        aymix += AySound::_channel[2].getSample() + 127;
+
+        audioBuffer[buffertofill][i>>3] = aymix >> 2;
     }
 
 }

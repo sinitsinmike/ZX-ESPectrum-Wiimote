@@ -646,7 +646,7 @@ esp_err_t IRAM_ATTR pwm_audio_write(uint8_t *inbuf, size_t inbuf_len, size_t *by
                 } else {
                     uint8_t value;
 
-                    // Original code
+                    // // Original code
                     // for (size_t i = 0; i < len; i++) {
                     //     value = (inbuf[i] * handle->volume / VOLUME_0DB) + 0x7f; /**< offset */
                     //     rb_write_byte(rb, value);

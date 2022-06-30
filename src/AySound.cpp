@@ -35,8 +35,9 @@
 
 #include "fabgl.h"
 
-static SoundGenerator _soundGenerator;
-static SquareWaveformGenerator _channel[3];
+//static SoundGenerator _soundGenerator;
+
+SquareWaveformGenerator AySound::_channel[3];
 
 // Registers
 uint8_t AySound::finePitchChannelA = 0xFF;
@@ -66,11 +67,11 @@ const unsigned char volume[] = {
 
 void AySound::initialize()
 {
-    _soundGenerator.setVolume(126);
-    _soundGenerator.play(true);
+    //_soundGenerator.setVolume(126);
+    //_soundGenerator.play(true);
 	for (int8_t channel = 0; channel < 3; channel++)
 	{
-        _soundGenerator.attach(&_channel[channel]);
+        //_soundGenerator.attach(&_channel[channel]);
         _channel[channel].enable(true);
         _channel[channel].setVolume(0);
 	}
@@ -78,12 +79,12 @@ void AySound::initialize()
 
 void AySound::enable()
 {
-    _soundGenerator.play(true);
+    //_soundGenerator.play(true);
 }
 
 void AySound::disable()
 {
-    _soundGenerator.play(false);
+    //_soundGenerator.play(false);
 }
 
 // Reference frequency is calculated like this:
