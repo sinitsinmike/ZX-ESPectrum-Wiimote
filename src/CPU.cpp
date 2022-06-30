@@ -57,7 +57,7 @@ static bool interruptPending = false;
 uint32_t CPU::statesPerFrame()
 {
     if (Config::getArch() == "48K") return 69888;
-    else                            return 70908;
+    else                            return 70912; // 70908 is the right value. Added 4 states to make it divisible by 128 (audio issues)
 }
 
 uint32_t CPU::microsPerFrame()

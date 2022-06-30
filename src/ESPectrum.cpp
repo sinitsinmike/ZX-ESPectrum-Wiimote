@@ -84,7 +84,8 @@ int ESPectrum::lastaudioBit = 0;
 static QueueHandle_t audioTaskQueue;
 static TaskHandle_t audioTaskHandle;
 static uint8_t *param;
-// int ESPectrum::ESPoffset = 0; // Testing
+int ESPectrum::ESPoffset = 0; // Testing
+int ESPectrum::samplesPerFrame = 546; // 48k value
 
 bool isLittleEndian()
 {
@@ -126,16 +127,6 @@ void ESPectrum::setup()
     // Don't need wifi, free resources
     WiFi.mode(WIFI_OFF);
     esp_wifi_deinit();
-
-    // _channel.setDuration(-1);
-    // _channel.setSampleRate(27300);
-    // _channel.setVolume(127);
-    // _channel.enable(true);
-    // _channel.setFrequency(300);
-
-    AySound::_channel[0].setSampleRate(27300);
-    AySound::_channel[1].setSampleRate(27300);
-    AySound::_channel[2].setSampleRate(27300);
 
     Serial.begin(115200);
 
@@ -268,6 +259,14 @@ void ESPectrum::setup()
 
     AySound::initialize();
 
+    // Set AY channels samplerate to match pwm_audio's
+    AySound::_channel[0].setSampleRate(ESP_AUDIO_FREQ);
+    AySound::_channel[1].setSampleRate(ESP_AUDIO_FREQ);
+    AySound::_channel[2].setSampleRate(ESP_AUDIO_FREQ);
+
+    // Set samples per frame depending on arch
+    if (Config::getArch() == "48K") samplesPerFrame=546; else samplesPerFrame=554;
+
     Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
     if ((String)Config::ram_file != (String)NO_RAM_FILE) {
         OSD::changeSnapshot(Config::ram_file);
@@ -285,7 +284,7 @@ void ESPectrum::setup()
         pinMode(psKC[t], INPUT);
     }
 #endif // ZX_KEYB_PRESENT
-   
+
     setCpuFrequencyMhz(240);
 
     Serial.printf("Free heap at end of setup: %d\n", ESP.getFreeHeap());
@@ -307,7 +306,7 @@ void ESPectrum::reset()
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
 
-    if (Config::getArch() == "48K") Mem::pagingLock = 1; else Mem::pagingLock = 0;  
+    if (Config::getArch() == "48K") Mem::pagingLock = 1; else Mem::pagingLock = 0;
     
     Mem::modeSP3 = 0;
     Mem::romSP3 = 0;
@@ -326,6 +325,12 @@ void ESPectrum::reset()
     buffertofill=1;
     buffertoplay=0;
     lastaudioBit=0;
+
+    // Reset AY emulation
+    AySound::reset();
+
+    // Set samples per frame depending on arch
+    if (Config::getArch() == "48K") samplesPerFrame=546; else samplesPerFrame=554;
 
     CPU::reset();
 
@@ -463,7 +468,7 @@ void IRAM_ATTR ESPectrum::audioTask(void *unused) {
 
         xQueueReceive(audioTaskQueue, &param, portMAX_DELAY);
 
-        pwm_audio_write(param, ESP_AUDIO_SAMPLES, &written, portMAX_DELAY);
+        pwm_audio_write(param, samplesPerFrame, &written, portMAX_DELAY);
 
         // if (filebufs<1000) {
         //     uint16_t bytesWritten = file.write(param, ESP_AUDIO_SAMPLES);
@@ -506,8 +511,8 @@ void ESPectrum::audioFrameEnd() {
         for (int i=audbufcnt; i < ESP_AUDIO_OVERSAMPLES;i++) overSamplebuf[i] = signal;
     }
 
-    //Downsample beeper (median) and mix AY channels to output buffer
-    int fval,aymix;
+    // Downsample beeper (median) and mix AY channels to output buffer
+    int fval, aymix;
     for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
         // Downsample (median)
         fval  =  overSamplebuf[i];
@@ -518,13 +523,11 @@ void ESPectrum::audioFrameEnd() {
         fval +=  overSamplebuf[i+5];
         fval +=  overSamplebuf[i+6];
         fval +=  overSamplebuf[i+7];
-        // Mix AY Channels
-        aymix = (fval >> 3);
-        aymix += AySound::_channel[0].getSample() + 127;
+        // // Mix AY Channels
+        aymix = AySound::_channel[0].getSample() + 127;
         aymix += AySound::_channel[1].getSample() + 127;
         aymix += AySound::_channel[2].getSample() + 127;
-
-        audioBuffer[buffertofill][i>>3] = aymix >> 2;
+        audioBuffer[buffertofill][i>>3] = ((fval >> 3) + (aymix / 3)) / 2;
     }
 
 }
@@ -573,8 +576,8 @@ void ESPectrum::loop() {
 #endif
 
 #ifdef VIDEO_FRAME_TIMING
-  if (idle > 0) delayMicroseconds(idle);
-  // if ((idle + ESPoffset) > 0) delayMicroseconds(idle + ESPoffset); // Testing
+//  if (idle > 0) delayMicroseconds(idle);
+  if ((idle + ESPoffset) > 0) delayMicroseconds(idle + ESPoffset); // Testing
 #endif
 #ifdef LOG_DEBUG_TIMING
     static int ctr = 0;
@@ -592,8 +595,8 @@ void ESPectrum::loop() {
             Serial.printf("[CPU] elapsed: %u; idle: %d\n", elapsed, idle);
             Serial.printf("[Audio] Volume: %d\n", aud_volume);
             Serial.printf("[CPU] average: %u; Samples taken: %u\n", sumelapsed / ctrcount, ctrcount);
-            // Serial.printf("[Delay offset] %d\n", ESPoffset);  // For testing
-            //Serial.printf("[Beeper samples taken] %u\n", audbufcnt);  
+            Serial.printf("[Delay offset] %d\n", ESPoffset);  // For testing
+            Serial.printf("[Beeper samples taken] %u\n", audbufcnt);  
             #ifdef SHOW_FPS
                 Serial.printf("[Framecnt] %u; [Seconds] %f; [FPS] %f\n", CPU::framecnt, totalseconds / 1000000, CPU::framecnt / (totalseconds / 1000000));
                 totalseconds = 0;

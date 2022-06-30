@@ -57,10 +57,10 @@
 #define VGA VGA14Bit
 #endif
 
-#define ESP_AUDIO_OVERSAMPLES 4368
+#define ESP_AUDIO_OVERSAMPLES 4432 // For 48K we get 4368 samples per frame, for 128K we get 4432
 
 #define ESP_AUDIO_FREQ 27300
-#define ESP_AUDIO_SAMPLES 546
+#define ESP_AUDIO_SAMPLES 554 // For 48K we get 546 samples per frame, for 128K we get 554
 #define ESP_AUDIO_TSTATES 128
 
 // #define ESP_AUDIO_FREQ 13650
@@ -94,8 +94,10 @@ public:
     static void audioFrameStart();
     static void audioGetSample(int Audiobit);
     static void audioFrameEnd();
+    static int samplesPerFrame;
 
-    // static int ESPoffset; // Testing
+
+    static int ESPoffset; // Testing
    
 private:
 

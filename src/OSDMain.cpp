@@ -123,6 +123,7 @@ static void quickLoad()
         return;
     }
     if (Config::getArch() == "48K") AySound::reset();
+    if (Config::getArch() == "48K") ESPectrum::samplesPerFrame=546; else ESPectrum::samplesPerFrame=554;
     OSD::osdCenteredMsg(OSD_QSNA_LOADED, LEVEL_INFO);
     delay(200);
 }
@@ -156,6 +157,7 @@ static void persistLoad(byte slotnumber)
          delay(1000);
     }
     if (Config::getArch() == "48K") AySound::reset();
+    if (Config::getArch() == "48K") ESPectrum::samplesPerFrame=546; else ESPectrum::samplesPerFrame=554;
     OSD::osdCenteredMsg(OSD_PSNA_LOADED, LEVEL_INFO);
     delay(400);
 }
@@ -226,14 +228,12 @@ void OSD::do_OSD() {
                 pwm_audio_set_volume(ESPectrum::aud_volume);
         }
     }    
-// FOR TESTING PURPOSE ONLY ///////////////////////////////
-    // else if (PS2Keyboard::checkAndCleanKey(KEY_F11)) {
-    //     ESPectrum::ESPoffset-=50;
-    // }    
-    // else if (PS2Keyboard::checkAndCleanKey(KEY_F12)) {
-    //     ESPectrum::ESPoffset+=50;
-    // }    
-// ////////////////////////////////////////////////////////
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F11)) {
+        ESPectrum::ESPoffset-=50;
+    }    
+    else if (PS2Keyboard::checkAndCleanKey(KEY_F12)) {
+        ESPectrum::ESPoffset+=50;
+    }    
     else if (PS2Keyboard::checkAndCleanKey(KEY_F1)) {
         AySound::disable();
 
@@ -474,4 +474,5 @@ void OSD::changeSnapshot(String filename)
     Config::save();
 
     if (Config::getArch() == "48K") AySound::reset();
+    if (Config::getArch() == "48K") ESPectrum::samplesPerFrame=546; else ESPectrum::samplesPerFrame=554;    
 }
