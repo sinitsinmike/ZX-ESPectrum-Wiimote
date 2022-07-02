@@ -326,11 +326,11 @@ void ESPectrum::reset()
     buffertoplay=0;
     lastaudioBit=0;
 
-    // Reset AY emulation
-    AySound::reset();
-
     // Set samples per frame depending on arch
     if (Config::getArch() == "48K") samplesPerFrame=546; else samplesPerFrame=554;
+
+    // Reset AY emulation
+    AySound::reset();
 
     CPU::reset();
 
@@ -512,7 +512,7 @@ void ESPectrum::audioFrameEnd() {
     }
 
     // Downsample beeper (median) and mix AY channels to output buffer
-    int fval, aymix;
+    int fval, aymix, mix;
     for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
         // Downsample (median)
         fval  =  overSamplebuf[i];
@@ -527,7 +527,13 @@ void ESPectrum::audioFrameEnd() {
         aymix = AySound::_channel[0].getSample() + 127;
         aymix += AySound::_channel[1].getSample() + 127;
         aymix += AySound::_channel[2].getSample() + 127;
-        audioBuffer[buffertofill][i>>3] = ((fval >> 3) + (aymix / 3)) / 2;
+        mix = ((fval >> 3) + (aymix / 3));
+        #ifdef AUDIO_MIX_CLAMP
+        mix = (mix < 0? 0: (mix > 255 ? 255 : mix));
+        #else
+        mix >>= 1;
+        #endif
+        audioBuffer[buffertofill][i>>3] = mix;
     }
 
 }
