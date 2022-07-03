@@ -97,7 +97,7 @@ public:
     static int samplesPerFrame;
 
 
-    static int ESPoffset; // Testing
+    //static int ESPoffset; // Testing
    
 private:
 
