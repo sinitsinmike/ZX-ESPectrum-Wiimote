@@ -198,6 +198,8 @@ uint8_t Ports::input(uint8_t portLow, uint8_t portHigh)
     return data;
 }
 
+int Audiobit, Tapebit;
+
 void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
     // Serial.printf("%02X,%02X:%02X|", portHigh, portLow, data);
 
@@ -207,13 +209,13 @@ void Ports::output(uint8_t portLow, uint8_t portHigh, uint8_t data) {
         ESPectrum::borderColor = data & 0x07;
         
         #ifdef SPEAKER_PRESENT
-        // if (Tape::SaveStatus==TAPE_SAVING)
-        //     int Tapebit = bitRead(data,3);
-        // else
-        //     int Audiobit = bitRead(data,4) | Tapebit;
 
-        int Audiobit = bitRead(data,4);
-        ESPectrum::audioGetSample(Audiobit);
+        if (Tape::SaveStatus==TAPE_SAVING)
+            Tapebit = bitRead(data,3);
+        else
+            Audiobit = bitRead(data,4);
+
+        ESPectrum::audioGetSample(Audiobit | Tapebit);
 
         #endif
 

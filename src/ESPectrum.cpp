@@ -229,8 +229,8 @@ void ESPectrum::setup()
     Tape::Init();
 
 #ifdef SPEAKER_PRESENT
-//    pinMode(SPEAKER_PIN, OUTPUT);
-//    digitalWrite(SPEAKER_PIN, LOW);
+    pinMode(SPEAKER_PIN, OUTPUT);
+    digitalWrite(SPEAKER_PIN, LOW);
 #endif
 #ifdef EAR_PRESENT
     pinMode(EAR_PIN, INPUT);
@@ -512,27 +512,28 @@ void ESPectrum::audioFrameEnd() {
     }
 
     // Downsample beeper (median) and mix AY channels to output buffer
-    int fval, aymix, mix;
+    int beeper, aymix, mix;
     for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
         // Downsample (median)
-        fval  =  overSamplebuf[i];
-        fval +=  overSamplebuf[i+1];
-        fval +=  overSamplebuf[i+2];
-        fval +=  overSamplebuf[i+3];
-        fval +=  overSamplebuf[i+4];
-        fval +=  overSamplebuf[i+5];
-        fval +=  overSamplebuf[i+6];
-        fval +=  overSamplebuf[i+7];
+        beeper  =  overSamplebuf[i];
+        beeper +=  overSamplebuf[i+1];
+        beeper +=  overSamplebuf[i+2];
+        beeper +=  overSamplebuf[i+3];
+        beeper +=  overSamplebuf[i+4];
+        beeper +=  overSamplebuf[i+5];
+        beeper +=  overSamplebuf[i+6];
+        beeper +=  overSamplebuf[i+7];
         // // Mix AY Channels
         aymix = AySound::_channel[0].getSample() + 127;
         aymix += AySound::_channel[1].getSample() + 127;
         aymix += AySound::_channel[2].getSample() + 127;
-        mix = ((fval >> 3) + (aymix / 3));
+        mix = ((beeper >> 3) + (aymix / 3));
         #ifdef AUDIO_MIX_CLAMP
         mix = (mix < 0? 0: (mix > 255 ? 255 : mix));
         #else
         mix >>= 1;
         #endif
+
         audioBuffer[buffertofill][i>>3] = mix;
     }
 

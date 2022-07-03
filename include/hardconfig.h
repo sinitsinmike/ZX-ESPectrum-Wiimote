@@ -65,7 +65,7 @@
 // Video output switch
 //
 // #define NOVIDEO for disabling video output.
-// Useful for CPU / Video timing
+// Useful for Testing & CPU / Video timing
 ///////////////////////////////////////////////////////////////////////////////
 
 //#define NO_VIDEO
@@ -118,7 +118,6 @@
 // set some offset, (ex: OFF_X = _20_)
 // use a smaller border (ex: BOR_W = 32 == 52 - _20_)
 // then change OFF_X for software centering (0 < OFF_X < 40) (40 == 2 * _20_)
-
 #define BOR_W_4_3 40
 #define BOR_H_4_3 24
 #define OFF_X_4_3 0
@@ -149,7 +148,6 @@
 //
 // also, if you happen to have a pesky keyboard which won't initialize
 // until it receives an echo message, also define PS2_KEYB_FORCE_INIT
-
 #define PS2_KEYB_PRESENT
 #define PS2_KEYB_FORCE_INIT
 

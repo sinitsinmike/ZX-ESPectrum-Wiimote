@@ -124,25 +124,23 @@ void CPU::loop()
                 if (Tape::tapeStatus!=TAPE_STOPPED)
                     if (Z80::isCarryFlag()) Tape::tapeStatus=TAPE_PAUSED; else Tape::tapeStatus=TAPE_STOPPED;
                 Tape::SaveStatus=SAVE_STOPPED;
-                
                 /*
                 Serial.printf("TapeStatus: %u\n", Tape::tapeStatus);
                 Serial.printf("SaveStatus: %u\n", Tape::SaveStatus);
                 Serial.printf("Carry Flag: %u\n", Z80::isCarryFlag());            
                 Serial.printf("------\n");
                 */
-
                 break;
             }
         #endif
 
-            // frame Tstates before instruction
-            uint32_t pre_tstates = tstates;
-        
-            Z80::execute();
+        // frame Tstates before instruction
+        uint32_t pre_tstates = tstates;
+    
+        Z80::execute();
 
-            // increase global Tstates
-            global_tstates += (tstates - pre_tstates);
+        // increase global Tstates
+        global_tstates += (tstates - pre_tstates);
 
 	}
 
