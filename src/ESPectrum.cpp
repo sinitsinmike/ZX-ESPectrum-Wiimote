@@ -180,9 +180,6 @@ void ESPectrum::setup()
 
     borderColor = 0;
 
-    // precalculate ULA SWAP values
-    precalcULASWAP();
-
     vga.clear(0);
 
     Serial.printf("Free heap after vga: %d \n", ESP.getFreeHeap());
