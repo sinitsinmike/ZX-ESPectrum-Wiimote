@@ -31,6 +31,7 @@
 #define AySound_h
 
 #include "hardconfig.h"
+#include "fabgl.h"
 
 class AySound
 {
@@ -57,6 +58,8 @@ public:
     static uint8_t getRegisterData();
     static void selectRegister(uint8_t data);
     static void setRegisterData(uint8_t data);
+
+    static SquareWaveformGenerator _channel[3];
 
 private:
     static uint8_t finePitchChannelA;

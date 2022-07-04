@@ -249,7 +249,8 @@ bool FileSNA::isPersistAvailable(String filename)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static bool IRAM_ATTR writeMemPage(uint8_t page, File file, bool blockMode)
+//static bool IRAM_ATTR writeMemPage(uint8_t page, File file, bool blockMode)
+static bool writeMemPage(uint8_t page, File file, bool blockMode)
 {
     page = page & 0x07;
     uint8_t* buffer = Mem::ram[page];

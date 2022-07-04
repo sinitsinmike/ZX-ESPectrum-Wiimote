@@ -37,6 +37,8 @@
 #include "driver/timer.h"
 #include "soc/timer_group_struct.h"
 #include <esp_bt.h>
+#include <esp_wifi.h>
+#include "WiFi.h"
 
 #include "Wiimote2Keys.h"
 
@@ -48,8 +50,17 @@
 
 #include "Ports.h"
 #include "Mem.h"
+#include "CPU.h"
 #include "AySound.h"
+#include "pwm_audio.h"
 #include "Tape.h"
+
+#include "Z80_JLS/z80.h"
+
+#include "fabgl.h"
+
+
+//#include "SD.h"
 
 // works, but not needed for now
 #pragma GCC optimize ("O3")
@@ -57,29 +68,24 @@
 // EXTERN METHODS
 void setup_cpuspeed();
 
-// ESPectrum graphics variables
-byte ESPectrum::borderColor = 7;
-VGA ESPectrum::vga;
-
-volatile byte flashing = 0;
-const int SAMPLING_RATE = 44100;
-const int BUFFER_SIZE = 2000;
-
-int halfsec, sp_int_ctr, evenframe, updateframe;
-
-static QueueHandle_t vidQueue;
-static TaskHandle_t videoTaskHandle;
-static volatile bool videoTaskIsRunning = false;    // volatile keyword REQUIRED!!!
-static uint16_t *param;
-
 // SETUP *************************************
-#ifdef AR_16_9
-#define VGA_AR_MODE MODE360x200
-#endif
+// ESPectrum graphics variables
+VGA ESPectrum::vga;
+byte ESPectrum::borderColor = 7;
 
-#ifdef AR_4_3
-#define VGA_AR_MODE MODE320x240
-#endif
+// Audio variables
+unsigned char ESPectrum::audioBuffer[2][ESP_AUDIO_SAMPLES];
+unsigned char ESPectrum::overSamplebuf[ESP_AUDIO_OVERSAMPLES];
+signed char ESPectrum::aud_volume = -8;
+int ESPectrum::buffertofill=1;
+int ESPectrum::buffertoplay=0;
+uint32_t ESPectrum::audbufcnt = 0;
+int ESPectrum::lastaudioBit = 0;
+static QueueHandle_t audioTaskQueue;
+static TaskHandle_t audioTaskHandle;
+static uint8_t *param;
+//int ESPectrum::ESPoffset = 0; // Testing
+int ESPectrum::samplesPerFrame = 546; // 48k value
 
 bool isLittleEndian()
 {
@@ -113,9 +119,14 @@ void ESPectrum::setup()
 {
 #ifndef WIIMOTE_PRESENT
     // if no wiimote, turn off peripherals to recover some memory
+    btStop();
     esp_bt_controller_deinit();
     esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
 #endif
+
+    // Don't need wifi, free resources
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_deinit();
 
     Serial.begin(115200);
 
@@ -165,8 +176,9 @@ void ESPectrum::setup()
     vga.init(vgaMode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
 #endif
 
-    // precalculate colors for current VGA mode
-    precalcColors();
+    ALU_video_init();
+
+    borderColor = 0;
 
     // precalculate ULA SWAP values
     precalcULASWAP();
@@ -192,9 +204,6 @@ void ESPectrum::setup()
     tryAllocateSRamThenPSRam(Mem::rom2, "ROM2");
     tryAllocateSRamThenPSRam(Mem::rom3, "ROM3");
 
-    // Allocate RAM for loading TAP files
-    Tape::Init();
-
 #else
     Mem::rom0 = (byte *)malloc(16384);
 
@@ -218,6 +227,9 @@ void ESPectrum::setup()
     Mem::ram[7] = Mem::ram7;
 
     Serial.printf("Free heap after allocating emulated ram: %d\n", ESP.getFreeHeap());
+
+    // Init tape
+    Tape::Init();
 
 #ifdef SPEAKER_PRESENT
     pinMode(SPEAKER_PIN, OUTPUT);
@@ -245,10 +257,18 @@ void ESPectrum::setup()
 
     Serial.printf("%s %u\n", MSG_EXEC_ON_CORE, xPortGetCoreID());
 
-    vidQueue = xQueueCreate(1, sizeof(uint16_t *));
-    xTaskCreatePinnedToCore(&ESPectrum::videoTask, "videoTask", 1024 * 4, NULL, 5, &videoTaskHandle, 0);
+    audioTaskQueue = xQueueCreate(1, sizeof(uint8_t *));
+    xTaskCreatePinnedToCore(&ESPectrum::audioTask, "audioTask", 4096, NULL, 5, &audioTaskHandle, 0);
 
     AySound::initialize();
+
+    // Set AY channels samplerate to match pwm_audio's
+    AySound::_channel[0].setSampleRate(ESP_AUDIO_FREQ);
+    AySound::_channel[1].setSampleRate(ESP_AUDIO_FREQ);
+    AySound::_channel[2].setSampleRate(ESP_AUDIO_FREQ);
+
+    // Set samples per frame depending on arch
+    if (Config::getArch() == "48K") samplesPerFrame=546; else samplesPerFrame=554;
 
     Config::requestMachine(Config::getArch(), Config::getRomSet(), true);
 
@@ -271,21 +291,28 @@ void ESPectrum::setup()
     }
 #endif // ZX_KEYB_PRESENT
 
+    setCpuFrequencyMhz(240);
+
     Serial.printf("Free heap at end of setup: %d\n", ESP.getFreeHeap());
 }
 
 void ESPectrum::reset()
 {
-    for (uint8_t i = 0; i < 128; i++) {
+    int i;
+    for (i = 0; i < 128; i++) {
         Ports::base[i] == 0x1F;
         Ports::wii[i] == 0x1F;
     }
-    ESPectrum::borderColor = 7;
+
+    borderColor = 7;
+
+    ALU_video_reset();
+
     Mem::bankLatch = 0;
     Mem::videoLatch = 0;
     Mem::romLatch = 0;
 
-    if (Config::getArch() == "48K") Mem::pagingLock = 1; else Mem::pagingLock = 0;  
+    if (Config::getArch() == "48K") Mem::pagingLock = 1; else Mem::pagingLock = 0;
     
     Mem::modeSP3 = 0;
     Mem::romSP3 = 0;
@@ -296,204 +323,23 @@ void ESPectrum::reset()
     Tape::SaveStatus = SAVE_STOPPED;
     Tape::romLoading = false;
 
+    // Flush audio buffers
+    for (int i=0;i<ESP_AUDIO_SAMPLES;i++) {
+        audioBuffer[0][i]=0;
+        audioBuffer[1][i]=0;
+    }
+    buffertofill=1;
+    buffertoplay=0;
+    lastaudioBit=0;
+
+    // Set samples per frame depending on arch
+    if (Config::getArch() == "48K") samplesPerFrame=546; else samplesPerFrame=554;
+
+    // Reset AY emulation
+    AySound::reset();
+
     CPU::reset();
-}
 
-#define NUM_SPECTRUM_COLORS 16
-
-static word spectrum_colors[NUM_SPECTRUM_COLORS] = {
-    BLACK,     BLUE,     RED,     MAGENTA,     GREEN,     CYAN,     YELLOW,     WHITE,
-    BRI_BLACK, BRI_BLUE, BRI_RED, BRI_MAGENTA, BRI_GREEN, BRI_CYAN, BRI_YELLOW, BRI_WHITE,
-};
-
-void ESPectrum::precalcColors()
-{
-    for (int i = 0; i < NUM_SPECTRUM_COLORS; i++)
-        spectrum_colors[i] = (spectrum_colors[i] & vga.RGBAXMask) | vga.SBits;
-}
-
-uint16_t ESPectrum::zxColor(uint8_t color, uint8_t bright) {
-    if (bright) color += 8;
-    return spectrum_colors[color];
-}
-
-
-// VIDEO core 0 *************************************
-
-#define SPEC_W 256
-#define SPEC_H 192
-
-static int calcY(int offset);
-static int calcX(int offset);
-static void swap_flash(word *a, word *b);
-
-// Precalc ULA_SWAP
-static int offBmp[SPEC_H];
-static int offAtt[SPEC_H];
-#define ULA_SWAP(y) ((y & 0xC0) | ((y & 0x38) >> 3) | ((y & 0x07) << 3))
-void ESPectrum::precalcULASWAP()
-{
-    for (int i = 0; i < SPEC_H; i++) {
-        offBmp[i] = ULA_SWAP(i) << 5;
-        offAtt[i] = ((i >> 3) << 5) + 0x1800;
-    }
-}
-
-void ESPectrum::videoTask(void *unused) {
-    videoTaskIsRunning = true;
-    uint16_t *param;
-
-    int offX = Config::aspect_16_9 ? OFF_X_16_9 : OFF_X_4_3;
-    int offY = Config::aspect_16_9 ? OFF_Y_16_9 : OFF_Y_4_3;
-    int borW = Config::aspect_16_9 ? BOR_W_16_9 : BOR_W_4_3;
-    int borH = Config::aspect_16_9 ? BOR_H_16_9 : BOR_H_4_3;
-
-    int borW_4 = borW >> 2;
-    int bWb_4 = (borW + SPEC_W + borW) >> 2;
-
-    int vgaY;       // from 0 to RESY - 1 
-    int ulaX;       // from 0 to 32
-    int bmpOffset;  // offset for bitmap in graphic memory
-    int attOffset;  // offset for attrib in graphic memory
-    int att, bmp;   // attribute and bitmap
-    int bri;        // bright flag
-    int back, fore; // background and foreground colors
-
-    int scanline;   // scanline ranges from 0 to 311
-    int statesPerLine = CPU::statesPerFrame() / 312;
-    int targetTstate;
-    int prevTstates;
-
-    uint8_t palette[2]; //0 backcolor 1 Forecolor
-    uint8_t a0,a1,a2,a3;
-    uint8_t border;
-
-    uint8_t* grmem;
-    uint32_t* lineptr32;
-
-    while (1) {
-
-        xQueueReceive(vidQueue, &param, portMAX_DELAY);
-
-#ifdef VIDEO_FRAME_TIMING
-        uint32_t ts_start = micros();
-#else
-    #ifdef LOG_DEBUG_TIMING
-        uint32_t ts_start = micros();
-    #endif
-#endif
-
-        prevTstates = CPU::tstates;
-
-        for (vgaY = 0; vgaY < borH+SPEC_H+borH; vgaY++)        
-        {
-            // ¿May videoLatch change during frame draw?
-            grmem = Mem::videoLatch ? Mem::ram7 : Mem::ram5;
-
-            // wait to (almost) correct tstate before beginning line render
-            scanline = 64 - borH + vgaY;
-            targetTstate = scanline * statesPerLine;
-            while (prevTstates != CPU::tstates && targetTstate > CPU::tstates)
-                delayMicroseconds(1);
-            prevTstates = CPU::tstates;
-
-            lineptr32 = (uint32_t *)(vga.backBuffer[vgaY+offY]+offX);                            
-
-            if (vgaY < borH || vgaY >= borH + SPEC_H)
-            {
-                // top / bottom border
-                for (int i = 0; i < bWb_4; i++) {
-                    border = zxColor(borderColor, 0);
-                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
-                }
-            }
-            else
-            {
-                // left border
-                for (int i = 0; i < borW_4; i++) {
-                    border = zxColor(borderColor, 0);
-                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
-                }
-                
-                bmpOffset = offBmp[vgaY - borH];
-                attOffset = offAtt[vgaY - borH];
-                
-                for (ulaX = 0; ulaX < 32; ulaX++) // foreach byte in line
-                {
-                    att = grmem[attOffset++];  // get attribute byte
-
-                    bri = att & 0x40;
-                    fore = zxColor(att & 0b111, bri);
-                    back = zxColor((att >> 3) & 0b111, bri);
-                    if ((att >> 7) && flashing) {
-                        palette[0] = fore; palette[1] = back;
-                    } else {
-                        palette[0] = back; palette[1] = fore;
-                    }
-
-                    bmp = grmem[bmpOffset++];  // get bitmap byte
-
-                    a0 = palette[(bmp >> 7) & 0x01];
-                    a1 = palette[(bmp >> 6) & 0x01];
-                    a2 = palette[(bmp >> 5) & 0x01];
-                    a3 = palette[(bmp >> 4) & 0x01];
-                    *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-
-                    a0 = palette[(bmp >> 3) & 0x01];
-                    a1 = palette[(bmp >> 2) & 0x01];
-                    a2 = palette[(bmp >> 1) & 0x01];
-                    a3 = palette[bmp & 0x01];
-                    *lineptr32++ = a2 | (a3<<8) | (a0<<16) | (a1<<24);
-                }
-
-                // right border
-                for (int i = 0; i < borW_4; i++) {
-                    border = zxColor(borderColor, 0);
-                    *lineptr32++ = border | (border << 8) | (border << 16) | (border << 24);
-                }
-            }
-        }
-
-
-#ifdef VIDEO_FRAME_TIMING
-        uint32_t ts_end = micros();
-
-        uint32_t elapsed = ts_end - ts_start;
-        uint32_t target = CPU::microsPerFrame();
-        uint32_t idle = target - elapsed;
-        if (idle < target)
-            delayMicroseconds(idle);
-#else
-    #ifdef LOG_DEBUG_TIMING
-        uint32_t ts_end = micros();
-
-        uint32_t elapsed = ts_end - ts_start;
-        uint32_t target = CPU::microsPerFrame();
-        uint32_t idle = target - elapsed;
-    #endif
-#endif
-
-#ifdef LOG_DEBUG_TIMING
-        static int ctr = 0;
-        if (ctr == 0) {
-            ctr = 50;
-            Serial.printf("[VideoTask] elapsed: %u; idle: %u\n", elapsed, idle);
-        }
-        else ctr--;
-#endif
-        videoTaskIsRunning = false;
-    }
-    videoTaskIsRunning = false;
-    vTaskDelete(NULL);
-
-    while (1) {
-    }
-}
-
-void ESPectrum::waitForVideoTask() {
-    xQueueSend(vidQueue, &param, portMAX_DELAY);
-    // Wait while ULA loop is finishing
-    delay(45);
 }
 
 // for abbreviating evaluation of convenience keys
@@ -601,54 +447,180 @@ void ESPectrum::processKeyboard() {
 #endif // PS2_CONVENIENCE_KEYS_ES
 }
 
+void IRAM_ATTR ESPectrum::audioTask(void *unused) {
+
+    size_t written;
+
+    pwm_audio_config_t pac;
+    pac.duty_resolution    = LEDC_TIMER_8_BIT;
+    pac.gpio_num_left      = 25;
+    pac.ledc_channel_left  = LEDC_CHANNEL_0;
+    pac.gpio_num_right     = -1;
+    pac.ledc_channel_right = LEDC_CHANNEL_1;
+    pac.ledc_timer_sel     = LEDC_TIMER_0;
+    pac.tg_num             = TIMER_GROUP_0;
+    pac.timer_num          = TIMER_0;
+    pac.ringbuf_len        = 1024 * 8;
+
+    pwm_audio_init(&pac);
+    pwm_audio_set_param(ESP_AUDIO_FREQ,LEDC_TIMER_8_BIT,1);
+    pwm_audio_start();
+    pwm_audio_set_volume(aud_volume);
+
+    // File file = SD.open("/persist/audioout", FILE_WRITE);
+    // int filebufs=0;
+    
+    for (;;) {
+
+        xQueueReceive(audioTaskQueue, &param, portMAX_DELAY);
+
+        pwm_audio_write(param, samplesPerFrame, &written, portMAX_DELAY);
+
+        // if (filebufs<1000) {
+        //     uint16_t bytesWritten = file.write(param, ESP_AUDIO_SAMPLES);
+        //     filebufs++;
+        //     if (filebufs==1000) file.close();
+        // }
+
+    }
+
+}
+
+void ESPectrum::audioFrameStart() {
+
+    audbufcnt = 0;
+
+}
+
+void ESPectrum::audioGetSample(int Audiobit) {
+
+    if (Audiobit != lastaudioBit) {
+
+        // Audio buffer generation (oversample)
+        uint32_t audbufpos = CPU::tstates >> 4;
+        int signal = lastaudioBit ? 255: 0;
+        for (int i=audbufcnt;i<audbufpos;i++) {
+            overSamplebuf[i] = signal;
+        }
+        audbufcnt = audbufpos;
+
+        lastaudioBit = Audiobit;
+    }
+
+}
+
+void ESPectrum::audioFrameEnd() {
+
+    // // Finish fill of oversampled audio buffer
+    if (audbufcnt < ESP_AUDIO_OVERSAMPLES) {
+        int signal = lastaudioBit ? 255: 0;
+        for (int i=audbufcnt; i < ESP_AUDIO_OVERSAMPLES;i++) overSamplebuf[i] = signal;
+    }
+
+    // Downsample beeper (median) and mix AY channels to output buffer
+    int beeper, aymix, mix;
+    for (int i=0;i<ESP_AUDIO_OVERSAMPLES;i+=8) {    
+        // Downsample (median)
+        beeper  =  overSamplebuf[i];
+        beeper +=  overSamplebuf[i+1];
+        beeper +=  overSamplebuf[i+2];
+        beeper +=  overSamplebuf[i+3];
+        beeper +=  overSamplebuf[i+4];
+        beeper +=  overSamplebuf[i+5];
+        beeper +=  overSamplebuf[i+6];
+        beeper +=  overSamplebuf[i+7];
+        // // Mix AY Channels
+        aymix = AySound::_channel[0].getSample() + 127;
+        aymix += AySound::_channel[1].getSample() + 127;
+        aymix += AySound::_channel[2].getSample() + 127;
+        mix = (beeper >> 3) + (aymix / 3);
+        #ifdef AUDIO_MIX_CLAMP
+        mix = (mix < 0? 0: (mix > 255 ? 255 : mix));
+        #else
+        mix >>= 1;
+        #endif
+
+        audioBuffer[buffertofill][i>>3] = mix;
+    }
+
+}
+
 /* +-------------+
    | LOOP core 1 |
    +-------------+
  */
 
+#if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+static double totalseconds=0;
+#endif
+
 void ESPectrum::loop() {
-    if (halfsec) {
-        flashing = ~flashing;
-    }
-    sp_int_ctr++;
-    halfsec = !(sp_int_ctr % 25);
+
+#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
+    uint32_t ts_start = micros();
+#endif
 
     processKeyboard();
+    
     updateWiimote2Keys();
     
     OSD::do_OSD();
 
-    xQueueSend(vidQueue, &param, portMAX_DELAY);
+    param = (uint8_t *) audioBuffer[buffertoplay];
+    xQueueSend(audioTaskQueue, &param, portMAX_DELAY);
 
-#ifdef LOG_DEBUG_TIMING 
-    uint32_t ts_start = micros();
-#endif
+    audioFrameStart();
 
-    CPU::loop();
+    CPU::loop();    
 
-#ifdef LOG_DEBUG_TIMING    
+    audioFrameEnd();
+
+    // Swap audio buffers
+    buffertofill ^= 1;
+    buffertoplay ^= 1;
+
+    AySound::update();
+ 
+#if defined(LOG_DEBUG_TIMING) || defined(VIDEO_FRAME_TIMING)
     uint32_t ts_end = micros();
     uint32_t elapsed = ts_end - ts_start;
     uint32_t target = CPU::microsPerFrame();
-    uint32_t idle = target - elapsed;
-    // if (idle < target)
-    //     delayMicroseconds(idle);
+    int32_t idle = target - elapsed;
+#endif
 
+#ifdef VIDEO_FRAME_TIMING
+  if (idle > 0) delayMicroseconds(idle);
+//  if ((idle + ESPoffset) > 0) delayMicroseconds(idle + ESPoffset); // Testing
+#endif
+#ifdef LOG_DEBUG_TIMING
     static int ctr = 0;
+    static int ctrcount = 0;
+    static uint32_t sumelapsed;
+    #ifdef SHOW_FPS
+        totalseconds += elapsed;
+    #endif
     if (ctr == 0) {
-        ctr = 50;
-        Serial.printf("[CPUTask] elapsed: %u; idle: %u\n", elapsed, idle);
+        ctr = 10;
+        sumelapsed+=elapsed;
+        ctrcount++;
+        if ((ctrcount & 0x000F) == 0) {
+            Serial.printf("========================================\n");
+            Serial.printf("[CPU] elapsed: %u; idle: %d\n", elapsed, idle);
+            Serial.printf("[Audio] Volume: %d\n", aud_volume);
+            Serial.printf("[CPU] average: %u; Samples taken: %u\n", sumelapsed / ctrcount, ctrcount);
+            //Serial.printf("[Delay offset] %d\n", ESPoffset);  // For testing
+            //Serial.printf("[Beeper samples taken] %u\n", audbufcnt);  
+            #ifdef SHOW_FPS
+                Serial.printf("[Framecnt] %u; [Seconds] %f; [FPS] %f\n", CPU::framecnt, totalseconds / 1000000, CPU::framecnt / (totalseconds / 1000000));
+                totalseconds = 0;
+                CPU::framecnt = 0;
+            #endif
+        }
     }
     else ctr--;
 #endif
 
-    AySound::update();
-
-    while (videoTaskIsRunning) {
-    }
-
-    TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
-    TIMERG0.wdt_feed = 1;
-    TIMERG0.wdt_wprotect = 0;
     vTaskDelay(0); // important to avoid task watchdog timeouts - change this to slow down emu
+
 }
+

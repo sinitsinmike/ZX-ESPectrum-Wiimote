@@ -2,6 +2,7 @@
 #include "FileUtils.h"
 #include "CPU.h"
 #include "Tape.h"
+#include "Ports.h"
 
 String Tape::tapeFileName = "none";
 byte Tape::tapeStatus = TAPE_STOPPED;
@@ -143,9 +144,9 @@ uint8_t Tape::TAP_Read()
         return LOW;
     } 
     
-#ifdef SPEAKER_PRESENT
-    digitalWrite(SPEAKER_PIN, tapeEarBit); // Send tape load sound to speaker
-#endif
+    #ifdef SPEAKER_PRESENT
+    ESPectrum::audioGetSample(tapeEarBit);
+    #endif
     
     return tapeEarBit;
 }

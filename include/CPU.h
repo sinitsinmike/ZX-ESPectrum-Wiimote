@@ -31,6 +31,7 @@
 #define CPU_h
 
 #include <inttypes.h>
+#include "ESPectrum.h"
 
 class CPU
 {
@@ -55,45 +56,28 @@ public:
 
     // CPU Tstates elapsed since reset
     static uint64_t global_tstates;
+    
+    #if (defined(LOG_DEBUG_TIMING) && defined(SHOW_FPS))
+    // Frames elapsed
+    static uint32_t framecnt;
+    #endif
 
-    // Delay Contention: for emulating CPU slowing due to sharing bus with ULA
-    // NOTE: Only 48K spectrum contention implemented. This function must be called
-    // only when dealing with affected memory (use ADDRESS_IN_LOW_RAM macro)
-    static uint8_t delayContention(uint32_t currentTstates);
 };
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// delay contention: emulates wait states introduced by the ULA (graphic chip)
-// whenever there is a memory access to contended memory (shared between ULA and CPU).
-// detailed info: https://worldofspectrum.org/faq/reference/48kreference.htm#ZXSpectrum
-// from paragraph which starts with "The 50 Hz interrupt is synchronized with..."
-// if you only read from https://worldofspectrum.org/faq/reference/48kreference.htm#Contention
-// without reading the previous paragraphs about line timings, it may be confusing.
-//
-inline uint8_t CPU::delayContention(uint32_t currentTstates)
-{
-    // sequence of wait states
-    static uint8_t wait_states[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
+// Video / ALU
+#define SPEC_W 256
+#define SPEC_H 192
 
-	// delay states one t-state BEFORE the first pixel to be drawn
-	currentTstates += 1;
+static unsigned int is169;
 
-	// each line spans 224 t-states
-	int line = currentTstates / 224;
+static unsigned int flashing = 0;
+static unsigned int halfsec, sp_int_ctr;
 
-	// only the 192 lines between 64 and 255 have graphic data, the rest is border
-	if (line < 64 || line >= 256) return 0;
+static unsigned int offBmp[SPEC_H];
+static unsigned int offAtt[SPEC_H];
 
-	// only the first 128 t-states of each line correspond to a graphic data transfer
-	// the remaining 96 t-states correspond to border
-	int halfpix = currentTstates % 224;
-	if (halfpix >= 128) return 0;
-
-	int modulo = halfpix % 8;
-	return wait_states[modulo];
-}
-
-
+void ALU_video_init();
+void ALU_video_reset();
+static void ALU_video(unsigned int statestoadd);
 
 #endif // CPU_h

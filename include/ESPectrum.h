@@ -46,15 +46,31 @@
 #define VGA VGA6Bit
 #endif
 
+// #ifdef COLOR_6B
+// #include "vga_6bit.h"
+// #define VGA VGA6Bit
+// #endif
+
 #ifdef COLOR_14B
 #include "ESP32Lib/VGA/VGA14Bit.h"
 #include "ESP32Lib/VGA/VGA14BitI.h"
 #define VGA VGA14Bit
 #endif
 
+#define ESP_AUDIO_OVERSAMPLES 4432 // For 48K we get 4368 samples per frame, for 128K we get 4432
+
+#define ESP_AUDIO_FREQ 27300
+#define ESP_AUDIO_SAMPLES 554 // For 48K we get 546 samples per frame, for 128K we get 554
+#define ESP_AUDIO_TSTATES 128
+
+// #define ESP_AUDIO_FREQ 13650
+// #define ESP_AUDIO_SAMPLES 273
+// #define ESP_AUDIO_TSTATES 256
+
 class ESPectrum
 {
 public:
+
     // arduino setup/loop
     static void setup();
     static void loop();
@@ -62,19 +78,31 @@ public:
     // reset machine
     static void reset();
 
-    // graphics
+    // Video
     static VGA vga;
     static uint8_t borderColor;
-    static uint16_t zxColor(uint8_t color, uint8_t bright);
-    static void waitForVideoTask();
-
     static void processKeyboard();
 
+    // Audio
+    static unsigned char audioBuffer[2][ESP_AUDIO_SAMPLES];
+    static unsigned char overSamplebuf[ESP_AUDIO_OVERSAMPLES];
+    static signed char aud_volume;
+    static int buffertofill;
+    static int buffertoplay;
+    static uint32_t audbufcnt;
+    static int lastaudioBit;
+    static void audioFrameStart();
+    static void audioGetSample(int Audiobit);
+    static void audioFrameEnd();
+    static int samplesPerFrame;
+
+
+    //static int ESPoffset; // Testing
+   
 private:
-    static void precalcColors();
-    static void precalcULASWAP();
-    static void videoTask(void* unused);
-    
+
+    static void audioTask(void* unused);
+
 };
 
 #endif

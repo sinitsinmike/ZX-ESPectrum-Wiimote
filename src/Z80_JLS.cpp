@@ -5486,4 +5486,3 @@ void Z80::copyToRegister(uint8_t opCode, uint8_t value)
             break;
     }
 }
-

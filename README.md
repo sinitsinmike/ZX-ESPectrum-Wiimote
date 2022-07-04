@@ -5,7 +5,7 @@
 It used to be for a custom devkit contraption I made, you can still find that code in the [devkit-custom branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/devkit-custom).
 
 
-**LATEST UPDATES: Better CPU / Video tasks sync, allowing partial support of multicolor modes. Preliminary realtime .tap file loading support (thanks to [EremusOne](https://github.com/EremusOne/) :-). Use new option in menu to select .tap file and F6,F7 to start/stop tape.**
+**LATEST UPDATES: Precise timing of 48K machine, supporting multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape. (Thanks to [EremusOne](https://github.com/EremusOne/) :-)**
 
 This is an emulator emulation of the Sinclair ZX Spectrum computer running on an Lilygo TTGo VGA32 board.
 

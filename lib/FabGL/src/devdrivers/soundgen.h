@@ -22,25 +22,18 @@
 
 #pragma once
 
-
 /**
  * @file
  *
  * @brief This file contains all classes related to FabGL Sound System
  */
 
-
-
-
 #include <stdint.h>
 #include <stddef.h>
 
 #include "freertos/FreeRTOS.h"
 
-#include "fabglconf.h"
 #include "fabutils.h"
-
-
 
 namespace fabgl {
 

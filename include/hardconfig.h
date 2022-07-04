@@ -41,35 +41,42 @@
 #define ESPectrum_hardconfig_h
 
 ///////////////////////////////////////////////////////////////////////////////
-// CPU timing configuration
-
-// #define CPU_PER_INSTRUCTION_TIMING for precise CPU timing, undefine it
-// to let the emulator run free (and too fast :). If #defined,
-// delayMicros() will be called after few instructions so CPU runs almost realtime.
-///////////////////////////////////////////////////////////////////////////////
-
-#define CPU_PER_INSTRUCTION_TIMING
-
-// CPU_PIT_PERIOD controls every how many cycles (approx) delayMicros() is called.
-// The lowest the value, the highest the precision, but there is a small performance
-// penalty when calling delayMicros() which may lead to worse timing in some games.
-// I recommend NOT changing the default value of 50, except for better PWM sound.
-#define CPU_PIT_PERIOD 50
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-// Video timing configuration
+// Frame timing switch
 //
-// #define VIDEO_FRAME_TIMING for precise video timing, limiting to 50fps.
-// undefine it to let the emulator run free (and too fast :)
+// #define VIDEO_FRAME_TIMING to let the emu add a delay at the end of
+// every frame in order to get the right duration in microsecs/frame
 ///////////////////////////////////////////////////////////////////////////////
 
 #define VIDEO_FRAME_TIMING
 
-// LOG_DEBUG_TIMING generates simple timing log messages to console every second.
-// #define LOG_DEBUG_TIMING
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// Border effects switch
+//
+// #define BORDEREFFECTS to use a drawing function
+// with border effects support. Still slow but quite neat :)
+// NOTE: Only for 4:3 aspect ratio (16:9 has no sense: only 4 pixels of border)
+///////////////////////////////////////////////////////////////////////////////
+
+//#define BORDER_EFFECTS
+
+///////////////////////////////////////////////////////////////////////////////
+// Video output switch
+//
+// #define NOVIDEO for disabling video output.
+// Useful for Testing & CPU / Video timing
+///////////////////////////////////////////////////////////////////////////////
+
+//#define NO_VIDEO
+
+///////////////////////////////////////////////////////////////////////////////
+// LOG_DEBUG_TIMING generates simple timing log messages to console every second.
+//#define LOG_DEBUG_TIMING
+
+// SHOW_FPS Shows FPS :o) (Needs LOG_DEBUG_TIMING)
+//#define SHOW_FPS
+///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 // Video color depth
@@ -91,18 +98,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
-// Screen aspect ratio (16/9 or 4/3)
-//
-// NOT USED ANYMORE; aspect ratio may be changed via menu
-// and is saved to config file. Only reset is required to change.
-///////////////////////////////////////////////////////////////////////////////
-
-// #define AR_16_9
-// #define AR_4_3
-
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
 // Resolution, border and centering
 //
 // Total number of pixels drawn affects video task timing,
@@ -114,16 +109,16 @@
 // 
 // Update: these are specified separately for the two supported aspect ratios.
 ///////////////////////////////////////////////////////////////////////////////
-#define BOR_W_16_9 52
+#define BOR_W_16_9 44
 #define BOR_H_16_9 4
-#define OFF_X_16_9 0
+#define OFF_X_16_9 1
 #define OFF_Y_16_9 0
+
 // if you can't center the image in your screen,
 // set some offset, (ex: OFF_X = _20_)
 // use a smaller border (ex: BOR_W = 32 == 52 - _20_)
 // then change OFF_X for software centering (0 < OFF_X < 40) (40 == 2 * _20_)
-
-#define BOR_W_4_3 32
+#define BOR_W_4_3 40
 #define BOR_H_4_3 24
 #define OFF_X_4_3 0
 #define OFF_Y_4_3 0
@@ -153,7 +148,6 @@
 //
 // also, if you happen to have a pesky keyboard which won't initialize
 // until it receives an echo message, also define PS2_KEYB_FORCE_INIT
-
 #define PS2_KEYB_PRESENT
 #define PS2_KEYB_FORCE_INIT
 
@@ -180,7 +174,7 @@
 // also, you should define wiimote button mappings for each game.
 //
 
-// #define WIIMOTE_PRESENT
+//#define WIIMOTE_PRESENT
 ///////////////////////////////////////////////////////////////////////////////
 
 
@@ -213,6 +207,25 @@
 // 
 
 #define USE_AY_SOUND
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// Audio I/O
+//
+// define AUDIO_MIX_CLAMP to use clamping on mix of beeper and AY sound data
+// 
+
+#define AUDIO_MIX_CLAMP
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// Tape traps beta (Experimental)
+//
+// define TAPE_TRAPS for emulator trapping LOAD and SAVE rom code. In some 
+// titles it could help with right loading or auto-stoping tape in right places.
+// (If a .tap doesn't load with tape load active try disabling it)
+
+//#define TAPE_TRAPS
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
