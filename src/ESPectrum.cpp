@@ -526,16 +526,22 @@ void ESPectrum::audioFrameEnd() {
         beeper +=  overSamplebuf[i+5];
         beeper +=  overSamplebuf[i+6];
         beeper +=  overSamplebuf[i+7];
-        // // Mix AY Channels
-        aymix = AySound::_channel[0].getSample() + 127;
-        aymix += AySound::_channel[1].getSample() + 127;
-        aymix += AySound::_channel[2].getSample() + 127;
-        mix = (beeper >> 3) + (aymix / 3);
+        // Mix AY Channels
+        aymix = AySound::_channel[0].getSample();
+        aymix += AySound::_channel[1].getSample();
+        aymix += AySound::_channel[2].getSample();
+        // mix must be centered around 0:
+        // aymix is centered (ranges from -128 to 127), but
+        // beeper is not centered (ranges from 0 to 255),
+        // so we need to substract 128 from beeper.
+        mix = ((beeper >> 3) - 128) + (aymix / 3);
         #ifdef AUDIO_MIX_CLAMP
-        mix = (mix < 0? 0: (mix > 255 ? 255 : mix));
+        mix = (mix < -128 ? 128 : (mix > 127 ? 127 : mix));
         #else
         mix >>= 1;
         #endif
+        // add 128 to recover original range (0 to 255)
+        mix += 128;
 
         audioBuffer[buffertofill][i>>3] = mix;
     }
