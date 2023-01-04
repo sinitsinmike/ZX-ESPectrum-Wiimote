@@ -1,5 +1,7 @@
 # ZX-ESPectrum-Wiimote
 
+**IMPORTANT: as of december 2022, I have learned that some boards sold recently don't handle well the 4:3 (320x240) mode. I have set the 16:9 mode as the default. If you have one of these boards and try the 4:3 mode, you will get no picture, and you will need to Upload Filesystem Image (for internal storage) or to manually edit the boot.cfg (for external storage, in the SD card) and set asp169 to true.**
+
 **IMPORTANT: this branch is for running on a Lilygo TTGo vga32 board.**
 
 It used to be for a custom devkit contraption I made, you can still find that code in the [devkit-custom branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/devkit-custom).
