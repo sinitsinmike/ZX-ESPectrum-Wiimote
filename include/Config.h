@@ -47,7 +47,7 @@ public:
 
     // config persistence
     static void           load();
-    static void IRAM_ATTR save();
+    static void           save();
 
     // list of snapshot file names
     static String   sna_file_list;

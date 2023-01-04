@@ -35,25 +35,25 @@
 class FileSNA
 {
 public:
-    static bool IRAM_ATTR load(String sna_fn);
+    static bool load(String sna_fn);
 
     // save snapshot in SNA format to disk using specified filename.
     // this function tries to save using pages, 
-    static bool IRAM_ATTR save(String sna_fn);
+    static bool save(String sna_fn);
     // using this function you can choose whether to write pages block by block, or byte by byte.
-    static bool IRAM_ATTR save(String sna_fn, bool blockMode);
+    static bool save(String sna_fn, bool blockMode);
 
-    static bool IRAM_ATTR loadQuick();
-    static bool IRAM_ATTR saveQuick();
+    static bool loadQuick();
+    static bool saveQuick();
 
-    static bool IRAM_ATTR loadFromMem(uint8_t* srcBuffer, uint32_t size);
-    static bool IRAM_ATTR saveToMem(uint8_t* dstBuffer, uint32_t size);
+    static bool loadFromMem(uint8_t* srcBuffer, uint32_t size);
+    static bool saveToMem(uint8_t* dstBuffer, uint32_t size);
 
-    static bool IRAM_ATTR loadQuick48();
-    static bool IRAM_ATTR saveQuick48();
+    static bool loadQuick48();
+    static bool saveQuick48();
 
-    static bool IRAM_ATTR isQuickAvailable();
-    static bool IRAM_ATTR isPersistAvailable(String filename);
+    static bool isQuickAvailable();
+    static bool isPersistAvailable(String filename);
 };
 
 #endif
