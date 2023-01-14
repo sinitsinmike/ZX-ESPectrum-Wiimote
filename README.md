@@ -1,6 +1,6 @@
 # ZX-ESPectrum-Wiimote
 
-**IMPORTANT: as of december 2022, I have learned that some boards sold recently don't handle well the 4:3 (320x240) mode. I have set the 16:9 mode as the default. If you have one of these boards and try the 4:3 mode, you will get no picture, and you will need to Upload Filesystem Image (for internal storage) or to manually edit the boot.cfg (for external storage, in the SD card) and set asp169 to true.**
+**IMPORTANT: as of december 2022, I have learned that some boards sold recently (with text "21-2-20" on the board serigraphy) don't handle the 320x240 (4:3) mode correctly. I have set the 16:9 mode as the default. If you have one of these boards and try the 4:3 mode, you will get no picture. There is a flag FIX_320_240_TTGO_21 in hardconfig.h which you can uncomment, which activates some hardcoded values on Bitluni's VGA library and seem to do the trick.**
 
 **IMPORTANT: this branch is for running on a Lilygo TTGo vga32 board.**
 

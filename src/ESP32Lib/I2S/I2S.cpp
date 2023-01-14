@@ -16,6 +16,9 @@
 
 i2s_dev_t *i2sDevices[] = {&I2S0, &I2S1};
 
+#include "../../../include/hardconfig.h"
+#include "../../../include/Config.h"
+
 I2S::I2S(const int i2sIndex)
 {
 	const periph_module_t deviceModule[] = {PERIPH_I2S0_MODULE, PERIPH_I2S1_MODULE};
@@ -325,7 +328,15 @@ bool I2S::initParallelOutputMode(const int *pinMap, long sampleRate, const int b
 		//sdm = 0xA1fff;
 		//odir = 0;
 		if(sdm > 0xA1fff) sdm = 0xA1fff;
+
+	#ifndef FIX_320_240_TTGO_21
 		rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
+	#else
+		if (Config::aspect_16_9)
+			rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
+		else
+			rtc_clk_apll_enable(true, 0xA, 0x57, 0x7, 0x7);	// thanks, @ackerman!
+	#endif
 	}
 
 	i2s.clkm_conf.val = 0;
@@ -395,7 +406,14 @@ void I2S::setAPLLClock(long sampleRate, int bitCount)
 	//sdm = 0xA1fff;
 	//odir = 0;
 	if(sdm > 0xA1fff) sdm = 0xA1fff;
-	rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
+	#ifndef FIX_320_240_TTGO_21
+		rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
+	#else
+		if (Config::aspect_16_9)
+			rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
+		else
+			rtc_clk_apll_enable(true, 0xA, 0x57, 0x7, 0x7);	// thanks, @ackerman!
+	#endif
 }
 
 void I2S::setClock(long sampleRate, int bitCount, bool useAPLL)
