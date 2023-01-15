@@ -185,6 +185,7 @@ I have written a detailed story, with photos, of the development process of this
 - Fabrizio di Vittorio for his [FabGL library](https://github.com/fdivitto/FabGL) which I use for sound only (but it's a great library).
 - [Ackerman](https://github.com/rpsubc8/ESP32TinyZXSpectrum) for his code and ideas for the emulation of the AY-3-8912 sound chip, and for discussing details about this development.
 - [EremusOne](https://github.com/EremusOne) for adding multiple snapshot slots, .TAP support, and other fixes.
+- [Jean Thomas](https://github.com/jeanthom/ESP32-APLL-cal) for his ESP32 APLL calculator, useful for getting a rebel TTGO board to work at 320x240.
 
 ## And all the involved people from the golden age
 

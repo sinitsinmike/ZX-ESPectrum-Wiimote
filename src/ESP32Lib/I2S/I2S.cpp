@@ -335,7 +335,8 @@ bool I2S::initParallelOutputMode(const int *pinMap, long sampleRate, const int b
 		if (Config::aspect_16_9)
 			rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
 		else
-			rtc_clk_apll_enable(true, 0xA, 0x57, 0x7, 0x7);	// thanks, @ackerman!
+			// using values calculated by https://github.com/jeanthom/ESP32-APLL-cal
+			rtc_clk_apll_enable(true, 41, 84, 7, 7);	// thanks, @ackerman and @eremus!
 	#endif
 	}
 
@@ -412,7 +413,8 @@ void I2S::setAPLLClock(long sampleRate, int bitCount)
 		if (Config::aspect_16_9)
 			rtc_clk_apll_enable(true, sdm & 255, (sdm >> 8) & 255, sdm >> 16, odir);
 		else
-			rtc_clk_apll_enable(true, 0xA, 0x57, 0x7, 0x7);	// thanks, @ackerman!
+			// using values calculated by https://github.com/jeanthom/ESP32-APLL-cal
+			rtc_clk_apll_enable(true, 41, 84, 7, 7);	// thanks, @ackerman and @eremus!
 	#endif
 }
 
