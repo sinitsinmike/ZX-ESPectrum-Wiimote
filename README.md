@@ -1,15 +1,12 @@
 # ZX-ESPectrum-Wiimote
 
-**IMPORTANT: as of december 2022, I have learned that some boards sold recently (with text "21-2-20" on the board serigraphy) don't handle the 320x240 (4:3) mode correctly. I have set the 16:9 mode as the default. If you have one of these boards and try the 4:3 mode, you will get no picture. There is a flag FIX_320_240_TTGO_21 in hardconfig.h which you can uncomment, which activates some hardcoded values on Bitluni's VGA library and seem to do the trick.**
+> **IMPORTANT**: I stopped working on this project some time ago.
+> 
+> But its legacy continues in the [ZX-ESPectrum-IDF](https://github.com/EremusOne/ZX-ESPectrum-IDF) project by @EremusOne (to which I also contributed), who is actively maintaining it and adding interesting features.
+>
+> Please [check it out](https://github.com/EremusOne/ZX-ESPectrum-IDF) as it incorporates a lot of features and enhancements.
 
-**IMPORTANT: this branch is for running on a Lilygo TTGo vga32 board.**
-
-It used to be for a custom devkit contraption I made, you can still find that code in the [devkit-custom branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/devkit-custom).
-
-
-**LATEST UPDATES: Precise timing of 48K machine, supporting multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape. (Thanks to [EremusOne](https://github.com/EremusOne/) :-)**
-
-This is an emulator emulation of the Sinclair ZX Spectrum computer running on an Lilygo TTGo VGA32 board.
+This is an emulator for the Sinclair ZX Spectrum computer running on an Lilygo TTGo VGA32 board.
 
 Just connect an VGA monitor, a PS/2 keyboard, and power via microUSB.
 
@@ -23,6 +20,14 @@ Quick start from PlatformIO:
 - Enjoy
 
 This is a fork of the [ZX-ESPectrum](https://github.com/rampa069/ZX-ESPectrum) project, based on it, but with some enhancements.
+
+As of december 2022, I have learned that some boards sold recently (with text "21-2-20" on the board serigraphy) don't handle the 320x240 (4:3) mode correctly. I have set the 16:9 mode as the default. If you have one of these boards and try the 4:3 mode, you will get no picture. There is a flag FIX_320_240_TTGO_21 in hardconfig.h which you can uncomment, which activates some hardcoded values on Bitluni's VGA library and seem to do the trick. Note: this issue is solved in [ZX-ESPectrum-IDF](https://github.com/EremusOne/ZX-ESPectrum-IDF).
+
+This branch is for running on a Lilygo TTGo vga32 board. It used to be for a custom devkit contraption I made, you can still find that code in the [devkit-custom branch](https://github.com/dcrespo3d/ZX-ESPectrum-Wiimote/tree/devkit-custom).
+
+Latest updates: Precise timing of 48K machine, supporting multicolor modes. Preliminary realtime .tap file loading support. Use new option in menu to select .tap file and F6,F7 to start/stop tape. (Thanks to [EremusOne](https://github.com/EremusOne/) :-)**
+
+
 
 ## Features
 
